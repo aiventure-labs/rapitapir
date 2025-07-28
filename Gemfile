@@ -4,6 +4,7 @@ source 'https://rubygems.org'
 
 gem 'json', '~> 2.6'
 gem 'rack', '~> 3.0'
+gem 'webrick', '~> 1.8' # For CLI server functionality
 
 group :development, :test do
   gem 'rspec', '~> 3.12'

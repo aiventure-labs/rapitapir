@@ -38,8 +38,34 @@ rescue LoadError
   # OpenAPI or client generation dependencies not available
 end
 
+# Documentation and CLI tools (optional)
+begin
+  require_relative 'rapitapir/docs/markdown_generator'
+  require_relative 'rapitapir/docs/html_generator'
+  require_relative 'rapitapir/cli/command'
+  require_relative 'rapitapir/cli/server'
+  require_relative 'rapitapir/cli/validator'
+rescue LoadError
+  # Documentation or CLI dependencies not available
+end
+
 module RapiTapir
   extend DSL
+
+  @endpoints = []
+
+  def self.endpoints
+    @endpoints
+  end
+
+  def self.register_endpoint(endpoint)
+    @endpoints << endpoint
+    endpoint
+  end
+
+  def self.clear_endpoints
+    @endpoints.clear
+  end
 
   # Convenience methods for creating endpoints
   def self.endpoint
@@ -47,30 +73,30 @@ module RapiTapir
   end
 
   def self.get(path = nil)
-    Core::Endpoint.get(path)
+    register_endpoint(Core::Endpoint.get(path))
   end
 
   def self.post(path = nil)
-    Core::Endpoint.post(path)
+    register_endpoint(Core::Endpoint.post(path))
   end
 
   def self.put(path = nil)
-    Core::Endpoint.put(path)
+    register_endpoint(Core::Endpoint.put(path))
   end
 
   def self.patch(path = nil)
-    Core::Endpoint.patch(path)
+    register_endpoint(Core::Endpoint.patch(path))
   end
 
   def self.delete(path = nil)
-    Core::Endpoint.delete(path)
+    register_endpoint(Core::Endpoint.delete(path))
   end
 
   def self.options(path = nil)
-    Core::Endpoint.options(path)
+    register_endpoint(Core::Endpoint.options(path))
   end
 
   def self.head(path = nil)
-    Core::Endpoint.head(path)
+    register_endpoint(Core::Endpoint.head(path))
   end
 end

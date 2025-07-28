@@ -267,12 +267,16 @@ module RapiTapir
       end
 
       def determine_status_code(output)
-        if output.respond_to?(:status_code) && output.status_code
-          output.status_code
-        elsif output.kind == :status && output.type.is_a?(Integer)
+        if output.kind == :status && output.type.is_a?(Integer)
           output.type
         else
-          200
+          # Default status codes based on output type
+          case output.kind
+          when :json, :xml
+            200
+          else
+            200
+          end
         end
       end
 
