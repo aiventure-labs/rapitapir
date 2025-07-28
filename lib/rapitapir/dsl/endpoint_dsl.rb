@@ -87,9 +87,9 @@ module RapiTapir
     end
 
     def validate_schema!(schema)
-      return if schema.is_a?(Hash) || schema.is_a?(Class) || schema.is_a?(Symbol)
+      return if schema.is_a?(Hash) || schema.is_a?(Class) || schema.is_a?(Symbol) || schema.is_a?(Array)
       
-      raise ArgumentError, "Invalid schema: #{schema}. Must be a Hash, Class, or Symbol"
+      raise ArgumentError, "Invalid schema: #{schema}. Must be a Hash, Class, Symbol, or Array"
     end
 
     def validate_status_code!(code)

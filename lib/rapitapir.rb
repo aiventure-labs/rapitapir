@@ -29,6 +29,15 @@ rescue LoadError
   # Rails not available
 end
 
+# OpenAPI and client generation (optional)
+begin
+  require_relative 'rapitapir/openapi/schema_generator'
+  require_relative 'rapitapir/client/generator_base'
+  require_relative 'rapitapir/client/typescript_generator'
+rescue LoadError
+  # OpenAPI or client generation dependencies not available
+end
+
 module RapiTapir
   extend DSL
 
