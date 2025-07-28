@@ -17,6 +17,13 @@ Please follow these conventions when generating or suggesting code in this repos
 - Always use 2-space indentation.
 - Prefer `require_relative` for internal files and `require` for gems.
 - Favor immutable data and functional style when possible.
+- Use `attr_reader` for simple attribute accessors.
+- Use `freeze` on data structures to prevent accidental mutation.
+- Use `# frozen_string_literal: true` at the top of files to enforce immutability.
+- Write tests for all new features and bug fixes.
+- Use RSpec for tests, following the conventions in `spec/`.
+- Run tests with `bundle exec rspec` and ensure they pass before submitting changes.
+- Use SOLID principles for class design.
 
 ### File Layout
 
