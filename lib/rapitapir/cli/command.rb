@@ -33,7 +33,7 @@ module RapiTapir
           when 'validate'
             run_validate(@args)
           when 'version'
-            puts "RapiTapir version 0.1.0"
+            puts "RapiTapir version #{RapiTapir::VERSION}"
           when 'help', nil
             puts parser.help
           else
@@ -96,8 +96,13 @@ module RapiTapir
             @options[:config][:package_name] = name
           end
 
-          opts.on("--version VERSION", "Version for generated client") do |version|
+          opts.on("--client-version VERSION", "Version for generated client") do |version|
             @options[:config][:version] = version
+          end
+
+          opts.on("-v", "--version", "Show RapiTapir version") do
+            puts "RapiTapir version #{RapiTapir::VERSION}"
+            exit
           end
 
           opts.on("-h", "--help", "Show this help") do
