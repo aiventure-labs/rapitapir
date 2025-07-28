@@ -9,4 +9,8 @@ group :development, :test do
   gem 'rspec', '~> 3.12'
   gem 'simplecov', '~> 0.22'
   gem 'rack-test', '~> 2.1'
+  gem 'sinatra', '~> 4.0'
+  gem 'puma', '~> 6.0'
 end
+
+gem "rackup", "~> 2.2"

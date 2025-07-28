@@ -10,14 +10,6 @@ module RapiTapir
       def initialize(sinatra_app)
         @app = sinatra_app
         @endpoints = []
-        
-        # Store adapter reference in the app for access in route handlers
-        @app.instance_variable_set(:@rapitapir_adapter, self)
-        
-        # Define a helper method on the app to access the adapter
-        @app.define_singleton_method(:rapitapir_adapter) do
-          @rapitapir_adapter
-        end
       end
 
       # Register an endpoint with automatic Sinatra route creation
@@ -30,48 +22,53 @@ module RapiTapir
         endpoint_handler = handler || block
         raise ArgumentError, 'Handler must be provided' unless endpoint_handler
         
-        endpoint_info = { endpoint: endpoint, handler: endpoint_handler, id: @endpoints.length }
-        @endpoints << endpoint_info
+        @endpoints << { endpoint: endpoint, handler: endpoint_handler }
         
-        # Register route with Sinatra
-        register_sinatra_route(endpoint_info)
+        # Register route with Sinatra using a simpler approach
+        register_sinatra_route(endpoint, endpoint_handler)
       end
 
       private
 
-      def register_sinatra_route(endpoint_info)
-        method_name = endpoint_info[:endpoint].method.to_s.downcase.to_sym
-        path_pattern = convert_path_to_sinatra(endpoint_info[:endpoint].path)
-        endpoint_id = endpoint_info[:id]
+      def register_sinatra_route(endpoint, handler)
+        method_name = endpoint.method.to_s.downcase
+        path_pattern = convert_path_to_sinatra(endpoint.path)
         
-        # Define the route on the Sinatra app class
-        @app.class.send(method_name, path_pattern) do
-          adapter = @rapitapir_adapter
-          endpoint_data = adapter.endpoints[endpoint_id]
-          
+        # Store references for the block
+        adapter = self
+        endpoint_ref = endpoint
+        handler_ref = handler
+        
+        # Use define_method to create a proper method on the Sinatra app
+        route_method_name = "rapitapir_route_#{@endpoints.length}"
+        
+        @app.define_singleton_method(route_method_name) do
           begin
-            # Extract inputs using Sinatra's params (which includes path parameters)
-            processed_inputs = adapter.extract_sinatra_inputs(request, params, endpoint_data[:endpoint])
+            # Extract inputs from Sinatra request
+            processed_inputs = adapter.extract_sinatra_inputs(request, endpoint_ref)
             
             # Call the handler in the app context with access to instance variables
-            result = case endpoint_data[:handler]
+            result = case handler_ref
                      when Proc
-                       instance_exec(processed_inputs, &endpoint_data[:handler])
+                       instance_exec(processed_inputs, &handler_ref)
                      else
-                       endpoint_data[:handler].respond_to?(:call) ? endpoint_data[:handler].call(processed_inputs) : instance_exec(processed_inputs, &endpoint_data[:handler])
+                       handler_ref.respond_to?(:call) ? handler_ref.call(processed_inputs) : instance_exec(processed_inputs, &handler_ref)
                      end
             
             # Set content type and return response
-            content_type adapter.determine_content_type(endpoint_data[:endpoint])
-            status adapter.determine_status_code(endpoint_data[:endpoint])
+            content_type adapter.determine_content_type(endpoint_ref)
+            status adapter.determine_status_code(endpoint_ref)
             
-            adapter.serialize_response(result, endpoint_data[:endpoint])
+            adapter.serialize_response(result, endpoint_ref)
           rescue ArgumentError => e
             halt 400, { error: e.message }.to_json
           rescue StandardError => e
             halt 500, { error: 'Internal Server Error', message: e.message }.to_json
           end
         end
+        
+        # Register the route with the method
+        @app.send(method_name, path_pattern, &@app.method(route_method_name))
       end
 
       public
@@ -81,18 +78,17 @@ module RapiTapir
         path
       end
 
-      def extract_sinatra_inputs(request, params, endpoint)
+      def extract_sinatra_inputs(request, endpoint)
         inputs = {}
         
         endpoint.inputs.each do |input|
           value = case input.kind
                   when :query
-                    params[input.name.to_s] || params[input.name.to_sym]
+                    request.params[input.name.to_s]
                   when :header
                     request.env["HTTP_#{input.name.to_s.upcase}"]
                   when :path
-                    # In Sinatra, path parameters are available directly in params
-                    params[input.name.to_s] || params[input.name.to_sym]
+                    request.params[input.name.to_s]
                   when :body
                     parse_sinatra_body(request, input)
                   else
