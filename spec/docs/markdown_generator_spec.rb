@@ -9,28 +9,32 @@ RSpec.describe RapiTapir::Docs::MarkdownGenerator do
   let(:endpoints) do
     [
       RapiTapir.get('/users')
-        .out(json_body([{ id: :integer, name: :string }]))
+        .ok(RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string})))
         .summary('Get all users')
-        .description('Retrieve a list of all users'),
+        .description('Retrieve a list of all users')
+        .build,
 
       RapiTapir.get('/users/:id')
-        .in(path_param(:id, :integer))
-        .out(json_body({ id: :integer, name: :string, email: :string }))
+        .path_param(:id, :integer)
+        .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
         .summary('Get user by ID')
-        .description('Retrieve a specific user by their ID'),
+        .description('Retrieve a specific user by their ID')
+        .build,
 
       RapiTapir.post('/users')
-        .in(body({ name: :string, email: :string }))
-        .out(json_body({ id: :integer, name: :string, email: :string }))
+        .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
+        .created(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
         .summary('Create user')
-        .description('Create a new user'),
+        .description('Create a new user')
+        .build,
 
       RapiTapir.get('/users/search')
-        .in(query(:q, :string))
-        .in(query(:limit, :integer, optional: true))
-        .out(json_body([{ id: :integer, name: :string }]))
+        .query(:q, :string)
+        .query(:limit, :integer, required: false)
+        .ok(RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string})))
         .summary('Search users')
         .description('Search for users')
+        .build
     ]
   end
 

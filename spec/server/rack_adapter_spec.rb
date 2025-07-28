@@ -11,7 +11,7 @@ RSpec.describe RapiTapir::Server::RackAdapter do
   let(:app) { adapter }
 
   describe '#register_endpoint' do
-    let(:endpoint) { RapiTapir.get('/users') }
+    let(:endpoint) { RapiTapir.get('/users').build }
     let(:handler) { proc { |inputs| { message: 'Hello' } } }
 
     it 'registers an endpoint with handler' do
@@ -42,8 +42,9 @@ RSpec.describe RapiTapir::Server::RackAdapter do
     before do
       # Register a simple endpoint
       endpoint = RapiTapir.get('/hello')
-        .in(RapiTapir::Core::Input.new(kind: :query, name: :name, type: :string, options: { optional: true }))
-        .out(RapiTapir::Core::Output.new(kind: :json, type: { message: :string }))
+        .query(:name, :string, required: false)
+        .ok(RapiTapir::Types.hash({"message" => RapiTapir::Types.string}))
+        .build
       
       handler = proc do |inputs|
         { message: "Hello, #{inputs[:name] || 'World'}!" }
@@ -82,8 +83,9 @@ RSpec.describe RapiTapir::Server::RackAdapter do
   describe 'path parameters' do
     before do
       endpoint = RapiTapir.get('/users/:id')
-        .in(RapiTapir::Core::Input.new(kind: :path, name: :id, type: :string))
-        .out(RapiTapir::Core::Output.new(kind: :json, type: { user_id: :string }))
+        .path_param(:id, :string)
+        .ok(RapiTapir::Types.hash({"user_id" => RapiTapir::Types.string}))
+        .build
       
       handler = proc do |inputs|
         { user_id: inputs[:id] }
@@ -104,11 +106,12 @@ RSpec.describe RapiTapir::Server::RackAdapter do
   describe 'POST with JSON body' do
     before do
       endpoint = RapiTapir.post('/users')
-        .in(RapiTapir::Core::Input.new(kind: :body, name: :user_data, type: Hash))
-        .out(RapiTapir::Core::Output.new(kind: :json, type: { id: :integer, name: :string }))
+        .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string}))
+        .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string}))
+        .build
       
       handler = proc do |inputs|
-        user_data = inputs[:user_data]
+        user_data = inputs[:body]
         { id: 1, name: user_data['name'] }
       end
       
@@ -127,7 +130,8 @@ RSpec.describe RapiTapir::Server::RackAdapter do
   describe 'error handling' do
     before do
       endpoint = RapiTapir.get('/error')
-        .in(RapiTapir::Core::Input.new(kind: :query, name: :required_param, type: :string))
+        .query(:required_param, :string)
+        .build
       
       handler = proc do |inputs|
         raise StandardError, 'Something went wrong'

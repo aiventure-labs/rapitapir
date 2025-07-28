@@ -8,21 +8,24 @@ RSpec.describe 'Phase 3 Integration Tests' do
   let(:test_endpoints) do
     [
       RapiTapir.get('/users')
-        .out(json_body([{ id: :integer, name: :string, email: :string }]))
+        .ok(RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string})))
         .summary('Get all users')
-        .description('Retrieve a list of all users'),
+        .description('Retrieve a list of all users')
+        .build,
 
       RapiTapir.post('/users')
-        .in(body({ name: :string, email: :string }))
-        .out(json_body({ id: :integer, name: :string, email: :string, created_at: :datetime }))
+        .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
+        .created(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string, "created_at" => RapiTapir::Types.string}))
         .summary('Create user')
-        .description('Create a new user'),
+        .description('Create a new user')
+        .build,
 
       RapiTapir.get('/users/:id')
-        .in(path(:id, :integer))
-        .out(json_body({ id: :integer, name: :string, email: :string }))
+        .path_param(:id, :integer)
+        .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
         .summary('Get user by ID')
         .description('Get a specific user by their ID')
+        .build
     ]
   end
 
@@ -113,15 +116,17 @@ RSpec.describe 'Phase 3 Integration Tests' do
         include RapiTapir::DSL
 
         RapiTapir.get('/users')
-          .out(json_body([{ id: :integer, name: :string }]))
+          .ok(RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string})))
           .summary('Get all users')
           .description('Retrieve a list of all users')
+          .build
 
         RapiTapir.post('/users')
-          .in(body({ name: :string, email: :string }))
-          .out(json_body({ id: :integer, name: :string, email: :string }))
+          .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
+          .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
           .summary('Create user')
           .description('Create a new user')
+          .build
       RUBY
     end
 
@@ -137,7 +142,7 @@ RSpec.describe 'Phase 3 Integration Tests' do
       end
 
       it 'detects invalid endpoints' do
-        invalid_endpoint = RapiTapir.get('/invalid').summary('Test') # Missing output
+        invalid_endpoint = RapiTapir.get('/invalid').summary('Test').build # Missing output
         validator = RapiTapir::CLI::Validator.new([invalid_endpoint])
         
         expect(validator.validate).to be(false)
@@ -236,23 +241,26 @@ RSpec.describe 'Phase 3 Integration Tests' do
         include RapiTapir::DSL
 
         RapiTapir.get('/api/v1/users')
-          .in(query(:page, :integer, optional: true))
-          .in(query(:limit, :integer, optional: true))
-          .out(json_body([{ id: :integer, name: :string, email: :string }]))
+          .query(:page, :integer, required: false)
+          .query(:limit, :integer, required: false)
+          .ok(RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string})))
           .summary('List users')
           .description('Get paginated list of users')
+          .build
 
         RapiTapir.get('/api/v1/users/:id')
-          .in(path(:id, :integer))
-          .out(json_body({ id: :integer, name: :string, email: :string, created_at: :datetime }))
+          .path_param(:id, :integer)
+          .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string, "created_at" => RapiTapir::Types.string}))
           .summary('Get user')
           .description('Get user by ID')
+          .build
 
         RapiTapir.post('/api/v1/users')
-          .in(body({ name: :string, email: :string }))
-          .out(json_body({ id: :integer, name: :string, email: :string, created_at: :datetime }))
+          .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
+          .created(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string, "created_at" => RapiTapir::Types.string}))
           .summary('Create user')
           .description('Create new user')
+          .build
       RUBY
 
       # 2. Generate OpenAPI schema

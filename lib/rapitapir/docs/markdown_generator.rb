@@ -103,7 +103,7 @@ module RapiTapir
           doc << "| Parameter | Type | Description |"
           doc << "|-----------|------|-------------|"
           path_params.each do |param|
-            doc << "| `#{param.name}` | #{format_type(param.type)} | #{param.options[:description] || 'No description'} |"
+            doc << "| `#{param.name}` | #{format_type(param.type)} | #{(param.options && param.options[:description]) || 'No description'} |"
           end
         end
 
@@ -116,7 +116,7 @@ module RapiTapir
           doc << "|-----------|------|----------|-------------|"
           query_params.each do |param|
             required = param.required? ? "Yes" : "No"
-            doc << "| `#{param.name}` | #{format_type(param.type)} | #{required} | #{param.options[:description] || 'No description'} |"
+            doc << "| `#{param.name}` | #{format_type(param.type)} | #{required} | #{(param.options && param.options[:description]) || 'No description'} |"
           end
         end
 
@@ -286,6 +286,22 @@ module RapiTapir
 
       def format_type(type)
         case type
+        when RapiTapir::Types::String
+          'string'
+        when RapiTapir::Types::Integer
+          'integer'
+        when RapiTapir::Types::Float
+          'number'
+        when RapiTapir::Types::Boolean
+          'boolean'
+        when RapiTapir::Types::Date
+          'date'
+        when RapiTapir::Types::DateTime
+          'datetime'
+        when RapiTapir::Types::Array
+          'array'
+        when RapiTapir::Types::Hash
+          'object'
         when :string, String then 'string'
         when :integer, Integer then 'integer'
         when :float, Float then 'number'

@@ -117,7 +117,12 @@ module RapiTapir
             raise ArgumentError, "Required input '#{input.name}' is missing"
           end
 
-          inputs[input.name] = input.coerce(value) if value || !input.required?
+          # Only coerce non-nil values, or include nil for optional parameters
+          if value.nil?
+            inputs[input.name] = nil if !input.required?
+          else
+            inputs[input.name] = input.coerce(value)
+          end
         end
 
         inputs
@@ -155,6 +160,12 @@ module RapiTapir
       end
 
       def determine_content_type(output)
+        # For enhanced outputs, use the content_type attribute directly
+        if output.respond_to?(:content_type) && output.content_type
+          return output.content_type
+        end
+        
+        # Fallback to kind-based detection for legacy outputs
         case output.kind
         when :json
           'application/json'

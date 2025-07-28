@@ -427,7 +427,7 @@ module RapiTapir
               <td><code class="param-name">#{param.name}</code></td>
               <td>#{format_type(param.type)}</td>
               <td>#{required_badge}</td>
-              <td>#{param.options[:description] || 'No description'}</td>
+              <td>#{(param.options && param.options[:description]) || 'No description'}</td>
             </tr>
           HTML
         end

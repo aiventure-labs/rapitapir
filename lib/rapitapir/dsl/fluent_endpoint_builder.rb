@@ -195,7 +195,7 @@ module RapiTapir
 
       # Build the final endpoint
       def build
-        Core::EnhancedEndpoint.new(
+        endpoint = Core::EnhancedEndpoint.new(
           method: @method,
           path: @path,
           inputs: @inputs,
@@ -206,6 +206,10 @@ module RapiTapir
             scopes: @scopes
           )
         )
+        
+        # Register the endpoint with RapiTapir
+        RapiTapir.register_endpoint(endpoint)
+        endpoint
       end
 
       private

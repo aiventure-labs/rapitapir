@@ -138,11 +138,11 @@ module RapiTapir
       end
 
       def required?
-        !type.optional? && !options[:optional]
+        !type.optional? && !(options && options[:optional])
       end
 
       def optional?
-        type.optional? || options[:optional]
+        type.optional? || (options && options[:optional])
       end
 
       def validate(value)

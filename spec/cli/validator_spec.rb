@@ -8,21 +8,24 @@ RSpec.describe RapiTapir::CLI::Validator do
   let(:valid_endpoints) do
     [
       RapiTapir.get('/users')
-        .out(json_body([{ id: :integer, name: :string }]))
+        .ok(RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string})))
         .summary('Get all users')
-        .description('Retrieve a list of all users'),
+        .description('Retrieve a list of all users')
+        .build,
 
       RapiTapir.post('/users')
-        .in(body({ name: :string, email: :string }))
-        .out(json_body({ id: :integer, name: :string, email: :string }))
+        .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
+        .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
         .summary('Create user')
-        .description('Create a new user'),
+        .description('Create a new user')
+        .build,
 
       RapiTapir.get('/users/:id')
-        .in(path(:id, :integer))
-        .out(json_body({ id: :integer, name: :string, email: :string }))
+        .path_param(:id, :integer)
+        .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
         .summary('Get user by ID')
         .description('Get a specific user by their ID')
+        .build
     ]
   end
 
@@ -51,18 +54,21 @@ RSpec.describe RapiTapir::CLI::Validator do
         [
           # Missing output definition
           RapiTapir.get('/no-output')
-            .summary('No output endpoint'),
+            .summary('No output endpoint')
+            .build,
 
           # Missing summary
           RapiTapir.get('/no-summary')
-            .out(json_body({ id: :integer })),
+            .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer}))
+            .build,
 
           # Conflicting parameters
           RapiTapir.post('/conflicting')
-            .in(body({ name: :string }))
-            .in(body({ email: :string })) # Duplicate body
-            .out(json_body({ id: :integer }))
+            .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string}))
+            .json_body(RapiTapir::Types.hash({"email" => RapiTapir::Types.string})) # Duplicate body
+            .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer}))
             .summary('Conflicting parameters')
+            .build
         ]
       end
 
@@ -89,6 +95,7 @@ RSpec.describe RapiTapir::CLI::Validator do
           valid_endpoints.first, # Valid endpoint
           RapiTapir.get('/invalid')
             .summary('Invalid endpoint') # Missing output
+            .build
         ]
       end
 
@@ -114,7 +121,7 @@ RSpec.describe RapiTapir::CLI::Validator do
     end
 
     it 'accumulates errors during validation' do
-      invalid_endpoint = RapiTapir.get('/test').summary('Test') # Missing output
+      invalid_endpoint = RapiTapir.get('/test').summary('Test').build # Missing output
       validator = described_class.new([invalid_endpoint])
       
       validator.validate
@@ -131,7 +138,7 @@ RSpec.describe RapiTapir::CLI::Validator do
         validator.send(:validate_endpoint, valid_endpoint, 0)
         expect(validator.errors.length).to eq(initial_error_count)
 
-        invalid_endpoint = RapiTapir.get('/test') # Missing summary and output
+        invalid_endpoint = RapiTapir.get('/test').build # Missing summary and output
         validator.send(:validate_endpoint, invalid_endpoint, 1)
         expect(validator.errors.length).to be > initial_error_count
       end
@@ -140,13 +147,15 @@ RSpec.describe RapiTapir::CLI::Validator do
     describe '#validate_basic_properties' do
       it 'checks for required properties' do
         endpoint_without_summary = RapiTapir.get('/test')
-          .out(json_body({ id: :integer }))
+          .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer}))
+          .build
         
         validator.send(:validate_basic_properties, endpoint_without_summary)
         expect(validator.errors.last).to include('missing summary')
 
         endpoint_without_output = RapiTapir.get('/test2')
           .summary('Test')
+          .build
         
         validator.send(:validate_basic_properties, endpoint_without_output)
         expect(validator.errors.last).to include('missing output definition')
@@ -235,40 +244,45 @@ RSpec.describe RapiTapir::CLI::Validator do
         [
           # GET collection
           RapiTapir.get('/users')
-            .in(query(:page, :integer, optional: true))
-            .in(query(:limit, :integer, optional: true))
-            .out(json_body([{ id: :integer, name: :string, email: :string }]))
+            .query(:page, :integer, required: false)
+            .query(:limit, :integer, required: false)
+            .ok(RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string})))
             .summary('List users')
-            .description('Get paginated list of users'),
+            .description('Get paginated list of users')
+            .build,
 
           # GET single resource
           RapiTapir.get('/users/:id')
-            .in(path(:id, :integer))
-            .out(json_body({ id: :integer, name: :string, email: :string }))
+            .path_param(:id, :integer)
+            .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
             .summary('Get user')
-            .description('Get user by ID'),
+            .description('Get user by ID')
+            .build,
 
           # POST create
           RapiTapir.post('/users')
-            .in(body({ name: :string, email: :string }))
-            .out(json_body({ id: :integer, name: :string, email: :string }))
+            .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
+            .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
             .summary('Create user')
-            .description('Create new user'),
+            .description('Create new user')
+            .build,
 
           # PUT update
           RapiTapir.put('/users/:id')
-            .in(path(:id, :integer))
-            .in(body({ name: :string, email: :string }))
-            .out(json_body({ id: :integer, name: :string, email: :string }))
+            .path_param(:id, :integer)
+            .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
+            .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
             .summary('Update user')
-            .description('Update existing user'),
+            .description('Update existing user')
+            .build,
 
           # DELETE
           RapiTapir.delete('/users/:id')
-            .in(path(:id, :integer))
-            .out(json_body({ success: :boolean }))
+            .path_param(:id, :integer)
+            .ok(RapiTapir::Types.hash({"success" => RapiTapir::Types.boolean}))
             .summary('Delete user')
             .description('Delete user by ID')
+            .build
         ]
       end
 
@@ -283,13 +297,14 @@ RSpec.describe RapiTapir::CLI::Validator do
       let(:complex_endpoints) do
         [
           RapiTapir.post('/search')
-            .in(query(:q, :string))
-            .in(query(:filters, Hash))
-            .in(query(:sort_by, :string, optional: true))
-            .in(header('X-API-Key', :string))
-            .out(json_body({ results: Array, total: :integer }))
+            .query(:q, :string)
+            .query(:filters, RapiTapir::Types.hash({}))
+            .query(:sort_by, :string, required: false)
+            .header('X-API-Key', :string)
+            .ok(RapiTapir::Types.hash({"results" => RapiTapir::Types.array(RapiTapir::Types.object), "total" => RapiTapir::Types.integer}))
             .summary('Search with filters')
             .description('Advanced search with complex filtering')
+            .build
         ]
       end
 

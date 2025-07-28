@@ -11,17 +11,20 @@ RSpec.describe RapiTapir::OpenAPI::SchemaGenerator do
         RapiTapir.get('/users')
           .summary('List all users')
           .description('Returns a list of all users')
-          .out(RapiTapir::Core::Output.new(kind: :json, type: { users: [{ id: :integer, name: :string }] })),
+          .ok(RapiTapir::Types.hash({"users" => RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string}))}))
+          .build,
         
         RapiTapir.get('/users/:id')
           .summary('Get user by ID')
-          .in(RapiTapir::Core::Input.new(kind: :path, name: :id, type: :integer))
-          .out(RapiTapir::Core::Output.new(kind: :json, type: { id: :integer, name: :string })),
+          .path_param(:id, :integer)
+          .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string}))
+          .build,
         
         RapiTapir.post('/users')
           .summary('Create user')
-          .in(RapiTapir::Core::Input.new(kind: :body, name: :user_data, type: { name: :string }))
-          .out(RapiTapir::Core::Output.new(kind: :json, type: { id: :integer, name: :string }))
+          .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string}))
+          .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string}))
+          .build
       ]
     end
 

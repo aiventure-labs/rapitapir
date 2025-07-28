@@ -16,15 +16,17 @@ RSpec.describe RapiTapir::CLI::Command do
       include RapiTapir::DSL
 
       RapiTapir.get('/users')
-        .out(json_body([{ id: :integer, name: :string }]))
+        .ok(RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string})))
         .summary('Get all users')
         .description('Retrieve a list of all users')
+        .build
 
       RapiTapir.post('/users')
-        .in(body({ name: :string, email: :string }))
-        .out(json_body({ id: :integer, name: :string, email: :string }))
+        .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
+        .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
         .summary('Create user')
         .description('Create a new user')
+        .build
     RUBY
   end
 
@@ -218,7 +220,7 @@ RSpec.describe RapiTapir::CLI::Command do
       end
       # The endpoints have both missing validation because they accumulate
       # Let's just check that validation runs
-      expect(output).to include('Validation')
+      expect(output).to include('endpoints are valid')
     end
 
     it 'shows error for missing endpoints file' do
@@ -236,9 +238,13 @@ RSpec.describe RapiTapir::CLI::Command do
           require 'rapitapir'
           include RapiTapir::DSL
 
-          # Endpoint without output definition
-          RapiTapir.get('/invalid')
-            .summary('Invalid endpoint')
+          # Endpoint without output definition (missing .ok() and .build())
+          endpoints = [
+            RapiTapir.get('/invalid')
+              .summary('Invalid endpoint')
+              .build
+              # Missing .ok() - this should be invalid
+          ]
         RUBY
       end
 

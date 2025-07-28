@@ -59,6 +59,27 @@ module RapiTapir
           'Date'
         when :datetime
           'Date'
+        when RapiTapir::Types::String
+          'string'
+        when RapiTapir::Types::Integer
+          'number'
+        when RapiTapir::Types::Float
+          'number'
+        when RapiTapir::Types::Boolean
+          'boolean'
+        when RapiTapir::Types::Date, RapiTapir::Types::DateTime
+          'Date'
+        when RapiTapir::Types::Array
+          "#{convert_to_typescript_type(type.item_type)}[]"
+        when RapiTapir::Types::Hash
+          if type.field_types.empty?
+            'Record<string, any>'
+          else
+            properties = type.field_types.map do |key, value|
+              "#{key}: #{convert_to_typescript_type(value)}"
+            end
+            "{ #{properties.join('; ')} }"
+          end
         when Array
           if type.length == 1
             "#{convert_to_typescript_type(type.first)}[]"

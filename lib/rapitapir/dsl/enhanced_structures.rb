@@ -17,6 +17,14 @@ module RapiTapir
         @content_type = content_type
       end
 
+      def required?
+        @required
+      end
+
+      def optional?
+        !@required
+      end
+
       def to_openapi_spec
         spec = {
           name: @name.to_s,
@@ -68,6 +76,20 @@ module RapiTapir
         @description = description
         @example = example
         @headers = headers || {}
+      end
+
+      # Legacy compatibility method for validators
+      def kind
+        return :status if @type.nil?
+        
+        case @content_type
+        when 'application/json'
+          :json
+        when 'application/xml', 'text/xml'
+          :xml
+        else
+          :json  # Default to json for unknown content types
+        end
       end
 
       def to_openapi_spec

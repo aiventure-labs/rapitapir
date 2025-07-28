@@ -9,10 +9,12 @@ RSpec.describe RapiTapir::Client::GeneratorBase do
   let(:endpoints) do
     [
       RapiTapir.get('/users')
-        .out(json_body([{ id: :integer, name: :string }])),
+        .ok(RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string})))
+        .build,
       RapiTapir.post('/users')
-        .in(body({ name: :string }))
-        .out(json_body({ id: :integer, name: :string }))
+        .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string}))
+        .created(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string}))
+        .build
     ]
   end
 
@@ -69,10 +71,10 @@ RSpec.describe RapiTapir::Client::GeneratorBase do
 
   describe '#method_name_for_endpoint' do
     it 'generates method names for different HTTP methods' do
-      get_endpoint = RapiTapir.get('/users')
-      post_endpoint = RapiTapir.post('/users')
-      put_endpoint = RapiTapir.put('/users/:id')
-      delete_endpoint = RapiTapir.delete('/users/:id')
+      get_endpoint = RapiTapir.get('/users').build
+      post_endpoint = RapiTapir.post('/users').build
+      put_endpoint = RapiTapir.put('/users/:id').path_param(:id, :integer).build
+      delete_endpoint = RapiTapir.delete('/users/:id').path_param(:id, :integer).build
 
       expect(generator.send(:method_name_for_endpoint, get_endpoint)).to eq('getUsers')
       expect(generator.send(:method_name_for_endpoint, post_endpoint)).to eq('createUser')
@@ -81,7 +83,7 @@ RSpec.describe RapiTapir::Client::GeneratorBase do
     end
 
     it 'handles nested paths' do
-      nested_endpoint = RapiTapir.get('/api/v1/users/:id/posts')
+      nested_endpoint = RapiTapir.get('/api/v1/users/:id/posts').path_param(:id, :integer).build
       expect(generator.send(:method_name_for_endpoint, nested_endpoint))
         .to eq('getApiV1UsersPostsById')
     end
@@ -105,12 +107,13 @@ RSpec.describe RapiTapir::Client::GeneratorBase do
   describe 'parameter extraction methods' do
     let(:complex_endpoint) do
       RapiTapir.get('/users/:id')
-        .in(path_param(:id, :integer))
-        .in(query(:include, :string))
-        .in(query(:format, :string, optional: true))
-        .in(header(:authorization, :string))
-        .in(body({ data: :string }))
-        .out(json_body({ id: :integer, name: :string }))
+        .path_param(:id, :integer)
+        .query(:include, :string)
+        .query(:format, :string, required: false)
+        .header(:authorization, :string)
+        .json_body(RapiTapir::Types.hash({"data" => RapiTapir::Types.string}))
+        .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string}))
+        .build
     end
 
     describe '#path_parameters' do
@@ -139,7 +142,9 @@ RSpec.describe RapiTapir::Client::GeneratorBase do
         body = generator.send(:request_body, complex_endpoint)
         expect(body).not_to be_nil
         expect(body.kind).to eq(:body)
-        expect(body.type).to eq({ data: :string })
+        expect(body.type).to be_a(RapiTapir::Types::Hash)
+        expect(body.type.field_types.keys).to include("data")
+        expect(body.type.field_types["data"]).to be_a(RapiTapir::Types::String)
       end
 
       it 'returns nil when no body' do
@@ -152,7 +157,10 @@ RSpec.describe RapiTapir::Client::GeneratorBase do
     describe '#response_type' do
       it 'extracts response type from outputs' do
         response = generator.send(:response_type, complex_endpoint)
-        expect(response).to eq({ id: :integer, name: :string })
+        expect(response).to be_a(RapiTapir::Types::Hash)
+        expect(response.field_types.keys).to include("id", "name")
+        expect(response.field_types["id"]).to be_a(RapiTapir::Types::Integer)
+        expect(response.field_types["name"]).to be_a(RapiTapir::Types::String)
       end
 
       it 'returns nil when no outputs' do

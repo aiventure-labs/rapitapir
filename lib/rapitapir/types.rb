@@ -91,8 +91,8 @@ module RapiTapir
       Array.new(item_type, **options)
     end
 
-    def self.hash(**field_types)
-      Hash.new(field_types)
+    def self.hash(field_types = {}, **options)
+      Hash.new(field_types, **options)
     end
 
     def self.optional(type)

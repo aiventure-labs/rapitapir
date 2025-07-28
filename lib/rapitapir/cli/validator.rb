@@ -171,6 +171,8 @@ module RapiTapir
           end
         when Class
           # Allow custom classes
+        when RapiTapir::Types::Base
+          # Enhanced types - these are valid
         else
           @errors << "#{context}: Invalid type '#{type}'"
         end

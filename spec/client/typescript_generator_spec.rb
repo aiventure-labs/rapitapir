@@ -10,27 +10,31 @@ RSpec.describe RapiTapir::Client::TypescriptGenerator do
     [
       # Simple GET endpoint
       RapiTapir.get('/users')
-        .out(json_body([{ id: :integer, name: :string }]))
-        .summary('Get all users'),
+        .ok(RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string})))
+        .summary('Get all users')
+        .build,
 
       # GET with path parameter
       RapiTapir.get('/users/:id')
-        .in(path_param(:id, :integer))
-        .out(json_body({ id: :integer, name: :string, email: :string }))
-        .summary('Get user by ID'),
+        .path_param(:id, :integer)
+        .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
+        .summary('Get user by ID')
+        .build,
 
       # POST with body
       RapiTapir.post('/users')
-        .in(body({ name: :string, email: :string }))
-        .out(json_body({ id: :integer, name: :string, email: :string }))
-        .summary('Create user'),
+        .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
+        .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
+        .summary('Create user')
+        .build,
 
       # GET with query parameters
       RapiTapir.get('/users/search')
-        .in(query(:q, :string))
-        .in(query(:limit, :integer, optional: true))
-        .out(json_body([{ id: :integer, name: :string }]))
+        .query(:q, :string)
+        .query(:limit, :integer, required: false)
+        .ok(RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string})))
         .summary('Search users')
+        .build
     ]
   end
 
@@ -148,9 +152,9 @@ RSpec.describe RapiTapir::Client::TypescriptGenerator do
 
   describe 'method name generation' do
     it 'generates proper method names for different HTTP methods' do
-      get_endpoint = RapiTapir.get('/users')
-      post_endpoint = RapiTapir.post('/users')
-      get_by_id_endpoint = RapiTapir.get('/users/:id')
+      get_endpoint = RapiTapir.get('/users').build
+      post_endpoint = RapiTapir.post('/users').build
+      get_by_id_endpoint = RapiTapir.get('/users/:id').build
 
       expect(generator.send(:method_name_for_endpoint, get_endpoint)).to eq('getUsers')
       expect(generator.send(:method_name_for_endpoint, post_endpoint)).to eq('createUser')
@@ -158,7 +162,7 @@ RSpec.describe RapiTapir::Client::TypescriptGenerator do
     end
 
     it 'handles complex paths correctly' do
-      search_endpoint = RapiTapir.get('/users/search')
+      search_endpoint = RapiTapir.get('/users/search').build
       
       expect(generator.send(:method_name_for_endpoint, search_endpoint)).to eq('getUsersSearch')
     end
@@ -167,16 +171,17 @@ RSpec.describe RapiTapir::Client::TypescriptGenerator do
   describe 'parameter extraction' do
     let(:endpoint_with_params) do
       RapiTapir.get('/users/:id')
-        .in(path_param(:id, :integer))
-        .in(query(:include, :string, optional: true))
-        .in(body({ name: :string }))
+        .path_param(:id, :integer)
+        .query(:include, :string, required: false)
+        .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string}))
+        .build
     end
 
     it 'extracts path parameters correctly' do
       path_params = generator.send(:path_parameters, endpoint_with_params)
       expect(path_params.length).to eq(1)
       expect(path_params.first.name).to eq(:id)
-      expect(path_params.first.type).to eq(:integer)
+      expect(path_params.first.type).to be_a(RapiTapir::Types::Integer)
     end
 
     it 'extracts query parameters correctly' do
@@ -189,7 +194,7 @@ RSpec.describe RapiTapir::Client::TypescriptGenerator do
     it 'extracts request body correctly' do
       body_param = generator.send(:request_body, endpoint_with_params)
       expect(body_param).not_to be_nil
-      expect(body_param.type).to eq({ name: :string })
+      expect(body_param.type).to be_a(RapiTapir::Types::Hash)
     end
   end
 end

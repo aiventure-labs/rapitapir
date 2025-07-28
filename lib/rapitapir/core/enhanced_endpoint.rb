@@ -9,8 +9,6 @@ module RapiTapir
   module Core
     # Enhanced Endpoint class that integrates with the new type system
     class EnhancedEndpoint < Endpoint
-      include DSL::EnhancedEndpointDSL
-
       attr_reader :security_schemes, :custom_validators
 
       def initialize(method: nil, path: nil, inputs: [], outputs: [], errors: [], metadata: {})
@@ -19,48 +17,13 @@ module RapiTapir
         @custom_validators = []
       end
 
-      # Override input methods to use enhanced DSL
-      def in(input_def, **options)
-        case input_def
-        when DSL::EnhancedInput
-          copy_with(inputs: inputs + [input_def])
-        when Hash
-          # Handle hash-based input definitions
-          if input_def.key?(:query)
-            copy_with(inputs: inputs + [query(input_def[:name] || :query, input_def[:query], **options)])
-          elsif input_def.key?(:path)
-            copy_with(inputs: inputs + [path_param(input_def[:name] || :path, input_def[:path], **options)])
-          elsif input_def.key?(:header)
-            copy_with(inputs: inputs + [header(input_def[:name] || :header, input_def[:header], **options)])
-          elsif input_def.key?(:body)
-            copy_with(inputs: inputs + [json_body(input_def[:body], **options)])
-          else
-            raise ArgumentError, "Unknown input definition: #{input_def}"
-          end
-        else
-          # Fallback to parent implementation for backward compatibility
-          super(input_def)
-        end
-      end
-
-      def out(output_def, **options)
-        case output_def
-        when DSL::EnhancedOutput
-          copy_with(outputs: outputs + [output_def])
-        when Hash
-          if output_def.key?(:json)
-            copy_with(outputs: outputs + [out_json(output_def[:json], **options)])
-          elsif output_def.key?(:text)
-            copy_with(outputs: outputs + [out_text(output_def[:text], **options)])
-          elsif output_def.key?(:status)
-            copy_with(outputs: outputs + [out_status(output_def[:status])])
-          else
-            raise ArgumentError, "Unknown output definition: #{output_def}"
-          end
-        else
-          # Fallback to parent implementation for backward compatibility
-          super(output_def)
-        end
+      # Type validation helpers
+      def validate_with_type(type, value)
+        return true if type.nil?
+        type.validate(value)
+        true
+      rescue Types::CoercionError => e
+        raise ValidationError, "Type validation failed: #{e.message}"
       end
 
       # Enhanced error handling with typed errors

@@ -20,15 +20,17 @@ RSpec.describe RapiTapir::CLI::Server do
       require 'rapitapir'
 
       RapiTapir.get('/users')
-        .out(json_body([{ id: :integer, name: :string }]))
+        .ok(RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string})))
         .summary('Get all users')
         .description('Retrieve a list of all users')
+        .build
 
       RapiTapir.post('/users')
-        .in(body({ name: :string, email: :string }))
-        .out(json_body({ id: :integer, name: :string, email: :string }))
+        .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
+        .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
         .summary('Create user')
         .description('Create a new user')
+        .build
     RUBY
   end
 

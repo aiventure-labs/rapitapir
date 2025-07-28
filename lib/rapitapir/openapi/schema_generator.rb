@@ -205,6 +205,32 @@ module RapiTapir
 
       def type_to_schema(type)
         case type
+        when RapiTapir::Types::String
+          { type: 'string' }
+        when RapiTapir::Types::Integer
+          { type: 'integer' }
+        when RapiTapir::Types::Float
+          { type: 'number' }
+        when RapiTapir::Types::Boolean
+          { type: 'boolean' }
+        when RapiTapir::Types::Array
+          { type: 'array', items: type_to_schema(type.item_type) }
+        when RapiTapir::Types::Hash
+          if type.field_types.empty?
+            { type: 'object' }
+          else
+            properties = {}
+            required = []
+            
+            type.field_types.each do |key, value|
+              properties[key.to_s] = type_to_schema(value)
+              required << key.to_s unless value.nil?
+            end
+            
+            schema = { type: 'object', properties: properties }
+            schema[:required] = required if required.any?
+            schema
+          end
         when :string, String
           { type: 'string' }
         when :integer, Integer
