@@ -10,6 +10,13 @@ require_relative 'rapitapir/core/request'
 require_relative 'rapitapir/core/response'
 require_relative 'rapitapir/dsl/endpoint_dsl'
 
+# Enhanced components for Phase 1
+require_relative 'rapitapir/core/enhanced_endpoint'
+require_relative 'rapitapir/dsl/enhanced_endpoint_dsl'
+require_relative 'rapitapir/server/enhanced_rack_adapter'
+require_relative 'rapitapir/server/sinatra_integration'
+require_relative 'rapitapir/dsl/fluent_dsl'
+
 # Server components (optional, only load if needed)
 begin
   require_relative 'rapitapir/server/rack_adapter'
@@ -53,8 +60,7 @@ rescue LoadError
 end
 
 module RapiTapir
-  extend DSL
-
+  # Will be extended with FluentDSL later
   @endpoints = []
 
   def self.endpoints
@@ -70,36 +76,8 @@ module RapiTapir
     @endpoints.clear
   end
 
-  # Convenience methods for creating endpoints
+  # Convenience methods for creating endpoints (will be replaced by FluentDSL)
   def self.endpoint
     Core::Endpoint.new
-  end
-
-  def self.get(path = nil)
-    register_endpoint(Core::Endpoint.get(path))
-  end
-
-  def self.post(path = nil)
-    register_endpoint(Core::Endpoint.post(path))
-  end
-
-  def self.put(path = nil)
-    register_endpoint(Core::Endpoint.put(path))
-  end
-
-  def self.patch(path = nil)
-    register_endpoint(Core::Endpoint.patch(path))
-  end
-
-  def self.delete(path = nil)
-    register_endpoint(Core::Endpoint.delete(path))
-  end
-
-  def self.options(path = nil)
-    register_endpoint(Core::Endpoint.options(path))
-  end
-
-  def self.head(path = nil)
-    register_endpoint(Core::Endpoint.head(path))
   end
 end
