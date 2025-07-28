@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require_relative 'rapitapir/version'
+require_relative 'rapitapir/types'
+require_relative 'rapitapir/schema'
 require_relative 'rapitapir/core/endpoint'
 require_relative 'rapitapir/core/input'
 require_relative 'rapitapir/core/output'

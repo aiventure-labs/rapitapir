@@ -10,7 +10,7 @@ require 'rapitapir/cli/command'
 
 # Run the CLI command
 begin
-  RapiTapir::CLI::Command.new.run(ARGV)
+  RapiTapir::CLI::Command.new(ARGV).run
 rescue Interrupt
   puts "\nInterrupted"
   exit 1
