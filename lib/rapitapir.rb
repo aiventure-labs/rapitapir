@@ -20,6 +20,9 @@ require_relative 'rapitapir/dsl/fluent_dsl'
 # Observability components (Phase 2.1)
 require_relative 'rapitapir/observability'
 
+# Authentication & Security components (Phase 2.2)
+require_relative 'rapitapir/auth'
+
 # Server components (optional, only load if needed)
 begin
   require_relative 'rapitapir/server/rack_adapter'

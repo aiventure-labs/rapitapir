@@ -1,0 +1,395 @@
+# frozen_string_literal: true
+
+require 'base64'
+require 'json'
+require 'openssl'
+require_relative 'configuration'
+require_relative 'errors'
+require_relative 'context'
+
+module RapiTapir
+  module Auth
+    module Schemes
+      class Base
+        attr_reader :name, :config
+
+        def initialize(name, config = {})
+          @name = name
+          @config = config
+        end
+
+        def authenticate(request)
+          raise NotImplementedError, "Subclasses must implement #authenticate"
+        end
+
+        def challenge
+          raise NotImplementedError, "Subclasses must implement #challenge"
+        end
+
+        protected
+
+        def create_context(user: nil, scopes: [], token: nil, metadata: {})
+          Context.new(
+            user: user,
+            scopes: scopes,
+            token: token,
+            metadata: metadata.merge(scheme: @name)
+          )
+        end
+      end
+
+      class BearerToken < Base
+        def initialize(name, config = {})
+          super(name, config)
+          @token_validator = config[:token_validator] || method(:default_token_validator)
+          @realm = config[:realm] || 'API'
+        end
+
+        def authenticate(request)
+          auth_header = request.env['HTTP_AUTHORIZATION']
+          return nil unless auth_header
+
+          token = extract_bearer_token(auth_header)
+          return nil unless token
+
+          user_data = @token_validator.call(token)
+          return nil unless user_data
+
+          create_context(
+            user: user_data[:user],
+            scopes: user_data[:scopes] || [],
+            token: token,
+            metadata: { token_type: 'bearer' }
+          )
+        rescue InvalidTokenError
+          nil
+        end
+
+        def challenge
+          "Bearer realm=\"#{@realm}\""
+        end
+
+        private
+
+        def extract_bearer_token(auth_header)
+          match = auth_header.match(/\ABearer\s+(.+)\z/i)
+          match ? match[1] : nil
+        end
+
+        def default_token_validator(token)
+          # Default implementation - should be overridden
+          return nil if token.nil? || token.empty?
+          
+          { 
+            user: { id: 'default_user', name: 'Default User' },
+            scopes: ['read']
+          }
+        end
+      end
+
+      class ApiKey < Base
+        def initialize(name, config = {})
+          super(name, config)
+          @key_validator = config[:key_validator] || method(:default_key_validator)
+          @header_name = config[:header_name] || 'X-API-Key'
+          @query_param = config[:query_param] || 'api_key'
+          @location = config[:location] || :header # :header, :query, or :both
+        end
+
+        def authenticate(request)
+          api_key = extract_api_key(request)
+          return nil unless api_key
+
+          user_data = @key_validator.call(api_key)
+          return nil unless user_data
+
+          create_context(
+            user: user_data[:user],
+            scopes: user_data[:scopes] || [],
+            token: api_key,
+            metadata: { 
+              token_type: 'api_key',
+              location: @location
+            }
+          )
+        rescue InvalidTokenError
+          nil
+        end
+
+        def challenge
+          "ApiKey"
+        end
+
+        private
+
+        def extract_api_key(request)
+          case @location
+          when :header
+            request.env["HTTP_#{@header_name.upcase.tr('-', '_')}"]
+          when :query
+            request.params[@query_param]
+          when :both
+            request.env["HTTP_#{@header_name.upcase.tr('-', '_')}"] || 
+              request.params[@query_param]
+          end
+        end
+
+        def default_key_validator(key)
+          # Default implementation - should be overridden
+          return nil if key.nil? || key.empty?
+          
+          { 
+            user: { id: 'api_user', name: 'API User' },
+            scopes: ['api']
+          }
+        end
+      end
+
+      class BasicAuth < Base
+        def initialize(name, config = {})
+          super(name, config)
+          @credential_validator = config[:credential_validator] || method(:default_credential_validator)
+          @realm = config[:realm] || 'API'
+        end
+
+        def authenticate(request)
+          auth_header = request.env['HTTP_AUTHORIZATION']
+          return nil unless auth_header
+
+          credentials = extract_basic_credentials(auth_header)
+          return nil unless credentials
+
+          user_data = @credential_validator.call(credentials[:username], credentials[:password])
+          return nil unless user_data
+
+          create_context(
+            user: user_data[:user],
+            scopes: user_data[:scopes] || [],
+            metadata: { 
+              token_type: 'basic',
+              username: credentials[:username]
+            }
+          )
+        rescue AuthenticationError
+          nil
+        end
+
+        def challenge
+          "Basic realm=\"#{@realm}\""
+        end
+
+        private
+
+        def extract_basic_credentials(auth_header)
+          match = auth_header.match(/\ABasic\s+(.+)\z/i)
+          return nil unless match
+
+          decoded = Base64.decode64(match[1])
+          username, password = decoded.split(':', 2)
+          
+          return nil if username.nil? || password.nil?
+
+          { username: username, password: password }
+        rescue ArgumentError
+          nil
+        end
+
+        def default_credential_validator(username, password)
+          # Default implementation - should be overridden
+          return nil if username.nil? || password.nil? || username.empty? || password.empty?
+          
+          { 
+            user: { id: username, name: username.capitalize },
+            scopes: ['basic']
+          }
+        end
+      end
+
+      class OAuth2 < Base
+        def initialize(name, config = {})
+          super(name, config)
+          @token_validator = config[:token_validator] || method(:default_oauth2_validator)
+          @introspection_endpoint = config[:introspection_endpoint]
+          @client_id = config[:client_id]
+          @client_secret = config[:client_secret]
+          @realm = config[:realm] || 'API'
+        end
+
+        def authenticate(request)
+          auth_header = request.env['HTTP_AUTHORIZATION']
+          return nil unless auth_header
+
+          token = extract_bearer_token(auth_header)
+          return nil unless token
+
+          user_data = validate_oauth2_token(token)
+          return nil unless user_data
+
+          create_context(
+            user: user_data[:user],
+            scopes: user_data[:scopes] || [],
+            token: token,
+            metadata: { 
+              token_type: 'oauth2',
+              client_id: user_data[:client_id],
+              expires_at: user_data[:expires_at]
+            }
+          )
+        rescue InvalidTokenError, TokenExpiredError
+          nil
+        end
+
+        def challenge
+          "Bearer realm=\"#{@realm}\""
+        end
+
+        private
+
+        def extract_bearer_token(auth_header)
+          match = auth_header.match(/\ABearer\s+(.+)\z/i)
+          match ? match[1] : nil
+        end
+
+        def validate_oauth2_token(token)
+          if @introspection_endpoint
+            introspect_token(token)
+          else
+            @token_validator.call(token)
+          end
+        end
+
+        def introspect_token(token)
+          # OAuth2 token introspection (RFC 7662)
+          # This would typically make an HTTP request to the introspection endpoint
+          # For now, we'll use the configured validator
+          @token_validator.call(token)
+        end
+
+        def default_oauth2_validator(token)
+          # Default implementation - should be overridden
+          return nil if token.nil? || token.empty?
+          
+          { 
+            user: { id: 'oauth_user', name: 'OAuth User' },
+            scopes: ['read', 'write'],
+            client_id: 'default_client',
+            expires_at: Time.now + 3600
+          }
+        end
+      end
+
+      class JWT < Base
+        def initialize(name, config = {})
+          super(name, config)
+          @secret = config[:secret] || raise(ArgumentError, "JWT secret is required")
+          @algorithm = config[:algorithm] || 'HS256'
+          @verify_expiration = config.fetch(:verify_expiration, true)
+          @verify_issuer = config[:verify_issuer]
+          @verify_audience = config[:verify_audience]
+          @realm = config[:realm] || 'API'
+        end
+
+        def authenticate(request)
+          auth_header = request.env['HTTP_AUTHORIZATION']
+          return nil unless auth_header
+
+          token = extract_bearer_token(auth_header)
+          return nil unless token
+
+          payload = decode_jwt_token(token)
+          return nil unless payload
+
+          create_context(
+            user: extract_user_from_payload(payload),
+            scopes: extract_scopes_from_payload(payload),
+            token: token,
+            metadata: { 
+              token_type: 'jwt',
+              payload: payload
+            }
+          )
+        rescue InvalidTokenError, TokenExpiredError
+          nil
+        end
+
+        def challenge
+          "Bearer realm=\"#{@realm}\""
+        end
+
+        private
+
+        def extract_bearer_token(auth_header)
+          match = auth_header.match(/\ABearer\s+(.+)\z/i)
+          match ? match[1] : nil
+        end
+
+        def decode_jwt_token(token)
+          # This is a simplified JWT decoder
+          # In a real implementation, you'd use a library like ruby-jwt
+          parts = token.split('.')
+          return nil unless parts.length == 3
+
+          begin
+            # Add padding if needed
+            header_b64 = parts[0]
+            header_b64 += '=' * (4 - header_b64.length % 4) if header_b64.length % 4 != 0
+            
+            payload_b64 = parts[1]
+            payload_b64 += '=' * (4 - payload_b64.length % 4) if payload_b64.length % 4 != 0
+            
+            header = JSON.parse(Base64.urlsafe_decode64(header_b64))
+            payload = JSON.parse(Base64.urlsafe_decode64(payload_b64))
+            signature = parts[2]
+
+            # Verify signature (simplified)
+            expected_signature = Base64.urlsafe_encode64(
+              OpenSSL::HMAC.digest('SHA256', @secret, "#{parts[0]}.#{parts[1]}")
+            ).tr('=', '')
+
+            return nil unless signature == expected_signature
+
+            # Verify expiration
+            if @verify_expiration && payload['exp']
+              return nil if Time.at(payload['exp']) < Time.now
+            end
+
+            # Verify issuer
+            if @verify_issuer && payload['iss'] != @verify_issuer
+              return nil
+            end
+
+            # Verify audience
+            if @verify_audience && payload['aud'] != @verify_audience
+              return nil
+            end
+
+            payload
+          rescue JSON::ParserError, ArgumentError
+            nil
+          end
+        end
+
+        def extract_user_from_payload(payload)
+          user_data = payload['user'] || payload['sub']
+          return { id: user_data, name: user_data } if user_data.is_a?(String)
+          
+          user_data || { id: payload['sub'], name: payload['name'] || payload['sub'] }
+        end
+
+        def extract_scopes_from_payload(payload)
+          scopes = payload['scopes'] || payload['scope']
+          return [] unless scopes
+
+          case scopes
+          when Array
+            scopes
+          when String
+            scopes.split(' ')
+          else
+            []
+          end
+        end
+      end
+    end
+  end
+end
