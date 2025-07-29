@@ -170,13 +170,24 @@ module RapiTapir
 
         # Error responses
         endpoint.errors.each do |error_entry|
-          status_code = error_entry[:code] || 400
+          # Handle both old hash format and new EnhancedError objects
+          if error_entry.respond_to?(:status_code)
+            # New EnhancedError format
+            status_code = error_entry.status_code
+            description = error_entry.description || "Error response"
+            schema = error_entry.type ? type_to_schema(error_entry.type) : type_to_schema({ error: :string })
+          else
+            # Old hash format (fallback)
+            status_code = error_entry[:code] || 400
+            description = error_entry[:description] || "Error response"
+            schema = type_to_schema(error_entry[:output]&.type || { error: :string })
+          end
           
           responses[status_code.to_s] = {
-            description: "Error response",
+            description: description,
             content: {
               'application/json' => {
-                schema: type_to_schema(error_entry[:output]&.type || { error: :string })
+                schema: schema
               }
             }
           }
