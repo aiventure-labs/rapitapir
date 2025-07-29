@@ -20,10 +20,16 @@ Please follow these conventions when generating or suggesting code in this repos
 - Use `attr_reader` for simple attribute accessors.
 - Use `freeze` on data structures to prevent accidental mutation.
 - Use `# frozen_string_literal: true` at the top of files to enforce immutability.
+- Write comprehensive comments and documentation for public APIs.
+- Use SOLID principles for class design.
+- Write reusable, composable code that can be easily extended.
+- Write code that is easy to read and understand, avoiding unnecessary complexity.
+- Write code that is idiomatic Ruby, leveraging built-in methods and libraries where appropriate.
+- Write tests before implementing new features or fixing bugs, then implement the code to pass those tests
+- Write tests and ensure high coverage (aim for >90%).
 - Write tests for all new features and bug fixes.
 - Use RSpec for tests, following the conventions in `spec/`.
 - Run tests with `bundle exec rspec` and ensure they pass before submitting changes.
-- Use SOLID principles for class design.
 
 ### File Layout
 
