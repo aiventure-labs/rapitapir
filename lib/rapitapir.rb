@@ -17,6 +17,9 @@ require_relative 'rapitapir/server/enhanced_rack_adapter'
 require_relative 'rapitapir/server/sinatra_integration'
 require_relative 'rapitapir/dsl/fluent_dsl'
 
+# Observability components (Phase 2.1)
+require_relative 'rapitapir/observability'
+
 # Server components (optional, only load if needed)
 begin
   require_relative 'rapitapir/server/rack_adapter'
@@ -74,6 +77,47 @@ module RapiTapir
 
   def self.clear_endpoints
     @endpoints.clear
+  end
+
+  # Observability configuration
+  def self.configure
+    yield(Observability.configuration) if block_given?
+    
+    # Initialize observability components after configuration
+    if Observability.config.metrics.enabled
+      Observability::Metrics.configure(
+        provider: Observability.config.metrics.provider,
+        namespace: Observability.config.metrics.namespace,
+        custom_labels: Observability.config.metrics.custom_labels
+      )
+    end
+    
+    if Observability.config.tracing.enabled
+      Observability::Tracing.configure(
+        service_name: Observability.config.tracing.service_name,
+        service_version: Observability.config.tracing.service_version,
+        provider: Observability.config.tracing.provider
+      )
+    end
+    
+    if Observability.config.logging.enabled
+      Observability::Logging.configure(
+        level: Observability.config.logging.level,
+        format: Observability.config.logging.format,
+        structured: Observability.config.logging.structured
+      )
+    end
+    
+    if Observability.config.health_check.enabled
+      Observability::HealthCheck.configure(
+        endpoint: Observability.config.health_check.endpoint
+      )
+      
+      # Register custom health checks
+      Observability.config.health_check.checks.each do |check|
+        Observability::HealthCheck.register(check[:name], &check[:check])
+      end
+    end
   end
 
   # Convenience methods for creating endpoints (will be replaced by FluentDSL)

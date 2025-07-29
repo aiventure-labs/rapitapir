@@ -80,7 +80,53 @@ module RapiTapir
         validate_with(->(data) { Schema.validate!(data, resolve_type(schema_def)) })
       end
 
+      # Observability DSL methods (Phase 2.1)
+      def with_metrics(metric_name = nil)
+        @metric_name = metric_name || generate_metric_name
+        self
+      end
+
+      def with_tracing(span_name = nil)
+        @trace_span_name = span_name || generate_span_name
+        self
+      end
+
+      def with_logging(level: :info, structured: true, fields: nil)
+        @log_config = {
+          level: level,
+          structured: structured,
+          fields: fields
+        }
+        self
+      end
+
+      def metric_name
+        @metric_name
+      end
+
+      def trace_span_name
+        @trace_span_name
+      end
+
+      def log_config
+        @log_config
+      end
+
       private
+
+      def generate_metric_name
+        # Generate a metric name based on HTTP method and path
+        method = @method&.downcase || 'unknown'
+        path = @path&.gsub(/[\/:]/, '_')&.gsub(/_{2,}/, '_')&.strip('_') || 'unknown'
+        "#{method}_#{path}"
+      end
+
+      def generate_span_name
+        # Generate a span name for tracing
+        method = @method&.upcase || 'UNKNOWN'
+        path = @path || '/unknown'
+        "HTTP #{method} #{path}"
+      end
 
       def resolve_type(type_def)
         case type_def
