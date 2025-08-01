@@ -1,9 +1,14 @@
 # frozen_string_literal: true
 
-require 'simplecov'
-SimpleCov.start do
-  add_filter '/spec/'
-  add_filter '/vendor/'
+# Only enable SimpleCov in supported environments
+if ENV['COVERAGE'] != 'false'
+  require 'simplecov'
+  SimpleCov.start do
+    add_filter '/spec/'
+    add_filter '/vendor/'
+    # Skip SimpleCov in CI for compatibility
+    enable_coverage(:branch) unless ENV['CI']
+  end
 end
 
 require 'rspec'
