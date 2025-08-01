@@ -371,26 +371,57 @@ module RapiTapir
         anchor = generate_anchor(method, path)
         method_class = "method-#{method.downcase}"
 
+        sections = build_endpoint_sections(endpoint)
+
+        build_endpoint_html_structure(method, path, anchor, method_class, sections, endpoint)
+      end
+
+      def build_endpoint_sections(endpoint)
         sections = []
 
-        # Path parameters
+        sections << build_path_params_section(endpoint)
+        sections << build_query_params_section(endpoint)
+        sections << build_body_section(endpoint)
+        sections << build_response_section(endpoint)
+        sections << build_try_it_section(endpoint)
+
+        sections.compact
+      end
+
+      def build_path_params_section(endpoint)
         path_params = endpoint.inputs.select { |input| input.kind == :path }
-        sections << generate_params_section('Path Parameters', path_params) if path_params.any?
+        return nil unless path_params.any?
 
-        # Query parameters
+        generate_params_section('Path Parameters', path_params)
+      end
+
+      def build_query_params_section(endpoint)
         query_params = endpoint.inputs.select { |input| input.kind == :query }
-        sections << generate_params_section('Query Parameters', query_params) if query_params.any?
+        return nil unless query_params.any?
 
-        # Request body
+        generate_params_section('Query Parameters', query_params)
+      end
+
+      def build_body_section(endpoint)
         body_param = endpoint.inputs.find { |input| input.kind == :body }
-        sections << generate_body_section(body_param) if body_param
+        return nil unless body_param
 
-        # Response
-        sections << generate_response_section(endpoint.outputs) if endpoint.outputs.any?
+        generate_body_section(body_param)
+      end
 
-        # Try it section
-        sections << generate_try_it_section(endpoint) if config[:include_try_it]
+      def build_response_section(endpoint)
+        return nil unless endpoint.outputs.any?
 
+        generate_response_section(endpoint.outputs)
+      end
+
+      def build_try_it_section(endpoint)
+        return nil unless config[:include_try_it]
+
+        generate_try_it_section(endpoint)
+      end
+
+      def build_endpoint_html_structure(method, path, anchor, method_class, sections, endpoint)
         <<~HTML
           <div class="endpoint" id="#{anchor}">
             <div class="endpoint-header">
@@ -398,18 +429,26 @@ module RapiTapir
                 <span class="method-badge #{method_class}">#{method}</span>
                 <span class="endpoint-path">#{path}</span>
               </div>
-              #{if endpoint.metadata[:summary]
-                  "<div class=\"endpoint-summary\"><strong>#{endpoint.metadata[:summary]}</strong></div>"
-                end}
-              #{if endpoint.metadata[:description]
-                  "<div class=\"endpoint-description\">#{endpoint.metadata[:description]}</div>"
-                end}
+              #{build_endpoint_summary(endpoint)}
+              #{build_endpoint_description(endpoint)}
             </div>
             <div class="endpoint-content">
               #{sections.join}
             </div>
           </div>
         HTML
+      end
+
+      def build_endpoint_summary(endpoint)
+        return '' unless endpoint.metadata[:summary]
+
+        "<div class=\"endpoint-summary\"><strong>#{endpoint.metadata[:summary]}</strong></div>"
+      end
+
+      def build_endpoint_description(endpoint)
+        return '' unless endpoint.metadata[:description]
+
+        "<div class=\"endpoint-description\">#{endpoint.metadata[:description]}</div>"
       end
 
       def generate_params_section(title, params)

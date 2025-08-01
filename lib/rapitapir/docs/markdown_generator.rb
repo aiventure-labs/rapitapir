@@ -215,10 +215,19 @@ module RapiTapir
 
       def generate_curl_example(endpoint)
         method = endpoint.method.to_s.upcase
-        path = endpoint.path
+        example_path = build_example_path(endpoint.path, endpoint)
 
-        # Replace path parameters with example values
-        example_path = path.gsub(/:(\w+)/) do |_match|
+        curl_parts = build_curl_parts(method, endpoint, example_path)
+        curl_parts.join(' \\\n  ')
+      end
+
+      def build_example_path(path, endpoint)
+        example_path = replace_path_parameters(path)
+        add_query_parameters(example_path, endpoint)
+      end
+
+      def replace_path_parameters(path)
+        path.gsub(/:(\w+)/) do |_match|
           param_name = ::Regexp.last_match(1)
           case param_name
           when 'id' then '123'
@@ -226,39 +235,55 @@ module RapiTapir
           else 'example-value'
           end
         end
+      end
 
+      def add_query_parameters(example_path, endpoint)
+        query_params = endpoint.inputs.select { |input| input.kind == :query }
+        return example_path unless query_params.any?
+
+        query_string = build_query_string(query_params)
+        "#{example_path}?#{query_string}"
+      end
+
+      def build_query_string(query_params)
+        query_params.map do |param|
+          example_value = generate_param_example_value(param.type)
+          "#{param.name}=#{example_value}"
+        end.join('&')
+      end
+
+      def generate_param_example_value(param_type)
+        case param_type
+        when :string then 'example'
+        when :integer then '10'
+        when :boolean then 'true'
+        else 'value'
+        end
+      end
+
+      def build_curl_parts(method, endpoint, example_path)
         curl_parts = ["curl -X #{method}"]
 
-        # Add headers
-        curl_parts << "-H 'Content-Type: application/json'"
-        curl_parts << "-H 'Accept: application/json'"
-
-        # Add query parameters example
-        query_params = endpoint.inputs.select { |input| input.kind == :query }
-        if query_params.any?
-          query_string = query_params.map do |param|
-            example_value = case param.type
-                            when :string then 'example'
-                            when :integer then '10'
-                            when :boolean then 'true'
-                            else 'value'
-                            end
-            "#{param.name}=#{example_value}"
-          end.join('&')
-          example_path += "?#{query_string}"
-        end
-
-        # Add request body
-        body_param = endpoint.inputs.find { |input| input.kind == :body }
-        if body_param
-          body_example = format_schema_example(body_param.type)
-          curl_parts << "-d '#{body_example}'"
-        end
-
-        # Add URL
+        curl_parts.concat(build_curl_headers)
+        curl_parts.concat(build_curl_body(endpoint))
         curl_parts << "'#{config[:base_url]}#{example_path}'"
 
-        curl_parts.join(' \\\n  ')
+        curl_parts
+      end
+
+      def build_curl_headers
+        [
+          "-H 'Content-Type: application/json'",
+          "-H 'Accept: application/json'"
+        ]
+      end
+
+      def build_curl_body(endpoint)
+        body_param = endpoint.inputs.find { |input| input.kind == :body }
+        return [] unless body_param
+
+        body_example = format_schema_example(body_param.type)
+        ["-d '#{body_example}'"]
       end
 
       def generate_response_example(endpoint)

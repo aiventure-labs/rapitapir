@@ -155,7 +155,14 @@ module RapiTapir
       def generate_responses(endpoint)
         responses = {}
 
-        # Success responses
+        generate_success_responses(endpoint, responses)
+        generate_error_responses(endpoint, responses)
+        add_default_response_if_needed(responses)
+
+        responses
+      end
+
+      def generate_success_responses(endpoint, responses)
         endpoint.outputs.each do |output|
           status_code = determine_status_code(output)
           content_type = determine_output_content_type(output)
@@ -169,23 +176,31 @@ module RapiTapir
             }
           }
         end
+      end
 
-        # Error responses
+      def generate_error_responses(endpoint, responses)
         endpoint.errors.each do |error_entry|
-          # Handle both old hash format and new EnhancedError objects
-          if error_entry.respond_to?(:status_code)
-            # New EnhancedError format
-            status_code = error_entry.status_code
-            description = error_entry.description || 'Error response'
-            schema = type_to_schema(error_entry.type || { error: :string })
-          else
-            # Old hash format (fallback)
-            status_code = error_entry[:code] || 400
-            description = error_entry[:description] || 'Error response'
-            schema = type_to_schema(error_entry[:output]&.type || { error: :string })
-          end
+          error_response = build_error_response(error_entry)
+          responses[error_response[:status_code].to_s] = error_response[:response]
+        end
+      end
 
-          responses[status_code.to_s] = {
+      def build_error_response(error_entry)
+        if error_entry.respond_to?(:status_code)
+          build_enhanced_error_response(error_entry)
+        else
+          build_legacy_error_response(error_entry)
+        end
+      end
+
+      def build_enhanced_error_response(error_entry)
+        status_code = error_entry.status_code
+        description = error_entry.description || 'Error response'
+        schema = type_to_schema(error_entry.type || { error: :string })
+
+        {
+          status_code: status_code,
+          response: {
             description: description,
             content: {
               'application/json' => {
@@ -193,16 +208,33 @@ module RapiTapir
               }
             }
           }
-        end
+        }
+      end
 
-        # Default success response if none specified
-        if responses.empty?
-          responses['200'] = {
-            description: 'Successful response'
+      def build_legacy_error_response(error_entry)
+        status_code = error_entry[:code] || 400
+        description = error_entry[:description] || 'Error response'
+        schema = type_to_schema(error_entry[:output]&.type || { error: :string })
+
+        {
+          status_code: status_code,
+          response: {
+            description: description,
+            content: {
+              'application/json' => {
+                schema: schema
+              }
+            }
           }
-        end
+        }
+      end
 
-        responses
+      def add_default_response_if_needed(responses)
+        return unless responses.empty?
+
+        responses['200'] = {
+          description: 'Successful response'
+        }
       end
 
       def generate_components
@@ -227,34 +259,48 @@ module RapiTapir
         when RapiTapir::Types::Boolean, :boolean
           { type: 'boolean' }
         when RapiTapir::Types::Array
-          { type: 'array', items: type_to_schema(type.item_type) }
+          generate_array_schema(type)
         when RapiTapir::Types::Hash
-          if type.field_types.empty?
-            { type: 'object' }
-          else
-            properties = {}
-            required = []
-
-            type.field_types.each do |key, value|
-              properties[key.to_s] = type_to_schema(value)
-              required << key.to_s unless value.nil?
-            end
-
-            schema = { type: 'object', properties: properties }
-            schema[:required] = required if required.any?
-            schema
-          end
+          generate_hash_schema(type)
         when :date, :datetime
-          format = type == :date ? 'date' : 'date-time'
-          { type: 'string', format: format }
+          generate_date_schema(type)
         when Array
-          if type.length == 1
-            { type: 'array', items: type_to_schema(type.first) }
-          else
-            { type: 'array', items: { type: 'string' } }
-          end
+          generate_ruby_array_schema(type)
         else # Default for unknown types, :string, String, and Hash
           { type: 'string' }
+        end
+      end
+
+      def generate_array_schema(type)
+        { type: 'array', items: type_to_schema(type.item_type) }
+      end
+
+      def generate_hash_schema(type)
+        return { type: 'object' } if type.field_types.empty?
+
+        properties = {}
+        required = []
+
+        type.field_types.each do |key, value|
+          properties[key.to_s] = type_to_schema(value)
+          required << key.to_s unless value.nil?
+        end
+
+        schema = { type: 'object', properties: properties }
+        schema[:required] = required if required.any?
+        schema
+      end
+
+      def generate_date_schema(type)
+        format = type == :date ? 'date' : 'date-time'
+        { type: 'string', format: format }
+      end
+
+      def generate_ruby_array_schema(type)
+        if type.length == 1
+          { type: 'array', items: type_to_schema(type.first) }
+        else
+          { type: 'array', items: { type: 'string' } }
         end
       end
 

@@ -149,19 +149,22 @@ module RapiTapir
         end
       end
 
+      PRIMITIVE_TYPE_MAP = {
+        string: -> { Types.string },
+        integer: -> { Types.integer },
+        float: -> { Types.float },
+        boolean: -> { Types.boolean },
+        date: -> { Types.date },
+        datetime: -> { Types.datetime },
+        uuid: -> { Types.uuid },
+        email: -> { Types.email }
+      }.freeze
+
       def create_primitive_type(type_symbol)
-        case type_symbol
-        when :string then Types.string
-        when :integer then Types.integer
-        when :float then Types.float
-        when :boolean then Types.boolean
-        when :date then Types.date
-        when :datetime then Types.datetime
-        when :uuid then Types.uuid
-        when :email then Types.email
-        else
-          raise ArgumentError, "Unknown primitive type: #{type_symbol}"
-        end
+        type_creator = PRIMITIVE_TYPE_MAP[type_symbol]
+        return type_creator.call if type_creator
+
+        raise ArgumentError, "Unknown primitive type: #{type_symbol}"
       end
 
       def create_input(kind, name, type, **options)

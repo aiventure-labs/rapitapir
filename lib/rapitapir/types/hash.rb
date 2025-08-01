@@ -28,10 +28,17 @@ module RapiTapir
       def validate_constraints(value)
         errors = []
 
-        # Validate defined fields
-        field_types.each do |field_name, field_type|
-          field_value = value[field_name] || value[field_name.to_s] || value[field_name.to_sym]
+        errors.concat(validate_defined_fields(value))
+        errors.concat(validate_additional_properties(value))
 
+        errors
+      end
+
+      def validate_defined_fields(value)
+        errors = []
+
+        field_types.each do |field_name, field_type|
+          field_value = extract_field_value(value, field_name)
           field_result = field_type.validate(field_value)
           next if field_result[:valid]
 
@@ -40,14 +47,21 @@ module RapiTapir
           end
         end
 
-        # Check for unexpected fields if additional_properties is false
-        unless constraints[:additional_properties]
-          expected_keys = field_types.keys.map { |k| [k, k.to_s, k.to_sym] }.flatten.uniq
-          unexpected_keys = value.keys - expected_keys
-          errors << "Unexpected fields: #{unexpected_keys.join(', ')}" unless unexpected_keys.empty?
-        end
-
         errors
+      end
+
+      def validate_additional_properties(value)
+        return [] if constraints[:additional_properties]
+
+        expected_keys = field_types.keys.map { |k| [k, k.to_s, k.to_sym] }.flatten.uniq
+        unexpected_keys = value.keys - expected_keys
+        return [] if unexpected_keys.empty?
+
+        ["Unexpected fields: #{unexpected_keys.join(', ')}"]
+      end
+
+      def extract_field_value(value, field_name)
+        value[field_name] || value[field_name.to_s] || value[field_name.to_sym]
       end
 
       def coerce_value(value)

@@ -231,8 +231,11 @@ RSpec.describe RapiTapir::CLI::Validator do
                                          path: '/test',
                                          outputs: [])
 
-        expect(validator.send(:validate_output_definition, endpoint_with_output)).to be(true)
-        expect(validator.send(:validate_output_definition, endpoint_without_output)).to be(false)
+        validator.send(:validate_output_definition, endpoint_with_output, 'Test context')
+        expect(validator.errors).to be_empty
+
+        validator.send(:validate_output_definition, endpoint_without_output, 'Test context')
+        expect(validator.errors).to include('Test context: missing output definition')
       end
     end
   end

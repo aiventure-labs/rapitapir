@@ -318,6 +318,13 @@ module RapiTapir
       def load_endpoints(file_path)
         raise "Input file not found: #{file_path}" unless File.exist?(file_path)
 
+        prepare_loading_environment(file_path) do
+          content = File.read(file_path)
+          load_endpoints_from_content(content, file_path) || load_endpoints_fallback(file_path)
+        end
+      end
+
+      def prepare_loading_environment(file_path)
         # Store original state
         original_endpoints = RapiTapir.instance_variable_get(:@endpoints) || []
         original_load_path = $LOAD_PATH.dup
@@ -329,80 +336,102 @@ module RapiTapir
         RapiTapir.instance_variable_set(:@endpoints, [])
 
         begin
-          # Read file content
-          content = File.read(file_path)
-
-          # Look for variable assignments that might contain endpoints
-          if content.match?(/(\w+_api|\w+_endpoints|\wendpoints\w*)\s*=\s*\[/)
-            # Change directory to the file's location for relative requires
-            Dir.chdir(file_dir) do
-              # Execute the file content using load instead of eval for safety
-              # rubocop:disable Security/Eval
-              eval(content, TOPLEVEL_BINDING, file_path)
-              # rubocop:enable Security/Eval
-            end
-
-            # Try to find the endpoints in the main object's variables
-            main_obj = TOPLEVEL_BINDING.eval('self')
-
-            # Look for instance variables that might contain endpoints
-            endpoints_var = main_obj.instance_variables.find do |var|
-              var.to_s.include?('api') || var.to_s.include?('endpoint')
-            end
-
-            if endpoints_var
-              endpoints = main_obj.instance_variable_get(endpoints_var)
-              endpoints = [endpoints] unless endpoints.is_a?(Array)
-              return endpoints.flatten.compact
-            end
-
-            # Try global variables
-            global_endpoints_var = global_variables.find do |var|
-              var.to_s.include?('api') || var.to_s.include?('endpoint')
-            end
-
-            if global_endpoints_var
-              # rubocop:disable Security/Eval
-              endpoints = eval(global_endpoints_var.to_s)
-              # rubocop:enable Security/Eval
-              endpoints = [endpoints] unless endpoints.is_a?(Array)
-              return endpoints.flatten.compact
-            end
-
-            # Look for the variable name in the content and try to access it
-            var_match = content.match(/(\w+_api|\w+_endpoints|\wendpoints\w*)\s*=/)
-            if var_match
-              var_name = var_match[1]
-              begin
-                # rubocop:disable Security/Eval
-                endpoints = eval(var_name, TOPLEVEL_BINDING)
-                # rubocop:enable Security/Eval
-                endpoints = [endpoints] unless endpoints.is_a?(Array)
-                return endpoints.flatten.compact
-              rescue NameError
-                # Variable not accessible
-              end
-            end
-          end
-
-          # Fallback: try loading the file normally
-          load File.expand_path(file_path)
-          endpoints = RapiTapir.instance_variable_get(:@endpoints) || []
-
-          if endpoints.empty?
-            error_msg = "No endpoints found in #{file_path}. " \
-                        'Make sure the file defines endpoints in a variable ' \
-                        "containing 'api' or 'endpoints' in its name."
-            raise error_msg
-          end
-
-          endpoints
+          yield
         rescue SyntaxError => e
           raise "Syntax error in #{file_path}: #{e.message}"
         ensure
           RapiTapir.instance_variable_set(:@endpoints, original_endpoints)
           $LOAD_PATH.replace(original_load_path)
         end
+      end
+
+      def load_endpoints_from_content(content, file_path)
+        return nil unless content.match?(/(\w+_api|\w+_endpoints|\wendpoints\w*)\s*=\s*\[/)
+
+        file_dir = File.dirname(File.expand_path(file_path))
+        Dir.chdir(file_dir) do
+          # Execute the file content using load instead of eval for safety
+          # rubocop:disable Security/Eval
+          eval(content, TOPLEVEL_BINDING, file_path)
+          # rubocop:enable Security/Eval
+        end
+
+        find_endpoints_in_variables(content)
+      end
+
+      def find_endpoints_in_variables(content)
+        # Try instance variables
+        endpoints = find_endpoints_in_instance_variables
+        return endpoints if endpoints
+
+        # Try global variables
+        endpoints = find_endpoints_in_global_variables
+        return endpoints if endpoints
+
+        # Try content-matched variables
+        find_endpoints_in_content_variables(content)
+      end
+
+      def find_endpoints_in_instance_variables
+        main_obj = TOPLEVEL_BINDING.eval('self')
+        endpoints_var = main_obj.instance_variables.find do |var|
+          var.to_s.include?('api') || var.to_s.include?('endpoint')
+        end
+
+        return nil unless endpoints_var
+
+        endpoints = main_obj.instance_variable_get(endpoints_var)
+        normalize_endpoints_array(endpoints)
+      end
+
+      def find_endpoints_in_global_variables
+        global_endpoints_var = global_variables.find do |var|
+          var.to_s.include?('api') || var.to_s.include?('endpoint')
+        end
+
+        return nil unless global_endpoints_var
+
+        # rubocop:disable Security/Eval
+        endpoints = eval(global_endpoints_var.to_s)
+        # rubocop:enable Security/Eval
+        normalize_endpoints_array(endpoints)
+      end
+
+      def find_endpoints_in_content_variables(content)
+        var_match = content.match(/(\w+_api|\w+_endpoints|\wendpoints\w*)\s*=/)
+        return nil unless var_match
+
+        var_name = var_match[1]
+        begin
+          # rubocop:disable Security/Eval
+          endpoints = eval(var_name, TOPLEVEL_BINDING)
+          # rubocop:enable Security/Eval
+          normalize_endpoints_array(endpoints)
+        rescue NameError
+          nil
+        end
+      end
+
+      def normalize_endpoints_array(endpoints)
+        return nil unless endpoints
+
+        endpoints = [endpoints] unless endpoints.is_a?(Array)
+        endpoints.flatten.compact
+      end
+
+      def load_endpoints_fallback(file_path)
+        # Fallback: try loading the file normally
+        load File.expand_path(file_path)
+        endpoints = RapiTapir.instance_variable_get(:@endpoints) || []
+
+        if endpoints.empty?
+          error_msg = "No endpoints found in #{file_path}. " \
+                      'Make sure the file defines endpoints in a variable ' \
+                      "containing 'api' or 'endpoints' in its name."
+          raise error_msg
+        end
+
+        endpoints
       end
     end
   end

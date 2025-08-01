@@ -40,33 +40,57 @@ module RapiTapir
       def valid_type?(value)
         return true if value.nil? && optional?
 
-        case type
+        validate_type_match(value, type)
+      end
+
+      def validate_type_match(value, target_type)
+        case target_type
         when :string then value.is_a?(String)
         when :integer then value.is_a?(Integer)
         when :float then value.is_a?(Float) || value.is_a?(Integer)
         when :boolean then [true, false].include?(value)
-        when :date then value.is_a?(Date) || (value.is_a?(String) && date_string?(value))
-        when :datetime then value.is_a?(DateTime) || (value.is_a?(String) && datetime_string?(value))
+        when :date then validate_date_type(value)
+        when :datetime then validate_datetime_type(value)
         when Hash then validate_hash_type(value)
-        when Class then value.is_a?(type)
+        when Class then value.is_a?(target_type)
         else true # Accept any for custom types
         end
+      end
+
+      def validate_date_type(value)
+        value.is_a?(Date) || (value.is_a?(String) && date_string?(value))
+      end
+
+      def validate_datetime_type(value)
+        value.is_a?(DateTime) || (value.is_a?(String) && datetime_string?(value))
       end
 
       def coerce(value)
         return nil if value.nil? && optional?
 
-        case type
+        coerce_by_type(value, type)
+      rescue ArgumentError => e
+        raise TypeError, "Cannot coerce #{value.inspect} to #{type}: #{e.message}"
+      end
+
+      def coerce_by_type(value, target_type)
+        case target_type
         when :string then value.to_s
         when :integer then Integer(value)
         when :float then Float(value)
         when :boolean then !!value
-        when :date then value.is_a?(Date) ? value : Date.parse(value.to_s)
-        when :datetime then value.is_a?(DateTime) ? value : DateTime.parse(value.to_s)
+        when :date then coerce_to_date(value)
+        when :datetime then coerce_to_datetime(value)
         else value
         end
-      rescue ArgumentError => e
-        raise TypeError, "Cannot coerce #{value.inspect} to #{type}: #{e.message}"
+      end
+
+      def coerce_to_date(value)
+        value.is_a?(Date) ? value : Date.parse(value.to_s)
+      end
+
+      def coerce_to_datetime(value)
+        value.is_a?(DateTime) ? value : DateTime.parse(value.to_s)
       end
 
       def to_h

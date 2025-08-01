@@ -63,28 +63,37 @@ module RapiTapir
       def coerce_value(value)
         case value
         when ::Hash
-          coerced = {}
-
-          # Coerce each defined field
-          fields.each do |field_name, field_type|
-            field_value = extract_field_value(value, field_name)
-
-            coerced[field_name] = field_type.coerce(field_value) if field_value || !field_type.optional?
-          end
-
-          coerced
+          coerce_hash_to_object(value)
         when ::String
-          # Try to parse as JSON
-          require 'json'
-          parsed = JSON.parse(value)
-          raise CoercionError.new(value, 'Object', 'JSON string did not parse to object') unless parsed.is_a?(::Hash)
-
-          coerce_value(parsed)
+          coerce_json_string_to_object(value)
         else
           raise CoercionError.new(value, 'Object', 'Value cannot be converted to object')
         end
       rescue JSON::ParserError => e
         raise CoercionError.new(value, 'Object', "Invalid JSON: #{e.message}")
+      end
+
+      private
+
+      def coerce_hash_to_object(value)
+        coerced = {}
+
+        # Coerce each defined field
+        fields.each do |field_name, field_type|
+          field_value = extract_field_value(value, field_name)
+          coerced[field_name] = field_type.coerce(field_value) if field_value || !field_type.optional?
+        end
+
+        coerced
+      end
+
+      def coerce_json_string_to_object(value)
+        # Try to parse as JSON
+        require 'json'
+        parsed = JSON.parse(value)
+        raise CoercionError.new(value, 'Object', 'JSON string did not parse to object') unless parsed.is_a?(::Hash)
+
+        coerce_value(parsed)
       end
 
       def json_type
@@ -117,8 +126,6 @@ module RapiTapir
           "Object{#{field_strs.join(', ')}}"
         end
       end
-
-      private
 
       def extract_field_value(hash, field_name)
         # Try different key formats: symbol, string, and string version of symbol

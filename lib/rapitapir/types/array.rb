@@ -30,6 +30,16 @@ module RapiTapir
       def validate_constraints(value)
         errors = []
 
+        errors.concat(validate_length_constraints(value))
+        errors.concat(validate_uniqueness_constraint(value))
+        errors.concat(validate_item_types(value))
+
+        errors
+      end
+
+      def validate_length_constraints(value)
+        errors = []
+
         if constraints[:min_items] && value.length < constraints[:min_items]
           errors << "Array length #{value.length} is below minimum #{constraints[:min_items]}"
         end
@@ -38,11 +48,18 @@ module RapiTapir
           errors << "Array length #{value.length} exceeds maximum #{constraints[:max_items]}"
         end
 
-        if constraints[:unique_items] && value.uniq.length != value.length
-          errors << 'Array contains duplicate items but must be unique'
-        end
+        errors
+      end
 
-        # Validate each item
+      def validate_uniqueness_constraint(value)
+        return [] unless constraints[:unique_items] && value.uniq.length != value.length
+
+        ['Array contains duplicate items but must be unique']
+      end
+
+      def validate_item_types(value)
+        errors = []
+
         value.each_with_index do |item, index|
           item_result = item_type.validate(item)
           next if item_result[:valid]

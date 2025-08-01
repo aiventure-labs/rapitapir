@@ -85,15 +85,19 @@ module RapiTapir
         return true unless type.is_a?(Hash) # If type is not a hash schema, accept any hash
 
         type.all? do |key, expected_type|
-          case expected_type
-          when :string then value[key].is_a?(String)
-          when :integer then value[key].is_a?(Integer)
-          when :float then value[key].is_a?(Float) || value[key].is_a?(Integer)
-          when :boolean then [true, false].include?(value[key])
-          when :date then value[key].is_a?(Date) || value[key].is_a?(String)
-          when :datetime then value[key].is_a?(DateTime) || value[key].is_a?(String)
-          else true
-          end
+          validate_field_type(value[key], expected_type)
+        end
+      end
+
+      def validate_field_type(field_value, expected_type)
+        case expected_type
+        when :string then field_value.is_a?(String)
+        when :integer then field_value.is_a?(Integer)
+        when :float then field_value.is_a?(Float) || field_value.is_a?(Integer)
+        when :boolean then [true, false].include?(field_value)
+        when :date then field_value.is_a?(Date) || field_value.is_a?(String)
+        when :datetime then field_value.is_a?(DateTime) || field_value.is_a?(String)
+        else true
         end
       end
 

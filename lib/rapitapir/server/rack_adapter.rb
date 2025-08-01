@@ -103,29 +103,41 @@ module RapiTapir
         inputs = {}
 
         endpoint.inputs.each do |input|
-          value = case input.kind
-                  when :query
-                    request.params[input.name.to_s]
-                  when :header
-                    request.get_header("HTTP_#{input.name.to_s.upcase}")
-                  when :path
-                    path_params[input.name]
-                  when :body
-                    parse_body(request, input)
-                  end
-
-          # Validate and coerce the value
-          raise ArgumentError, "Required input '#{input.name}' is missing" if value.nil? && input.required?
-
-          # Only coerce non-nil values, or include nil for optional parameters
-          if value.nil?
-            inputs[input.name] = nil unless input.required?
-          else
-            inputs[input.name] = input.coerce(value)
-          end
+          value = extract_input_value(request, input, path_params)
+          process_input_value(inputs, input, value)
         end
 
         inputs
+      end
+
+      def extract_input_value(request, input, path_params)
+        case input.kind
+        when :query
+          request.params[input.name.to_s]
+        when :header
+          request.get_header("HTTP_#{input.name.to_s.upcase}")
+        when :path
+          path_params[input.name]
+        when :body
+          parse_body(request, input)
+        end
+      end
+
+      def process_input_value(inputs, input, value)
+        validate_required_input(input, value)
+        coerce_and_store_input(inputs, input, value)
+      end
+
+      def validate_required_input(input, value)
+        raise ArgumentError, "Required input '#{input.name}' is missing" if value.nil? && input.required?
+      end
+
+      def coerce_and_store_input(inputs, input, value)
+        if value.nil?
+          inputs[input.name] = nil unless input.required?
+        else
+          inputs[input.name] = input.coerce(value)
+        end
       end
 
       def parse_body(request, input)

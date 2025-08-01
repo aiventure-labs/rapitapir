@@ -30,53 +30,72 @@ module RapiTapir
       def validate_endpoint(endpoint, index)
         context = "Endpoint #{index + 1}"
 
-        # Validate basic structure
+        return unless validate_endpoint_structure(endpoint, context)
+
+        validate_endpoint_basics(endpoint, context)
+        validate_endpoint_content(endpoint, context)
+        validate_endpoint_consistency(endpoint, context)
+      end
+
+      def validate_endpoint_structure(endpoint, context)
         unless endpoint.respond_to?(:method) && endpoint.respond_to?(:path)
           @errors << "#{context}: Missing method or path"
-          return
+          return false
         end
+        true
+      end
 
-        # Validate HTTP method
+      def validate_endpoint_basics(endpoint, context)
+        validate_http_method(endpoint, context)
+        validate_summary(endpoint, context)
+        validate_output_definition(endpoint, context)
+        validate_parameters(endpoint) if endpoint.respond_to?(:input_specs) && endpoint.input_specs
+        validate_path(endpoint.path, context)
+      end
+
+      def validate_endpoint_content(endpoint, context)
+        validate_endpoint_inputs(endpoint, context)
+        validate_endpoint_outputs(endpoint, context)
+      end
+
+      def validate_endpoint_consistency(endpoint, context)
+        validate_path_parameters_consistency(endpoint, context)
+        validate_metadata(endpoint, context)
+      end
+
+      def validate_http_method(endpoint, context)
         valid_methods = %w[GET POST PUT PATCH DELETE HEAD OPTIONS]
         unless valid_methods.include?(endpoint.method.to_s.upcase)
           @errors << "#{context}: Invalid HTTP method '#{endpoint.method}'"
         end
+      end
 
-        # Validate summary
+      def validate_summary(endpoint, context)
         if !endpoint.metadata || !endpoint.metadata[:summary] || endpoint.metadata[:summary].empty?
           @errors << "#{context}: missing summary"
         end
+      end
 
-        # Validate output definition
+      def validate_output_definition(endpoint, context)
         if !endpoint.respond_to?(:outputs) || endpoint.outputs.nil? || endpoint.outputs.empty?
           @errors << "#{context}: missing output definition"
         end
+      end
 
-        # Validate parameters
-        validate_parameters(endpoint) if endpoint.respond_to?(:input_specs) && endpoint.input_specs
+      def validate_endpoint_inputs(endpoint, context)
+        return unless endpoint.respond_to?(:inputs)
 
-        # Validate path
-        validate_path(endpoint.path, context)
-
-        # Validate inputs
-        if endpoint.respond_to?(:inputs)
-          endpoint.inputs.each_with_index do |input, input_index|
-            validate_input(input, "#{context}, Input #{input_index + 1}")
-          end
+        endpoint.inputs.each_with_index do |input, input_index|
+          validate_input(input, "#{context}, Input #{input_index + 1}")
         end
+      end
 
-        # Validate outputs
-        if endpoint.respond_to?(:outputs)
-          endpoint.outputs.each_with_index do |output, output_index|
-            validate_output(output, "#{context}, Output #{output_index + 1}")
-          end
+      def validate_endpoint_outputs(endpoint, context)
+        return unless endpoint.respond_to?(:outputs)
+
+        endpoint.outputs.each_with_index do |output, output_index|
+          validate_output(output, "#{context}, Output #{output_index + 1}")
         end
-
-        # Validate path parameters consistency
-        validate_path_parameters_consistency(endpoint, context)
-
-        # Validate metadata
-        validate_metadata(endpoint, context)
       end
 
       def validate_path(path, context)
@@ -279,7 +298,6 @@ module RapiTapir
 
         false
       end
-      alias validate_output_definition valid_output_definition?
     end
   end
 end

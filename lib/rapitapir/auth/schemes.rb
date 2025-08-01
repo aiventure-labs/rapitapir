@@ -338,41 +338,60 @@ module RapiTapir
         def decode_jwt_token(token)
           # This is a simplified JWT decoder
           # In a real implementation, you'd use a library like ruby-jwt
-          parts = token.split('.')
-          return nil unless parts.length == 3
+          parts = split_jwt_token(token)
+          return nil unless parts
 
           begin
-            # Add padding if needed
-            header_b64 = parts[0]
-            header_b64 += '=' * (4 - (header_b64.length % 4)) if header_b64.length % 4 != 0
-
-            payload_b64 = parts[1]
-            payload_b64 += '=' * (4 - (payload_b64.length % 4)) if payload_b64.length % 4 != 0
-
-            JSON.parse(Base64.urlsafe_decode64(header_b64))
-            payload = JSON.parse(Base64.urlsafe_decode64(payload_b64))
-            signature = parts[2]
-
-            # Verify signature (simplified)
-            expected_signature = Base64.urlsafe_encode64(
-              OpenSSL::HMAC.digest('SHA256', @secret, "#{parts[0]}.#{parts[1]}")
-            ).tr('=', '')
-
-            return nil unless signature == expected_signature
-
-            # Verify expiration
-            return nil if @verify_expiration && payload['exp'] && (Time.at(payload['exp']) < Time.now)
-
-            # Verify issuer
-            return nil if @verify_issuer && payload['iss'] != @verify_issuer
-
-            # Verify audience
-            return nil if @verify_audience && payload['aud'] != @verify_audience
+            header, payload, signature = parse_jwt_parts(parts)
+            return nil unless verify_jwt_signature(parts, signature)
+            return nil unless verify_jwt_claims(payload)
 
             payload
           rescue JSON::ParserError, ArgumentError
             nil
           end
+        end
+
+        def split_jwt_token(token)
+          parts = token.split('.')
+          parts.length == 3 ? parts : nil
+        end
+
+        def parse_jwt_parts(parts)
+          header_b64 = add_base64_padding(parts[0])
+          payload_b64 = add_base64_padding(parts[1])
+
+          header = JSON.parse(Base64.urlsafe_decode64(header_b64))
+          payload = JSON.parse(Base64.urlsafe_decode64(payload_b64))
+          signature = parts[2]
+
+          [header, payload, signature]
+        end
+
+        def add_base64_padding(base64_string)
+          missing_padding = 4 - (base64_string.length % 4)
+          base64_string += '=' * missing_padding if missing_padding != 4
+          base64_string
+        end
+
+        def verify_jwt_signature(parts, signature)
+          expected_signature = Base64.urlsafe_encode64(
+            OpenSSL::HMAC.digest('SHA256', @secret, "#{parts[0]}.#{parts[1]}")
+          ).tr('=', '')
+
+          signature == expected_signature
+        end
+
+        def verify_jwt_claims(payload)
+          return false if @verify_expiration && jwt_expired?(payload)
+          return false if @verify_issuer && payload['iss'] != @verify_issuer
+          return false if @verify_audience && payload['aud'] != @verify_audience
+
+          true
+        end
+
+        def jwt_expired?(payload)
+          payload['exp'] && (Time.at(payload['exp']) < Time.now)
         end
 
         def extract_user_from_payload(payload)
