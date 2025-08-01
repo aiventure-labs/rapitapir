@@ -1,0 +1,115 @@
+name: 💎 Publish Gem
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  test:
+    name: 🧪 Pre-publish Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🔄 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 💎 Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.2'
+        bundler-cache: true
+        
+    - name: 🧪 Run full test suite
+      run: bundle exec rspec
+      
+    - name: ✅ Validate gem build
+      run: |
+        gem build rapitapir.gemspec
+        gem install ./rapitapir-*.gem
+        ruby -e "require 'rapitapir'; puts 'Gem loads successfully!'"
+
+  publish:
+    name: 📦 Publish to RubyGems
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🔄 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 💎 Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.2'
+        bundler-cache: true
+        
+    - name: 🔧 Configure RubyGems credentials
+      env:
+        RUBYGEMS_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
+      run: |
+        mkdir -p ~/.gem
+        echo ":rubygems_api_key: $RUBYGEMS_API_KEY" > ~/.gem/credentials
+        chmod 600 ~/.gem/credentials
+        
+    - name: 📦 Build and publish gem
+      run: |
+        gem build rapitapir.gemspec
+        gem push rapitapir-*.gem
+        
+    - name: 🏷️ Create GitHub release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: RapiTapir ${{ github.ref_name }}
+        body: |
+          ## 🦙 RapiTapir ${{ github.ref_name }}
+          
+          ### 🚀 What's New
+          
+          This release includes bug fixes, performance improvements, and new features.
+          
+          ### 📦 Installation
+          
+          ```bash
+          gem install rapitapir
+          ```
+          
+          ### 📖 Documentation
+          
+          - [Getting Started Guide](https://github.com/riccardomerolla/ruby-tapir#-quick-start)
+          - [API Documentation](https://github.com/riccardomerolla/ruby-tapir/blob/main/docs/)
+          - [Examples](https://github.com/riccardomerolla/ruby-tapir/tree/main/examples)
+          
+          ### 🤝 Contributing
+          
+          See our [Contributing Guide](https://github.com/riccardomerolla/ruby-tapir/blob/main/CONTRIBUTING.md) for how to get involved!
+        draft: false
+        prerelease: false
+
+  notify:
+    name: 📢 Notify Community
+    needs: [test, publish]
+    runs-on: ubuntu-latest
+    if: success()
+    
+    steps:
+    - name: 🔄 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 📢 Post to Ruby community (optional)
+      run: |
+        echo "🎉 RapiTapir ${{ github.ref_name }} has been published!"
+        echo "Consider announcing on:"
+        echo "- Ruby Weekly newsletter"
+        echo "- Reddit r/ruby"
+        echo "- Ruby Discord/Slack communities"
+        echo "- Ruby Twitter community"

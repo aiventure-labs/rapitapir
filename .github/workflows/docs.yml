@@ -1,0 +1,118 @@
+name: 📚 Deploy Documentation
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'docs/**'
+      - 'examples/**' 
+      - 'README.md'
+      - 'CONTRIBUTING.md'
+  workflow_dispatch:
+
+jobs:
+  deploy-docs:
+    name: 📚 Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+      
+    steps:
+    - name: 🔄 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 💎 Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.2'
+        bundler-cache: true
+        
+    - name: 📖 Generate API documentation
+      run: |
+        gem install yard
+        yard doc --output-dir docs/api
+        
+    - name: 🎨 Generate OpenAPI documentation
+      run: |
+        mkdir -p docs/openapi
+        bundle exec ruby -e "
+          require_relative 'examples/getting_started_extension'
+          # This would generate OpenAPI docs - customize as needed
+        "
+        
+    - name: 🏗️ Build documentation site
+      run: |
+        mkdir -p public
+        cp -r docs/* public/
+        cp README.md public/
+        cp CONTRIBUTING.md public/
+        
+        # Create index.html
+        cat > public/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>RapiTapir Documentation</title>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+            h1 { color: #2c5aa0; }
+            .nav { margin: 20px 0; }
+            .nav a { margin-right: 20px; color: #2c5aa0; text-decoration: none; }
+            .nav a:hover { text-decoration: underline; }
+          </style>
+        </head>
+        <body>
+          <h1>🦙 RapiTapir Documentation</h1>
+          <div class="nav">
+            <a href="README.html">📖 Getting Started</a>
+            <a href="CONTRIBUTING.html">🤝 Contributing</a>
+            <a href="api/">📚 API Docs</a>
+            <a href="openapi/">🔧 OpenAPI Specs</a>
+          </div>
+          <p>Welcome to RapiTapir documentation! Choose a section above to get started.</p>
+        </body>
+        </html>
+        EOF
+        
+    - name: 🚀 Deploy to GitHub Pages
+      uses: actions/deploy-pages@v2
+      with:
+        artifact_name: github-pages
+        
+    - name: 📤 Upload Pages artifact
+      uses: actions/upload-pages-artifact@v2
+      with:
+        path: public/
+
+  generate-examples:
+    name: 🚀 Generate Example Documentation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🔄 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 💎 Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.2'
+        bundler-cache: true
+        
+    - name: 📝 Generate documentation from examples
+      run: |
+        mkdir -p tmp/example-docs
+        
+        # Generate OpenAPI spec from getting started example
+        timeout 30s ruby examples/getting_started_extension.rb &
+        sleep 5
+        curl -s http://localhost:4567/api/docs/openapi.json > tmp/example-docs/getting-started-openapi.json || true
+        
+        # Generate client code examples
+        if [ -f tmp/example-docs/getting-started-openapi.json ]; then
+          echo "✅ Generated OpenAPI documentation from examples"
+        fi
