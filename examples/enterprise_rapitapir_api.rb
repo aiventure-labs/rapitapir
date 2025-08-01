@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-# Enterprise-grade Sinatra API with RapiTapir - Using Proper RapiTapir DSL
+# Enterprise-grade Sinatra API with RapiTapir - Using SinatraAdapter
 # 
 # This example demonstrates a production-ready Sinatra application with:
 # - Bearer Token Authentication
 # - Auto-generated OpenAPI 3.0 documentation from RapiTapir endpoint definitions
-# - Request/Response validation
+# - Request/Response validation with SinatraAdapter
 # - Error handling
 # - Rate limiting
 # - CORS support
@@ -14,6 +14,7 @@
 require 'sinatra/base'
 require 'json'
 require_relative '../lib/rapitapir'
+require_relative '../lib/rapitapir/server/sinatra_adapter'
 
 # Sample User Database (In production, use a real database)
 class UserDatabase
@@ -305,41 +306,48 @@ end
 
 # Main Sinatra Application
 class EnterpriseTaskAPI < Sinatra::Base
-  configure do
-    set :show_exceptions, false
-    set :raise_errors, false
-    set :dump_errors, false
-  end
-
-  # Setup authentication scheme
-  bearer_auth = RapiTapir::Auth.bearer_token(:bearer, {
-    realm: 'Enterprise Task Management API',
-    token_validator: proc do |token|
-      user = UserDatabase.find_by_token(token)
-      next nil unless user
-
-      {
-        user: user,
-        scopes: user[:scopes]
-      }
+  def initialize
+    super
+    
+    configure do
+      set :show_exceptions, false
+      set :raise_errors, false
+      set :dump_errors, false
     end
-  })
 
-  auth_schemes = { bearer: bearer_auth }
+    # Setup authentication scheme
+    bearer_auth = RapiTapir::Auth.bearer_token(:bearer, {
+      realm: 'Enterprise Task Management API',
+      token_validator: proc do |token|
+        user = UserDatabase.find_by_token(token)
+        next nil unless user
 
-  # Setup middleware stack
-  use RapiTapir::Auth::Middleware::SecurityHeadersMiddleware
-  use RapiTapir::Auth::Middleware::CorsMiddleware, {
-    allowed_origins: ['http://localhost:3000', 'https://app.example.com'],
-    allowed_methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowed_headers: ['Authorization', 'Content-Type', 'Accept'],
-    allow_credentials: true
-  }
-  use RapiTapir::Auth::Middleware::RateLimitingMiddleware, {
-    requests_per_minute: 100,
-    requests_per_hour: 2000
-  }
-  use RapiTapir::Auth::Middleware::AuthenticationMiddleware, auth_schemes
+        {
+          user: user,
+          scopes: user[:scopes]
+        }
+      end
+    })
+
+    auth_schemes = { bearer: bearer_auth }
+
+    # Setup middleware stack
+    use RapiTapir::Auth::Middleware::SecurityHeadersMiddleware
+    use RapiTapir::Auth::Middleware::CorsMiddleware, {
+      allowed_origins: ['http://localhost:3000', 'https://app.example.com'],
+      allowed_methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowed_headers: ['Authorization', 'Content-Type', 'Accept'],
+      allow_credentials: true
+    }
+    use RapiTapir::Auth::Middleware::RateLimitingMiddleware, {
+      requests_per_minute: 100,
+      requests_per_hour: 2000
+    }
+    use RapiTapir::Auth::Middleware::AuthenticationMiddleware, auth_schemes
+
+    # Setup RapiTapir adapter and register endpoints
+    setup_rapitapir_endpoints
+  end
 
   # Helper methods
   def json_response(status, data)
@@ -377,6 +385,168 @@ class EnterpriseTaskAPI < Sinatra::Base
     task_copy
   end
 
+  private
+
+  def setup_rapitapir_endpoints
+    adapter = RapiTapir::Server::SinatraAdapter.new(self)
+
+    # Register all endpoints using the adapter
+    TaskAPI.endpoints.each do |endpoint|
+      adapter.register_endpoint(endpoint, get_endpoint_handler(endpoint))
+    end
+  end
+
+  def get_endpoint_handler(endpoint)
+    case endpoint.path
+    when '/health'
+      proc do |inputs|
+        {
+          status: 'healthy',
+          timestamp: Time.now.iso8601,
+          version: '1.0.0',
+          uptime: Process.clock_gettime(Process::CLOCK_MONOTONIC).to_i,
+          authentication: 'Bearer Token',
+          features: ['Rate Limiting', 'CORS', 'Security Headers', 'Auto-generated OpenAPI 3.0', 'RapiTapir DSL']
+        }
+      end
+
+    when '/api/v1/tasks'
+      if endpoint.method == :get
+        proc do |inputs|
+          require_authenticated
+          require_scope('read')
+
+          tasks = TaskDatabase.all
+          
+          # Apply filters
+          if inputs[:status]
+            tasks = tasks.select { |task| task[:status] == inputs[:status] }
+          end
+          
+          if inputs[:assignee_id]
+            tasks = tasks.select { |task| task[:assignee_id] == inputs[:assignee_id] }
+          end
+          
+          # Apply pagination
+          limit = inputs[:limit] || 50
+          offset = inputs[:offset] || 0
+          tasks = tasks.drop(offset).take(limit)
+          
+          # Format timestamps
+          tasks.map { |task| format_task(task) }
+        end
+      else # POST
+        proc do |inputs|
+          require_authenticated
+          require_scope('write')
+
+          body = inputs[:body] || {}
+          
+          # Validate required fields - now handled by RapiTapir type validation
+          # Create task
+          task_data = {
+            title: body['title'],
+            description: body['description'],
+            status: body['status'] || 'pending',
+            assignee_id: body['assignee_id']
+          }
+          
+          task = TaskDatabase.create(task_data)
+          format_task(task)
+        end
+      end
+
+    when '/api/v1/tasks/:id'
+      case endpoint.method
+      when :get
+        proc do |inputs|
+          require_authenticated
+          require_scope('read')
+
+          task = TaskDatabase.find(inputs[:id])
+          halt 404, { error: 'Task not found' }.to_json unless task
+
+          # Enrich with assignee details
+          assignee = UserDatabase.find_by_id(task[:assignee_id])
+          task_with_assignee = format_task(task)
+          task_with_assignee[:assignee] = assignee ? {
+            id: assignee[:id],
+            name: assignee[:name],
+            email: assignee[:email]
+          } : nil
+          
+          task_with_assignee
+        end
+      when :put
+        proc do |inputs|
+          require_authenticated
+          require_scope('write')
+
+          task = TaskDatabase.find(inputs[:id])
+          halt 404, { error: 'Task not found' }.to_json unless task
+
+          body = inputs[:body] || {}
+          update_data = {}
+          
+          # Prepare update data - validation handled by RapiTapir
+          update_data[:title] = body['title'] if body['title']
+          update_data[:description] = body['description'] if body['description']
+          update_data[:status] = body['status'] if body['status']
+          update_data[:assignee_id] = body['assignee_id'] if body['assignee_id']
+          
+          # Update task
+          updated_task = TaskDatabase.update(inputs[:id], update_data)
+          format_task(updated_task)
+        end
+      when :delete
+        proc do |inputs|
+          require_authenticated
+          require_scope('admin')
+
+          task = TaskDatabase.find(inputs[:id])
+          halt 404, { error: 'Task not found' }.to_json unless task
+
+          TaskDatabase.delete(inputs[:id])
+          status 204
+          nil # Return nothing for 204 No Content
+        end
+      end
+
+    when '/api/v1/profile'
+      proc do |inputs|
+        require_authenticated
+
+        current_user = RapiTapir::Auth.current_user
+        
+        # Get user's assigned tasks
+        user_tasks = TaskDatabase.by_assignee(current_user[:id]).map do |task|
+          {
+            id: task[:id],
+            title: task[:title],
+            status: task[:status]
+          }
+        end
+        
+        profile = current_user.dup
+        profile[:tasks] = user_tasks
+        profile
+      end
+
+    when '/api/v1/admin/users'
+      proc do |inputs|
+        require_authenticated
+        require_scope('admin')
+
+        UserDatabase.all_users
+      end
+
+    else
+      proc do |inputs|
+        halt 404, { error: 'Endpoint not implemented' }.to_json
+      end
+    end
+  end
+
   # OpenAPI Documentation endpoint - Auto-generated from RapiTapir endpoints
   get '/openapi.json' do
     content_type :json
@@ -410,7 +580,7 @@ class EnterpriseTaskAPI < Sinatra::Base
       <body>
         <div class="info-banner">
           <h1>🚀 Enterprise Task Management API</h1>
-          <p>Auto-generated from RapiTapir endpoint definitions with real-time validation</p>
+          <p>Auto-generated from RapiTapir endpoint definitions with SinatraAdapter integration</p>
         </div>
         <div id="swagger-ui"></div>
         <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
@@ -434,6 +604,7 @@ class EnterpriseTaskAPI < Sinatra::Base
               onComplete: function() {
                 console.log('Swagger UI loaded successfully');
                 console.log('OpenAPI spec auto-generated from RapiTapir endpoints');
+                console.log('Endpoints handled by SinatraAdapter with full type validation');
               }
             });
           };
@@ -441,181 +612,6 @@ class EnterpriseTaskAPI < Sinatra::Base
       </body>
       </html>
     HTML
-  end
-
-  # Health check endpoint (public)
-  get '/health' do
-    content_type :json
-    JSON.generate({
-      status: 'healthy',
-      timestamp: Time.now.iso8601,
-      version: '1.0.0',
-      uptime: Process.clock_gettime(Process::CLOCK_MONOTONIC).to_i,
-      authentication: 'Bearer Token',
-      features: ['Rate Limiting', 'CORS', 'Security Headers', 'Auto-generated OpenAPI 3.0', 'RapiTapir DSL']
-    })
-  end
-
-  # Tasks endpoints - Implementation using RapiTapir validation
-  get '/api/v1/tasks' do
-    require_authenticated
-    require_scope('read')
-
-    tasks = TaskDatabase.all
-    
-    # Apply filters
-    if params[:status]
-      tasks = tasks.select { |task| task[:status] == params[:status] }
-    end
-    
-    if params[:assignee_id]
-      tasks = tasks.select { |task| task[:assignee_id] == params[:assignee_id].to_i }
-    end
-    
-    # Apply pagination
-    limit = (params[:limit] || 50).to_i
-    offset = (params[:offset] || 0).to_i
-    tasks = tasks.drop(offset).take(limit)
-    
-    # Format timestamps
-    formatted_tasks = tasks.map { |task| format_task(task) }
-    
-    content_type :json
-    JSON.generate(formatted_tasks)
-  end
-
-  get '/api/v1/tasks/:id' do
-    require_authenticated
-    require_scope('read')
-
-    task = TaskDatabase.find(params[:id])
-    json_response(404, { error: 'Task not found' }) unless task
-
-    # Enrich with assignee details
-    assignee = UserDatabase.find_by_id(task[:assignee_id])
-    task_with_assignee = format_task(task)
-    task_with_assignee[:assignee] = assignee ? {
-      id: assignee[:id],
-      name: assignee[:name],
-      email: assignee[:email]
-    } : nil
-    
-    content_type :json
-    JSON.generate(task_with_assignee)
-  end
-
-  post '/api/v1/tasks' do
-    require_authenticated
-    require_scope('write')
-
-    body = parse_json_body
-    
-    # Use RapiTapir validation (simplified for demo)
-    json_response(400, { error: 'Title is required' }) unless body[:title] && !body[:title].empty?
-    json_response(400, { error: 'Description is required' }) unless body[:description] && !body[:description].empty?
-    json_response(400, { error: 'Assignee ID is required' }) unless body[:assignee_id]
-    
-    # Validate assignee exists
-    assignee = UserDatabase.find_by_id(body[:assignee_id])
-    json_response(400, { error: 'Invalid assignee ID' }) unless assignee
-    
-    # Validate status if provided
-    if body[:status] && !['pending', 'in_progress', 'completed'].include?(body[:status])
-      json_response(400, { error: 'Invalid status. Must be pending, in_progress, or completed' })
-    end
-    
-    # Create task
-    task_data = {
-      title: body[:title],
-      description: body[:description],
-      status: body[:status] || 'pending',
-      assignee_id: body[:assignee_id]
-    }
-    
-    task = TaskDatabase.create(task_data)
-    formatted_task = format_task(task)
-    
-    content_type :json
-    status 201
-    JSON.generate(formatted_task)
-  end
-
-  put '/api/v1/tasks/:id' do
-    require_authenticated
-    require_scope('write')
-
-    task = TaskDatabase.find(params[:id])
-    json_response(404, { error: 'Task not found' }) unless task
-
-    body = parse_json_body
-    update_data = {}
-    
-    # Validate and prepare update data
-    update_data[:title] = body[:title] if body[:title] && !body[:title].empty?
-    update_data[:description] = body[:description] if body[:description] && !body[:description].empty?
-    
-    if body[:status]
-      unless ['pending', 'in_progress', 'completed'].include?(body[:status])
-        json_response(400, { error: 'Invalid status. Must be pending, in_progress, or completed' })
-      end
-      update_data[:status] = body[:status]
-    end
-    
-    if body[:assignee_id]
-      assignee = UserDatabase.find_by_id(body[:assignee_id])
-      json_response(400, { error: 'Invalid assignee ID' }) unless assignee
-      update_data[:assignee_id] = body[:assignee_id]
-    end
-    
-    # Update task
-    updated_task = TaskDatabase.update(params[:id], update_data)
-    formatted_task = format_task(updated_task)
-    
-    content_type :json
-    JSON.generate(formatted_task)
-  end
-
-  delete '/api/v1/tasks/:id' do
-    require_authenticated
-    require_scope('admin')
-
-    task = TaskDatabase.find(params[:id])
-    json_response(404, { error: 'Task not found' }) unless task
-
-    TaskDatabase.delete(params[:id])
-    status 204
-  end
-
-  # User profile endpoint
-  get '/api/v1/profile' do
-    require_authenticated
-
-    current_user = RapiTapir::Auth.current_user
-    
-    # Get user's assigned tasks
-    user_tasks = TaskDatabase.by_assignee(current_user[:id]).map do |task|
-      {
-        id: task[:id],
-        title: task[:title],
-        status: task[:status]
-      }
-    end
-    
-    profile = current_user.dup
-    profile[:tasks] = user_tasks
-    
-    content_type :json
-    JSON.generate(profile)
-  end
-
-  # Admin endpoints
-  get '/api/v1/admin/users' do
-    require_authenticated
-    require_scope('admin')
-
-    users = UserDatabase.all_users
-    content_type :json
-    JSON.generate(users)
   end
 
   # Global error handler
@@ -650,8 +646,9 @@ class EnterpriseTaskAPI < Sinatra::Base
     puts "   curl -X POST -H 'Authorization: Bearer user-token-123' -H 'Content-Type: application/json' \\"
     puts "        -d '{\"title\":\"New Task\",\"description\":\"Test task\",\"assignee_id\":1}' \\"
     puts "        http://localhost:4567/api/v1/tasks"
-    puts "\n✨ Features: Bearer Auth, Rate Limiting, CORS, Security Headers, Auto-generated OpenAPI 3.0"
-    puts "🎯 RapiTapir: #{TaskAPI.endpoints.size} endpoints defined with full type safety"
+    puts "\n✨ Features: SinatraAdapter, Bearer Auth, Rate Limiting, CORS, Security Headers"
+    puts "🎯 RapiTapir: #{TaskAPI.endpoints.size} endpoints auto-registered with full type safety"
+    puts "🔧 Architecture: Routes handled by SinatraAdapter with automatic input/output validation"
     puts ""
   end
 end
