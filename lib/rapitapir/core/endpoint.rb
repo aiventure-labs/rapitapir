@@ -78,7 +78,8 @@ module RapiTapir
       end
 
       # Validate input/output types for a given input/output hash
-      def validate!(input_hash = {}, output_hash = {})
+      # Raises validation errors if invalid, returns true if valid
+      def validate!(input_hash = {}, output_hash = {}) # rubocop:disable Naming/PredicateMethod
         validate_inputs!(input_hash)
         validate_outputs!(output_hash) unless output_hash.empty?
         true

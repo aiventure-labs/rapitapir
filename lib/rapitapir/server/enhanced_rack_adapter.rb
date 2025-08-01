@@ -245,11 +245,9 @@ module RapiTapir
 
       def determine_content_type(output)
         case output.kind
-        when :json
-          'application/json'
         when :text
           'text/plain'
-        else
+        else # Default to JSON for :json and unknown formats
           'application/json'
         end
       end

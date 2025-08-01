@@ -113,11 +113,10 @@ module RapiTapir
         def log_level(level)
           case level.to_sym
           when :debug then ::Logger::DEBUG
-          when :info then ::Logger::INFO
           when :warn then ::Logger::WARN
           when :error then ::Logger::ERROR
           when :fatal then ::Logger::FATAL
-          else ::Logger::INFO
+          else ::Logger::INFO # Default for :info and unknown levels
           end
         end
 

@@ -104,16 +104,10 @@ module RapiTapir
           output = endpoint.outputs.find { |o| o.kind == :json } || endpoint.outputs.first
           status_code = determine_rails_status_code(endpoint)
 
-          if output
-            case output.kind
-            when :json
-              render json: result, status: status_code
-            when :xml
-              render xml: result, status: status_code
-            else
-              render json: result, status: status_code
-            end
+          if output&.kind == :xml
+            render xml: result, status: status_code
           else
+            # Default to JSON for nil output, :json kind, or unknown kinds
             render json: result, status: status_code
           end
         end

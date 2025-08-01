@@ -6,16 +6,15 @@ module RapiTapir
     class EnhancedInput
       attr_reader :kind, :name, :type, :required, :description, :example, :format, :content_type
 
-      def initialize(kind:, name:, type:, required: true, description: nil, example: nil, format: nil,
-                     content_type: nil)
+      def initialize(kind:, name:, type:, required: true, **options)
         @kind = kind.to_sym
         @name = name.to_sym
         @type = type
         @required = required
-        @description = description
-        @example = example
-        @format = format
-        @content_type = content_type
+        @description = options[:description]
+        @example = options[:example]
+        @format = options[:format]
+        @content_type = options[:content_type]
       end
 
       def required?
@@ -76,14 +75,13 @@ module RapiTapir
     class EnhancedOutput
       attr_reader :status_code, :type, :content_type, :description, :example, :headers
 
-      def initialize(status_code:, type: nil, content_type: 'application/json', description: nil, example: nil,
-                     headers: {})
+      def initialize(status_code:, type: nil, content_type: 'application/json', **options)
         @status_code = status_code.to_i
         @type = type
         @content_type = content_type
-        @description = description
-        @example = example
-        @headers = headers || {}
+        @description = options[:description]
+        @example = options[:example]
+        @headers = options[:headers] || {}
       end
 
       # Legacy compatibility method for validators
@@ -237,14 +235,14 @@ module RapiTapir
     class EnhancedSecurity
       attr_reader :type, :description, :name, :location, :scopes, :flows
 
-      def initialize(type:, description:, name: nil, location: nil, scopes: [], flows: nil, **options)
+      def initialize(type:, description:, **config)
         @type = type.to_sym
         @description = description
-        @name = name
-        @location = location&.to_sym
-        @scopes = Array(scopes)
-        @flows = flows
-        @options = options
+        @name = config[:name]
+        @location = config[:location]&.to_sym
+        @scopes = Array(config[:scopes] || [])
+        @flows = config[:flows]
+        @options = config.except(:name, :location, :scopes, :flows)
       end
 
       def to_openapi_spec
@@ -324,11 +322,9 @@ module RapiTapir
         key_name = @name || 'X-API-Key'
 
         key_value = case @location
-                    when :header
-                      request.env["HTTP_#{key_name.upcase.gsub('-', '_')}"]
                     when :query
                       request.params[key_name]
-                    else
+                    else # Default to header for :header and unknown locations
                       request.env["HTTP_#{key_name.upcase.gsub('-', '_')}"]
                     end
 
