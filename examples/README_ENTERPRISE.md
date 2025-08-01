@@ -1,79 +1,74 @@
-# Enterprise Sinatra API with RapiTapir
+# Enterprise RapiTapir API - Auto-Generated OpenAPI Implementation
 
-This is a production-ready enterprise-grade Sinatra application demonstrating RapiTapir's Phase 2.2 Authentication & Security features with OpenAPI 3.0 documentation.
+This is the improved version of the Enterprise Sinatra API that demonstrates RapiTapir's capability to automatically generate OpenAPI 3.0 specifications from endpoint definitions at runtime.
 
-## 🚀 Features
+## 🎯 Key Improvements
 
-- **Bearer Token Authentication** with role-based access control
-- **OpenAPI 3.0 Documentation** with Swagger UI
-- **Rate Limiting** (100 requests/minute, 2000/hour)
-- **CORS Support** for cross-origin requests
-- **Security Headers** (XSS, CSRF protection, etc.)
-- **Request/Response Validation**
-- **Structured Error Handling**
-- **Health Check Endpoint**
-- **Admin-only Endpoints**
-- **User Profile Management**
+### ✅ **Fixed Issues from Original Version**
 
-## 📋 API Endpoints
+1. **Auto-Generated OpenAPI**: The OpenAPI specification is now generated automatically from RapiTapir endpoint definitions at runtime, not manually written
+2. **Working Run Script**: Fixed the `run_enterprise_api.rb` script to properly load dependencies with `bundle exec`
+3. **Proper RapiTapir DSL Usage**: All endpoints are now defined using RapiTapir's fluent DSL with proper type definitions
+4. **Runtime Reflection**: The API documentation reflects the actual endpoint implementations
 
-### System
-- `GET /health` - Health check (public)
-- `GET /docs` - Swagger UI documentation
-- `GET /openapi.json` - OpenAPI specification
+### 🚀 **Enterprise Features**
 
-### Tasks
-- `GET /api/v1/tasks` - List all tasks (requires `read` scope)
-- `GET /api/v1/tasks/{id}` - Get specific task (requires `read` scope)
-- `POST /api/v1/tasks` - Create new task (requires `write` scope)
-- `PUT /api/v1/tasks/{id}` - Update task (requires `write` scope)
-- `DELETE /api/v1/tasks/{id}` - Delete task (requires `admin` scope)
+- **8 Fully-Typed Endpoints** defined with RapiTapir DSL
+- **Auto-Generated OpenAPI 3.0** specification from endpoint definitions
+- **Bearer Token Authentication** with scope-based authorization
+- **Production Middleware Stack**: CORS, Rate Limiting, Security Headers
+- **Interactive Documentation** with Swagger UI
+- **Type-Safe Request/Response** schemas using RapiTapir Types
 
-### Users
-- `GET /api/v1/profile` - Get current user profile (authenticated)
-- `GET /api/v1/admin/users` - List all users (requires `admin` scope)
+## 📋 API Endpoints (Auto-Generated from RapiTapir Definitions)
+
+All endpoints are defined using RapiTapir's fluent DSL and automatically generate OpenAPI documentation:
+
+### System Endpoints
+- **GET /health** - Health check (public)
+- **GET /docs** - Interactive Swagger UI documentation  
+- **GET /openapi.json** - Auto-generated OpenAPI 3.0 specification
+
+### Task Management Endpoints (Authenticated)
+- **GET /api/v1/tasks** - List all tasks (requires `read` scope)
+- **GET /api/v1/tasks/:id** - Get specific task (requires `read` scope)
+- **POST /api/v1/tasks** - Create new task (requires `write` scope)
+- **PUT /api/v1/tasks/:id** - Update task (requires `write` scope)
+- **DELETE /api/v1/tasks/:id** - Delete task (requires `admin` scope)
+
+### User Endpoints (Authenticated)
+- **GET /api/v1/profile** - Get current user profile with assigned tasks
+- **GET /api/v1/admin/users** - List all users (requires `admin` scope)
 
 ## 🔑 Authentication
 
-The API uses Bearer Token authentication. Include your token in the Authorization header:
+Three test Bearer tokens are provided:
 
 ```bash
-Authorization: Bearer your-token-here
+# Regular user (read, write permissions)
+Authorization: Bearer user-token-123
+
+# Admin user (read, write, admin, delete permissions) 
+Authorization: Bearer admin-token-456
+
+# Read-only user (read permission only)
+Authorization: Bearer readonly-token-789
 ```
 
-### Available Test Tokens
-
-| Token | User | Role | Scopes |
-|-------|------|------|--------|
-| `user-token-123` | John Doe | user | read, write |
-| `admin-token-456` | Jane Admin | admin | read, write, admin, delete |
-| `readonly-token-789` | Bob Reader | readonly | read |
-
-## 🏃‍♂️ Running the Application
-
-### Prerequisites
-
-```bash
-# Install dependencies
-bundle install
-```
+## 🏃‍♂️ **Running the API**
 
 ### Start the Server
-
 ```bash
-# From the examples directory
-ruby enterprise_sinatra_api.rb
+cd /Users/riccardo/git/github/riccardomerolla/ruby-tapir
+bundle exec ruby examples/run_enterprise_api.rb
 ```
 
-The server will start on `http://localhost:4567`
-
-### Available URLs
-
-- **API Documentation**: http://localhost:4567/docs
-- **OpenAPI Spec**: http://localhost:4567/openapi.json
+### Access Documentation
+- **Interactive Docs**: http://localhost:4567/docs
+- **OpenAPI Spec**: http://localhost:4567/openapi.json  
 - **Health Check**: http://localhost:4567/health
 
-## 📖 Example API Calls
+## 📖 **Example API Calls**
 
 ### Health Check (Public)
 ```bash
@@ -86,145 +81,122 @@ curl -H "Authorization: Bearer user-token-123" \
      http://localhost:4567/api/v1/tasks
 ```
 
-### Create Task
+### Create Task (Authenticated)
 ```bash
 curl -X POST \
-  -H "Authorization: Bearer user-token-123" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "New Task",
-    "description": "Task description",
-    "status": "pending",
-    "assignee_id": 1
-  }' \
-  http://localhost:4567/api/v1/tasks
+     -H "Authorization: Bearer user-token-123" \
+     -H "Content-Type: application/json" \
+     -d '{"title":"New Task","description":"Test task","assignee_id":1}' \
+     http://localhost:4567/api/v1/tasks
 ```
 
-### Get User Profile
+### Get User Profile (Authenticated)
 ```bash
 curl -H "Authorization: Bearer user-token-123" \
      http://localhost:4567/api/v1/profile
 ```
 
-### Admin: List All Users
+### Admin: List All Users (Admin Only)
 ```bash
 curl -H "Authorization: Bearer admin-token-456" \
      http://localhost:4567/api/v1/admin/users
 ```
 
-### Filter Tasks by Status
+## 🎯 **RapiTapir DSL Example**
+
+The endpoints are defined using RapiTapir's fluent DSL with full type safety:
+
+```ruby
+# Task creation endpoint with full type validation
+RapiTapir.post('/api/v1/tasks')
+  .summary('Create a new task')
+  .description('Create a new task in the system. Requires write permission.')
+  .json_body(TASK_CREATE_SCHEMA)  # RapiTapir type schema
+  .created(TASK_SCHEMA)           # Response type validation
+  .error_response(400, ERROR_SCHEMA, description: 'Validation error')
+  .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
+  .error_response(403, ERROR_SCHEMA, description: 'Insufficient permissions')
+  .build
+```
+
+## 🔧 **Auto-Generated OpenAPI Features**
+
+The OpenAPI specification is generated automatically from the RapiTapir endpoint definitions:
+
+- **Path Parameters**: Automatically extracted from `:id` patterns
+- **Query Parameters**: Type-safe with validation rules
+- **Request Bodies**: JSON schema validation from RapiTapir types
+- **Response Schemas**: Type-safe response definitions
+- **Error Responses**: Comprehensive error documentation
+- **Security Schemes**: Bearer token authentication documented
+- **Operation Metadata**: Summaries, descriptions, and tags
+
+## 🏗️ **Architecture Highlights**
+
+### Type-Safe Schema Definitions
+```ruby
+TASK_SCHEMA = RapiTapir::Types.hash({
+  "id" => RapiTapir::Types.integer,
+  "title" => RapiTapir::Types.string,
+  "description" => RapiTapir::Types.string,
+  "status" => RapiTapir::Types.string,
+  "assignee_id" => RapiTapir::Types.integer,
+  "created_at" => RapiTapir::Types.string,
+  "updated_at" => RapiTapir::Types.optional(RapiTapir::Types.string)
+})
+```
+
+### Auto-Generated OpenAPI
+```ruby
+def self.openapi_spec
+  @openapi_spec ||= begin
+    generator = RapiTapir::OpenAPI::SchemaGenerator.new(
+      endpoints: endpoints,
+      info: { title: 'Enterprise Task Management API', version: '1.0.0' }
+    )
+    generator.generate
+  end
+end
+```
+
+### Sinatra Integration
+```ruby
+# OpenAPI endpoint auto-generated at runtime
+get '/openapi.json' do
+  content_type :json
+  JSON.pretty_generate(TaskAPI.openapi_spec)
+end
+```
+
+## ✨ **Production Features**
+
+- **Security Headers**: XSS protection, content type options
+- **CORS Support**: Configurable origins and methods
+- **Rate Limiting**: 100 requests/minute, 2000/hour
+- **Request Validation**: Type-safe input validation
+- **Error Handling**: Structured error responses
+- **Authentication Middleware**: Bearer token validation
+- **Authorization**: Scope-based permission checking
+
+## 🧪 **Testing**
+
+Run the comprehensive test suite:
+
 ```bash
-curl -H "Authorization: Bearer user-token-123" \
-     "http://localhost:4567/api/v1/tasks?status=in_progress&limit=10"
+# Test RapiTapir endpoint definitions
+ruby examples/test_rapitapir_endpoints.rb
+
+# Test the full enterprise API (requires server to be running)
+ruby examples/test_enterprise_api.rb
 ```
 
-## 🔒 Security Features
+## 🎉 **Benefits of This Approach**
 
-### Authentication & Authorization
-- Bearer token validation
-- Scope-based access control
-- Role-based permissions
-- Thread-safe context management
+1. **Single Source of Truth**: API endpoints defined once in RapiTapir DSL
+2. **Auto-Generated Documentation**: OpenAPI spec reflects actual implementation
+3. **Type Safety**: Request/response validation with RapiTapir types  
+4. **Developer Experience**: Interactive Swagger UI for testing
+5. **Production Ready**: Comprehensive middleware and security
+6. **Maintainable**: No manual OpenAPI spec maintenance required
 
-### Security Middleware
-- **Rate Limiting**: Prevents API abuse
-- **CORS**: Configurable cross-origin support
-- **Security Headers**: XSS, CSRF, and other protections
-- **Request Validation**: Input sanitization and validation
-
-### Security Headers Applied
-- `X-Content-Type-Options: nosniff`
-- `X-Frame-Options: DENY`
-- `X-XSS-Protection: 1; mode=block`
-- `Strict-Transport-Security: max-age=31536000; includeSubDomains`
-- `Referrer-Policy: strict-origin-when-cross-origin`
-
-## 📊 Response Formats
-
-### Success Response
-```json
-{
-  "id": 1,
-  "title": "Setup CI/CD Pipeline",
-  "description": "Configure automated testing and deployment",
-  "status": "in_progress",
-  "assignee_id": 1,
-  "created_at": "2025-07-29T10:30:00Z"
-}
-```
-
-### Error Response
-```json
-{
-  "error": "Authentication required"
-}
-```
-
-### Validation Error
-```json
-{
-  "error": "Title is required"
-}
-```
-
-## 🏗️ Architecture
-
-The application demonstrates enterprise-grade patterns:
-
-1. **Separation of Concerns**: Database, authentication, and API logic are separated
-2. **Middleware Stack**: Security, authentication, and rate limiting middleware
-3. **Error Handling**: Structured error responses with appropriate HTTP status codes
-4. **Documentation**: Self-documenting API with OpenAPI 3.0
-5. **Validation**: Input validation and sanitization
-6. **Monitoring**: Health check and structured logging
-
-## 🧪 Testing the API
-
-### Using curl
-```bash
-# Test authentication
-curl -v -H "Authorization: Bearer invalid-token" \
-     http://localhost:4567/api/v1/tasks
-
-# Test rate limiting (run multiple times quickly)
-for i in {1..150}; do
-  curl -H "Authorization: Bearer user-token-123" \
-       http://localhost:4567/api/v1/tasks
-done
-
-# Test CORS preflight
-curl -X OPTIONS \
-  -H "Origin: http://localhost:3000" \
-  -H "Access-Control-Request-Method: POST" \
-  -H "Access-Control-Request-Headers: Authorization, Content-Type" \
-  http://localhost:4567/api/v1/tasks
-```
-
-### Using the Swagger UI
-1. Open http://localhost:4567/docs
-2. Click "Authorize" and enter a bearer token
-3. Try out the API endpoints interactively
-
-## 🚀 Production Deployment
-
-For production deployment, consider:
-
-1. **Database**: Replace in-memory databases with PostgreSQL, MySQL, etc.
-2. **Authentication**: Integrate with OAuth2, JWT, or your auth provider
-3. **Caching**: Add Redis for rate limiting and session storage
-4. **Monitoring**: Add structured logging and metrics
-5. **Configuration**: Use environment variables for secrets
-6. **SSL/TLS**: Enable HTTPS with proper certificates
-7. **Load Balancing**: Use nginx or similar for production traffic
-
-## 📈 Performance
-
-The application includes several performance optimizations:
-
-- **Rate Limiting**: Prevents API abuse and ensures fair usage
-- **Pagination**: Built-in pagination for large datasets
-- **Efficient Authentication**: Fast token validation
-- **Minimal Dependencies**: Lightweight Sinatra framework
-- **Thread Safety**: Context management is thread-safe
-
-This enterprise example showcases how RapiTapir can be used to build production-ready APIs with comprehensive security, documentation, and monitoring capabilities.
+This implementation demonstrates the power of RapiTapir's DSL and auto-generation capabilities in creating production-ready APIs with comprehensive documentation.

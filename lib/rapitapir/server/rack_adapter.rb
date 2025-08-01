@@ -119,7 +119,7 @@ module RapiTapir
 
           # Only coerce non-nil values, or include nil for optional parameters
           if value.nil?
-            inputs[input.name] = nil if !input.required?
+            inputs[input.name] = nil unless input.required?
           else
             inputs[input.name] = input.coerce(value)
           end

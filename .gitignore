@@ -5,12 +5,22 @@
 /doc/
 /pkg/
 /spec/reports/
+/spec/tmp/
 /tmp/
 vendor/
 *.gem
 .rspec_status
-Gemfile.lock
 
+# Generated files (should not be committed)
+cli-generated-*
+*_schema.json
+*_schema.yaml
+
+# IDE and OS files
 .idea
 .vscode
 .DS_Store
+
+# RapiTapir specific generated files
+generated_docs/
+generated_clients/

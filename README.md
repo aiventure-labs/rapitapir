@@ -1,23 +1,303 @@
 # RapiTapir 🦙
 
-A Ruby library for defining HTTP API endpoints declaratively with type safety, automatic validation, and excellent developer experience.
+**A modern Ruby library for building type-safe HTTP APIs with automatic OpenAPI documentation**
 
-[![Tests](https://img.shields.io/badge/tests-88%20passing-brightgreen)](spec/)
-[![Coverage](https://img.shields.io/badge/coverage-85.67%25-green)](coverage/)
-[![Ruby](https://img.shields.io/badge/ruby-3.2%2B-red)](Gemfile)
+[![Tests](https://img.shields.io/badge/tests-189%20passing-brightgreen)](spec/)
+[![Coverage](https://img.shields.io/badge/coverage-54.39%25-yellow)](coverage/)
+[![Ruby](https://img.shields.io/badge/ruby-3.0%2B-red)](Gemfile)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-## 🎯 Goals
+RapiTapir combines the expressiveness of Ruby with the safety of strong typing to create APIs that are both powerful and reliable. Define your endpoints once with our fluent DSL, and get automatic validation, documentation, and client generation.
 
-- **Type-safe HTTP APIs**: Define endpoints with strong typing for inputs and outputs
-- **Declarative DSL**: Readable, composable endpoint definitions
-- **Runtime Validation**: Automatic type checking and validation
-- **Framework Agnostic**: Works with any Ruby web framework
-- **Developer Joy**: Excellent error messages and IDE support
+## ✨ Why RapiTapir?
+
+- **🔒 Type Safety**: Strong typing for inputs and outputs with runtime validation
+- **📖 Auto Documentation**: OpenAPI 3.0 specs generated automatically from your code
+- **🚀 Framework Agnostic**: Works with Sinatra, Rails, and any Rack-based framework  
+- **🛡️ Production Ready**: Built-in security, observability, and authentication features
+- **💎 Ruby Native**: Designed specifically for Ruby developers who love clean, readable code
+- **🔧 Zero Config**: Get started in minutes with sensible defaults
 
 ## 🚀 Quick Start
 
+### Installation
+
+Add to your Gemfile:
+
 ```ruby
+gem 'rapitapir'
+```
+
+### Basic Sinatra Example
+
+```ruby
+require 'sinatra/base'
 require 'rapitapir'
+require 'rapitapir/sinatra/extension'
+
+class BookAPI < Sinatra::Base
+  register RapiTapir::Sinatra::Extension
+
+  # Configure API information
+  configure_api do |config|
+    config.info(
+      title: 'Book API',
+      description: 'A simple book management API',
+      version: '1.0.0'
+    )
+  end
+
+  # Define your data schema
+  BOOK_SCHEMA = RapiTapir::Types.hash({
+    "id" => RapiTapir::Types.integer,
+    "title" => RapiTapir::Types.string,
+    "author" => RapiTapir::Types.string,
+    "published" => RapiTapir::Types.boolean
+  })
+
+  # Define endpoints with the elegant resource DSL
+  api_resource '/books', schema: BOOK_SCHEMA do
+    crud do
+      index { Book.all }
+      
+      show do |inputs|
+        Book.find(inputs[:id]) || halt(404, { error: 'Book not found' }.to_json)
+      end
+      
+      create do |inputs|
+        Book.create(inputs[:body])
+      end
+    end
+  end
+
+  run! if __FILE__ == $0
+end
+```
+
+Start your server and visit:
+- **📖 Interactive Documentation**: `http://localhost:4567/docs`
+- **📋 OpenAPI Specification**: `http://localhost:4567/openapi.json`
+
+That's it! You now have a fully documented, type-safe API with interactive documentation.
+
+## 🏗️ Core Features
+
+### Type-Safe API Design
+
+Define your data schemas once and use them everywhere:
+
+```ruby
+USER_SCHEMA = RapiTapir::Types.hash({
+  "id" => RapiTapir::Types.integer,
+  "name" => RapiTapir::Types.string(min_length: 1, max_length: 100),
+  "email" => RapiTapir::Types.email,
+  "age" => RapiTapir::Types.optional(RapiTapir::Types.integer(min: 0, max: 150))
+})
+```
+
+### Fluent Endpoint Definition
+
+Create endpoints with a clean, readable DSL:
+
+```ruby
+# Simple endpoint
+endpoint(
+  RapiTapir.get('/users/:id')
+    .summary('Get user by ID')
+    .path_param(:id, RapiTapir::Types.integer)
+    .ok(USER_SCHEMA)
+    .error_response(404, ERROR_SCHEMA, description: 'User not found')
+    .build
+) do |inputs|
+  user = User.find(inputs[:id])
+  halt 404 unless user
+  user.to_h
+end
+```
+
+### RESTful Resource Builder
+
+Build complete CRUD APIs with minimal code:
+
+```ruby
+api_resource '/users', schema: USER_SCHEMA do
+  crud do
+    index { User.all }
+    show { |inputs| User.find(inputs[:id]) }
+    create { |inputs| User.create(inputs[:body]) }
+    update { |inputs| User.update(inputs[:id], inputs[:body]) }
+    destroy { |inputs| User.delete(inputs[:id]); status 204 }
+  end
+  
+  # Add custom endpoints
+  custom(:get, 'active') do
+    User.where(active: true)
+  end
+end
+```
+
+### Automatic OpenAPI Documentation
+
+Your API documentation is always up-to-date because it's generated from your actual code:
+
+- **Interactive Swagger UI** with try-it-out functionality
+- **Complete OpenAPI 3.0 specification** with schemas, examples, and security
+- **TypeScript client generation** for frontend teams
+- **Markdown documentation** for wikis and READMEs
+
+## 🔧 Framework Integration
+
+### Sinatra (Recommended)
+
+```ruby
+require 'rapitapir/sinatra/extension'
+
+class MyAPI < Sinatra::Base
+  register RapiTapir::Sinatra::Extension
+  # Use the full DSL...
+end
+```
+
+### Rack Applications
+
+```ruby
+require 'rapitapir/server/rack_adapter'
+
+class MyRackApp
+  def call(env)
+    # Manual integration with Rack
+  end
+end
+```
+
+### Rails Support
+
+```ruby
+# In your Rails controller
+include RapiTapir::Rails::Controller
+```
+
+## 🛡️ Production Features
+
+### Authentication & Authorization
+
+```ruby
+# Bearer token authentication
+configure_api do |config|
+  config.bearer_auth :api_key, realm: 'API'
+end
+
+# Scope-based authorization
+endpoint(
+  RapiTapir.get('/admin/users')
+    .summary('List all users (admin only)')
+    .bearer_auth(scopes: ['admin'])
+    .ok(RapiTapir::Types.array(USER_SCHEMA))
+    .build
+) do |inputs|
+  require_scope('admin')
+  User.all
+end
+```
+
+### Observability
+
+```ruby
+# Health checks
+RapiTapir::Observability.configure do |config|
+  config.enable_health_checks
+  config.health_endpoint '/health'
+end
+
+# Metrics and tracing
+endpoint(
+  RapiTapir.get('/api/data')
+    .with_metrics('api_data_requests')
+    .with_tracing('fetch_api_data')
+    .build
+) do
+  # Your endpoint code
+end
+```
+
+### Security Middleware
+
+```ruby
+# Built-in security features
+use RapiTapir::Server::Middleware::CORS
+use RapiTapir::Server::Middleware::RateLimit, requests_per_minute: 100
+use RapiTapir::Server::Middleware::SecurityHeaders
+```
+
+## 🎨 Examples
+
+Explore our comprehensive examples:
+
+- **[Getting Started](examples/getting_started_extension.rb)** - Basic Sinatra integration
+- **[Enterprise API](examples/enterprise_rapitapir_api.rb)** - Production-ready example with auth
+- **[Authentication](examples/authentication_example.rb)** - Bearer token and scope-based auth
+- **[Observability](examples/observability/)** - Health checks, metrics, and tracing
+
+## 📚 Documentation
+
+- **[API Reference](docs/endpoint-definition.md)** - Complete endpoint definition guide
+- **[Sinatra Extension](docs/SINATRA_EXTENSION.md)** - Detailed Sinatra integration
+- **[Type System](docs/types.md)** - All available types and validations
+- **[Authentication](docs/authentication.md)** - Security and auth patterns
+- **[Observability](docs/observability.md)** - Monitoring and health checks
+
+## 🧪 Testing
+
+RapiTapir includes comprehensive testing utilities:
+
+```ruby
+# Validate your endpoint definitions
+RapiTapir::CLI::Validator.new(endpoints).validate
+
+# Generate test fixtures
+RapiTapir::Testing.generate_fixtures(USER_SCHEMA)
+```
+
+Run the test suite:
+
+```bash
+bundle exec rspec
+```
+
+## 🤝 Contributing
+
+We love contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Development Setup
+
+```bash
+git clone https://github.com/riccardomerolla/ruby-tapir.git
+cd ruby-tapir
+bundle install
+bundle exec rspec
+```
+
+### Roadmap
+
+- **Phase 4**: Advanced client generation (Python, Go, etc.)
+- **Phase 5**: GraphQL integration
+- **Phase 6**: gRPC support
+- **Community**: Plugin ecosystem
+
+## � License
+
+RapiTapir is released under the [MIT License](LICENSE).
+
+## 🙋‍♂️ Support
+
+- **🐛 Bug Reports**: [GitHub Issues](https://github.com/riccardomerolla/ruby-tapir/issues)
+- **💡 Feature Requests**: [GitHub Discussions](https://github.com/riccardomerolla/ruby-tapir/discussions)
+- **📧 Email**: riccardo.merolla@example.com
+- **💬 Community**: Join our [Discord](https://discord.gg/rapitapir)
+
+---
+
+**Built with ❤️ for the Ruby and Sinatra community**
 
 # Define an endpoint
 endpoint = RapiTapir.post('/users')

@@ -147,7 +147,7 @@ RSpec.describe RapiTapir::Observability::HealthCheck do
         end
 
         it 'returns individual check result' do
-          status, headers, body = endpoint.call(env)
+          status, _headers, body = endpoint.call(env)
           
           expect(status).to eq 200
           response = JSON.parse(body.first)
@@ -159,7 +159,7 @@ RSpec.describe RapiTapir::Observability::HealthCheck do
         let(:env) { { 'REQUEST_METHOD' => 'GET', 'PATH_INFO' => '/health/checks' } }
 
         it 'returns list of available checks' do
-          status, headers, body = endpoint.call(env)
+          status, _headers, body = endpoint.call(env)
           
           expect(status).to eq 200
           response = JSON.parse(body.first)

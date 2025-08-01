@@ -74,7 +74,7 @@ example_id                                             | status | run_time      
 ./spec/client/typescript_generator_spec.rb[1:2:4]      | passed | 0.00043 seconds |
 ./spec/client/typescript_generator_spec.rb[1:2:5]      | passed | 0.00091 seconds |
 ./spec/client/typescript_generator_spec.rb[1:2:6]      | passed | 0.00015 seconds |
-./spec/client/typescript_generator_spec.rb[1:2:7]      | passed | 0.00094 seconds |
+./spec/client/typescript_generator_spec.rb[1:2:7]      | passed | 0.00016 seconds |
 ./spec/client/typescript_generator_spec.rb[1:2:8]      | passed | 0.00013 seconds |
 ./spec/client/typescript_generator_spec.rb[1:3:1]      | passed | 0.00056 seconds |
 ./spec/client/typescript_generator_spec.rb[1:4:1]      | passed | 0.00007 seconds |
@@ -180,7 +180,7 @@ example_id                                             | status | run_time      
 ./spec/docs/markdown_generator_spec.rb[1:2:2]          | passed | 0.00042 seconds |
 ./spec/docs/markdown_generator_spec.rb[1:2:3]          | passed | 0.00011 seconds |
 ./spec/docs/markdown_generator_spec.rb[1:2:4]          | passed | 0.00139 seconds |
-./spec/docs/markdown_generator_spec.rb[1:2:5]          | passed | 0.00012 seconds |
+./spec/docs/markdown_generator_spec.rb[1:2:5]          | passed | 0.0014 seconds  |
 ./spec/docs/markdown_generator_spec.rb[1:2:6]          | passed | 0.00011 seconds |
 ./spec/docs/markdown_generator_spec.rb[1:2:7]          | passed | 0.00089 seconds |
 ./spec/docs/markdown_generator_spec.rb[1:2:8]          | passed | 0.00078 seconds |
@@ -408,7 +408,7 @@ example_id                                             | status | run_time      
 ./spec/server/rack_adapter_spec.rb[1:1:3]              | passed | 0.00004 seconds |
 ./spec/server/rack_adapter_spec.rb[1:2:1]              | passed | 0.00003 seconds |
 ./spec/server/rack_adapter_spec.rb[1:3:1]              | passed | 0.00012 seconds |
-./spec/server/rack_adapter_spec.rb[1:3:2]              | passed | 0.0001 seconds  |
+./spec/server/rack_adapter_spec.rb[1:3:2]              | passed | 0.00105 seconds |
 ./spec/server/rack_adapter_spec.rb[1:3:3]              | passed | 0.00012 seconds |
 ./spec/server/rack_adapter_spec.rb[1:4:1]              | passed | 0.0001 seconds  |
 ./spec/server/rack_adapter_spec.rb[1:5:1]              | passed | 0.00012 seconds |
