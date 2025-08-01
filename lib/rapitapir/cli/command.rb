@@ -145,9 +145,9 @@ module RapiTapir
         end
 
         require_relative 'server'
-        server = CLI::Server.new(@options[:input], @options[:config])
+        server = CLI::Server.new(endpoints_file: @options[:input], port: port.to_i, config: @options[:config] || {})
         puts "Starting documentation server on port #{port}..."
-        server.start(port.to_i)
+        server.start
       end
 
       def run_validate(args)

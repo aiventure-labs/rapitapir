@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+# Set environment variable to prevent CLI commands from exiting during tests
+ENV['RSPEC_RUNNING'] = 'true'
+
 # Only enable SimpleCov in supported environments
 if ENV['COVERAGE'] != 'false'
   require 'simplecov'

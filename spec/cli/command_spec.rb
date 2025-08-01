@@ -136,7 +136,7 @@ RSpec.describe RapiTapir::CLI::Command do
           'generate', 'client',
           '--endpoints', test_endpoints_file,
           '--output', output_file,
-          '--language', 'typescript'
+          '--format', 'ts'
         ]).run
 
         expect(File.exist?(output_file)).to be(true)
@@ -274,7 +274,7 @@ RSpec.describe RapiTapir::CLI::Command do
           described_class.new([
             'serve',
             '--endpoints', test_endpoints_file,
-            '--port', '9999'
+            '9999'
           ]).run
         end
         sleep(0.1) # Give it a moment to start
