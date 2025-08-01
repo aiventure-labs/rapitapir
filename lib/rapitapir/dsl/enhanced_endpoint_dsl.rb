@@ -135,9 +135,7 @@ module RapiTapir
         case type_def
         when Symbol
           create_primitive_type(type_def)
-        when Hash
-          Schema.from_definition(type_def)
-        when Array
+        when Hash, Array
           Schema.from_definition(type_def)
         when Class
           if type_def < Types::Base
@@ -263,12 +261,10 @@ module RapiTapir
         case kind
         when :json
           JSON.generate(value)
-        when :text
-          value.to_s
         when :status
           # Status codes don't need serialization
           value
-        else
+        else # :text and other formats
           value.to_s
         end
       end

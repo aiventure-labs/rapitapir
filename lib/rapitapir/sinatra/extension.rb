@@ -139,12 +139,13 @@ module RapiTapir
           !current_user.nil?
         end
 
-        def has_scope?(scope)
+        def scope?(scope)
           return false unless authenticated?
 
           user_scopes = current_user.is_a?(Hash) ? current_user[:scopes] || [] : []
           user_scopes.include?(scope.to_s)
         end
+        alias has_scope? scope?
 
         def require_authentication!
           halt 401, { error: 'Authentication required' }.to_json unless authenticated?

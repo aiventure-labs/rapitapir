@@ -2,6 +2,8 @@
 
 module RapiTapir
   module Docs
+    # HTML documentation generator for RapiTapir APIs
+    # Generates interactive HTML documentation with Try-It functionality
     class HtmlGenerator
       attr_reader :endpoints, :config
 

@@ -284,36 +284,24 @@ module RapiTapir
 
       def format_type(type)
         case type
-        when RapiTapir::Types::String
+        when RapiTapir::Types::String, :string, String
           'string'
-        when RapiTapir::Types::Integer
+        when RapiTapir::Types::Integer, :integer, Integer
           'integer'
-        when RapiTapir::Types::Float
+        when RapiTapir::Types::Float, :float, Float
           'number'
-        when RapiTapir::Types::Boolean
+        when RapiTapir::Types::Boolean, :boolean
           'boolean'
-        when RapiTapir::Types::Date
+        when RapiTapir::Types::Date, :date
           'date'
-        when RapiTapir::Types::DateTime
+        when RapiTapir::Types::DateTime, :datetime
           'datetime'
-        when RapiTapir::Types::Array
+        when RapiTapir::Types::Array, Array
           'array'
-        when RapiTapir::Types::Hash
+        when RapiTapir::Types::Hash, Hash
           'object'
-        when :string, String then 'string'
-        when :integer, Integer then 'integer'
-        when :float, Float then 'number'
-        when :boolean then 'boolean'
-        when :date then 'date'
-        when :datetime then 'datetime'
         else
-          if type == Hash
-            'object'
-          elsif type == Array
-            'array'
-          else
-            type.to_s
-          end
+          type.to_s
         end
       end
 

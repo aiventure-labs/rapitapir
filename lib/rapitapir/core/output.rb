@@ -35,8 +35,7 @@ module RapiTapir
         when :boolean then [true, false].include?(value)
         when Hash then validate_hash_schema(value)
         when Class then value.is_a?(type)
-        when Integer then true # For status codes
-        else true # Accept any for custom types
+        else true # Accept any for custom types and status codes
         end
       end
 
@@ -101,7 +100,6 @@ module RapiTapir
       def serialize_json(value)
         case value
         when String then value
-        when Hash, Array then JSON.generate(value)
         else JSON.generate(value)
         end
       rescue JSON::GeneratorError, JSON::NestingError => e

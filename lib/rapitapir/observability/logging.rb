@@ -197,14 +197,7 @@ module RapiTapir
             @logger = StructuredLogger.new(output: output, level: level, format: format)
           else
             @logger = ::Logger.new(output)
-            @logger.level = case level.to_sym
-                            when :debug then ::Logger::DEBUG
-                            when :info then ::Logger::INFO
-                            when :warn then ::Logger::WARN
-                            when :error then ::Logger::ERROR
-                            when :fatal then ::Logger::FATAL
-                            else ::Logger::INFO
-                            end
+            @logger.level = log_level(level)
           end
         end
 

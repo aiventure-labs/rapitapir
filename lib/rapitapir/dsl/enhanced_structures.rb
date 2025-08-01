@@ -91,12 +91,10 @@ module RapiTapir
         return :status if @type.nil?
 
         case @content_type
-        when 'application/json'
-          :json
         when 'application/xml', 'text/xml'
           :xml
-        else
-          :json # Default to json for unknown content types
+        else # Default to json for application/json and unknown content types
+          :json
         end
       end
 

@@ -244,8 +244,6 @@ module RapiTapir
             schema[:required] = required if required.any?
             schema
           end
-        when :string, String
-          { type: 'string' }
         when :integer, Integer
           { type: 'integer' }
         when :number, Float
@@ -278,7 +276,7 @@ module RapiTapir
             schema[:required] = required if required.any?
             schema
           end
-        else
+        else # Default for unknown types and :string, String
           { type: 'string' }
         end
       end
@@ -294,13 +292,11 @@ module RapiTapir
 
       def determine_output_content_type(output)
         case output.kind
-        when :json
-          'application/json'
         when :xml
           'application/xml'
         when :html
           'text/html'
-        else
+        else # Default for :json and unknown formats
           'application/json'
         end
       end

@@ -49,37 +49,29 @@ module RapiTapir
 
       def convert_to_typescript_type(type)
         case type
-        when :string, String
+        when :string, String, RapiTapir::Types::String
           'string'
-        when :integer, Integer
+        when :integer, Integer, RapiTapir::Types::Integer, :number, Float, RapiTapir::Types::Float
           'number'
-        when :number, Float
-          'number'
-        when :boolean
+        when :boolean, RapiTapir::Types::Boolean
           'boolean'
-        when :date
-          'Date'
-        when :datetime
-          'Date'
-        when RapiTapir::Types::String
-          'string'
-        when RapiTapir::Types::Integer
-          'number'
-        when RapiTapir::Types::Float
-          'number'
-        when RapiTapir::Types::Boolean
-          'boolean'
-        when RapiTapir::Types::Date, RapiTapir::Types::DateTime
+        when :date, :datetime, RapiTapir::Types::Date, RapiTapir::Types::DateTime
           'Date'
         when RapiTapir::Types::Array
           "#{convert_to_typescript_type(type.item_type)}[]"
-        when RapiTapir::Types::Hash
-          if type.field_types.empty?
+        when RapiTapir::Types::Hash, Hash
+          if (type.respond_to?(:field_types) && type.field_types.empty?) || (type.respond_to?(:empty?) && type.empty?)
             'Record<string, any>'
           else
-            properties = type.field_types.map do |key, value|
-              "#{key}: #{convert_to_typescript_type(value)}"
-            end
+            properties = if type.respond_to?(:field_types)
+                           type.field_types.map do |key, value|
+                             "#{key}: #{convert_to_typescript_type(value)}"
+                           end
+                         else
+                           type.map do |key, value|
+                             "#{key}: #{convert_to_typescript_type(value)}"
+                           end
+                         end
             "{ #{properties.join('; ')} }"
           end
         when Array
@@ -87,15 +79,6 @@ module RapiTapir
             "#{convert_to_typescript_type(type.first)}[]"
           else
             'any[]'
-          end
-        when Hash
-          if type.empty?
-            'Record<string, any>'
-          else
-            properties = type.map do |key, value|
-              "#{key}: #{convert_to_typescript_type(value)}"
-            end
-            "{ #{properties.join('; ')} }"
           end
         else
           'any'

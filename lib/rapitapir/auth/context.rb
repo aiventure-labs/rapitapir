@@ -32,17 +32,20 @@ module RapiTapir
         !@user.nil?
       end
 
-      def has_scope?(scope)
+      def scope?(scope)
         @scopes.include?(scope.to_s)
       end
+      alias has_scope? scope?
 
-      def has_any_scope?(*scopes)
-        scopes.any? { |scope| has_scope?(scope) }
+      def any_scope?(*scopes)
+        scopes.any? { |scope| scope?(scope) }
       end
+      alias has_any_scope? any_scope?
 
-      def has_all_scopes?(*scopes)
-        scopes.all? { |scope| has_scope?(scope) }
+      def all_scopes?(*scopes)
+        scopes.all? { |scope| scope?(scope) }
       end
+      alias has_all_scopes? all_scopes?
 
       def user_id
         return nil unless @user
@@ -58,7 +61,7 @@ module RapiTapir
       end
 
       def add_scope(scope)
-        @scopes << scope.to_s unless has_scope?(scope)
+        @scopes << scope.to_s unless scope?(scope)
       end
 
       def remove_scope(scope)

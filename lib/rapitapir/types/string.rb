@@ -53,8 +53,7 @@ module RapiTapir
       def coerce_value(value)
         case value
         when ::String then value
-        when Symbol then value.to_s
-        when Numeric then value.to_s
+        when Symbol, Numeric then value.to_s
         else
           raise CoercionError.new(value, 'String', 'Value does not respond to to_s') unless value.respond_to?(:to_s)
 

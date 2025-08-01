@@ -2,6 +2,8 @@
 
 module RapiTapir
   module Core
+    # HTTP response wrapper for RapiTapir endpoints
+    # Provides a standardized interface for HTTP response data
     class Response
       attr_reader :status, :headers, :body
 

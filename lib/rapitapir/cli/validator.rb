@@ -12,7 +12,7 @@ module RapiTapir
         @errors = []
       end
 
-      def validate
+      def valid?
         @errors.clear
 
         return false if @endpoints.nil? || @endpoints.empty?
@@ -23,6 +23,7 @@ module RapiTapir
 
         @errors.empty?
       end
+      alias validate valid?
 
       private
 
@@ -273,11 +274,12 @@ module RapiTapir
         @errors << "#{endpoint.path}: missing output definition"
       end
 
-      def validate_output_definition(endpoint)
+      def valid_output_definition?(endpoint)
         return true if endpoint.respond_to?(:outputs) && endpoint.outputs && !endpoint.outputs.empty?
 
         false
       end
+      alias validate_output_definition valid_output_definition?
     end
   end
 end

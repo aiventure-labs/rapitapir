@@ -90,9 +90,10 @@ module RapiTapir
         current_context&.authenticated? || false
       end
 
-      def has_scope?(scope)
-        current_context&.has_scope?(scope) || false
+      def scope?(scope)
+        current_context&.scope?(scope) || false
       end
+      alias has_scope? scope?
     end
   end
 end

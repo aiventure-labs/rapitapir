@@ -67,8 +67,14 @@ module RapiTapir
         with_metadata(tag: name)
       end
 
-      def deprecated(flag = true)
-        with_metadata(deprecated: flag)
+      def deprecated(*args, **kwargs)
+        # Support both deprecated(true/false) and deprecated(flag: true/false)
+        flag_value = if args.any?
+                       args.first
+                     else
+                       kwargs.fetch(:flag, true)
+                     end
+        with_metadata(deprecated: flag_value)
       end
 
       # Validate input/output types for a given input/output hash
