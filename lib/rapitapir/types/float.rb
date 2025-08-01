@@ -7,11 +7,6 @@ module RapiTapir
     # Float type for validating floating-point numbers with range constraints
     # Supports minimum, maximum, and multiple validation rules
     class Float < Base
-      def initialize(minimum: nil, maximum: nil, exclusive_minimum: nil, exclusive_maximum: nil, multiple_of: nil,
-                     **options)
-        super
-      end
-
       protected
 
       def validate_type(value)
@@ -23,6 +18,17 @@ module RapiTapir
       def validate_constraints(value)
         errors = []
         float_value = value.to_f
+
+        errors.concat(validate_range_constraints(float_value))
+        errors.concat(validate_multiple_constraint(float_value))
+
+        errors
+      end
+
+      private
+
+      def validate_range_constraints(float_value)
+        errors = []
 
         if constraints[:minimum] && float_value < constraints[:minimum]
           errors << "Value #{float_value} is below minimum #{constraints[:minimum]}"
@@ -39,6 +45,12 @@ module RapiTapir
         if constraints[:exclusive_maximum] && float_value >= constraints[:exclusive_maximum]
           errors << "Value #{float_value} must be less than #{constraints[:exclusive_maximum]}"
         end
+
+        errors
+      end
+
+      def validate_multiple_constraint(float_value)
+        errors = []
 
         if constraints[:multiple_of] && (float_value % constraints[:multiple_of]) != 0
           errors << "Value #{float_value} is not a multiple of #{constraints[:multiple_of]}"

@@ -243,7 +243,8 @@ module RapiTapir
 
           type_def.new
 
-        when Schema
+        when Schema, ->(obj) { obj.respond_to?(:validate) }
+          # Handle Schema objects and any object that can validate
           type_def
         else
           raise ArgumentError, "Invalid type definition: #{type_def}"

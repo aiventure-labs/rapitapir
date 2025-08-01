@@ -124,17 +124,10 @@ module RapiTapir
         )
       end
 
-      def log_request(method:, path:, status:, duration:, request_id:, **extra_fields)
+      def log_request(**options)
         return unless Logging.enabled?
 
-        Logging.log_request(
-          method: method,
-          path: path,
-          status: status,
-          duration: duration,
-          request_id: request_id,
-          **extra_fields
-        )
+        Logging.log_request(**options)
       end
     end
 

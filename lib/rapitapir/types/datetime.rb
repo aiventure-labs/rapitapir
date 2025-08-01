@@ -35,8 +35,7 @@ module RapiTapir
       def coerce_value(value)
         case value
         when ::DateTime then value
-        when ::Time then value.to_datetime
-        when ::Date then value.to_datetime
+        when ::Time, ::Date then value.to_datetime
         when ::String
           ::DateTime.parse(value)
         when ::Integer

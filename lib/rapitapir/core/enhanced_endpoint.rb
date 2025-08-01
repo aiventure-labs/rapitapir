@@ -11,7 +11,7 @@ module RapiTapir
     class EnhancedEndpoint < Endpoint
       attr_reader :security_schemes, :custom_validators
 
-      def initialize(method: nil, path: nil, inputs: [], outputs: [], errors: [], metadata: {})
+      def initialize(**options)
         super
         @security_schemes = []
         @custom_validators = []

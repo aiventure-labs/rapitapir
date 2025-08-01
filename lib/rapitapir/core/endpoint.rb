@@ -19,13 +19,13 @@ module RapiTapir
 
       attr_reader :method, :path, :inputs, :outputs, :errors, :metadata
 
-      def initialize(method: nil, path: nil, inputs: [], outputs: [], errors: [], metadata: {})
-        @method = method
-        @path = path
-        @inputs = inputs.freeze
-        @outputs = outputs.freeze
-        @errors = errors.freeze
-        @metadata = metadata.freeze
+      def initialize(**options)
+        @method = options[:method]
+        @path = options[:path]
+        @inputs = (options[:inputs] || []).freeze
+        @outputs = (options[:outputs] || []).freeze
+        @errors = (options[:errors] || []).freeze
+        @metadata = (options[:metadata] || {}).freeze
       end
 
       HTTP_METHODS.each do |http_method|
@@ -69,7 +69,7 @@ module RapiTapir
 
       def deprecated(*args, **kwargs)
         # Support both deprecated(true/false) and deprecated(flag: true/false)
-        flag_value = if args.any?
+        flag_value = if args.length.positive?
                        args.first
                      else
                        kwargs.fetch(:flag, true)

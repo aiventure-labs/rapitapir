@@ -88,73 +88,100 @@ module RapiTapir
         # Header
         doc << "## #{method} #{path} {##{anchor}}"
 
-        # Summary and description
-        doc << "**#{endpoint.metadata[:summary]}**" if endpoint.metadata[:summary]
-
-        doc << endpoint.metadata[:description] if endpoint.metadata[:description]
-
-        # Path parameters
-        path_params = endpoint.inputs.select { |input| input.kind == :path }
-        if path_params.any?
-          doc << '### Path Parameters'
-          doc << ''
-          doc << '| Parameter | Type | Description |'
-          doc << '|-----------|------|-------------|'
-          path_params.each do |param|
-            description = (param.options && param.options[:description]) || 'No description'
-            doc << "| `#{param.name}` | #{format_type(param.type)} | #{description} |"
-          end
-        end
-
-        # Query parameters
-        query_params = endpoint.inputs.select { |input| input.kind == :query }
-        if query_params.any?
-          doc << '### Query Parameters'
-          doc << ''
-          doc << '| Parameter | Type | Required | Description |'
-          doc << '|-----------|------|----------|-------------|'
-          query_params.each do |param|
-            required = param.required? ? 'Yes' : 'No'
-            description = (param.options && param.options[:description]) || 'No description'
-            doc << "| `#{param.name}` | #{format_type(param.type)} | #{required} | #{description} |"
-          end
-        end
-
-        # Request body
-        body_param = endpoint.inputs.find { |input| input.kind == :body }
-        if body_param
-          doc << '### Request Body'
-          doc << ''
-          doc << '**Content-Type:** `application/json`'
-          doc << ''
-          doc << '**Schema:**'
-          doc << '```json'
-          doc << format_schema_example(body_param.type)
-          doc << '```'
-        end
-
-        # Response
-        if endpoint.outputs.any?
-          doc << '### Response'
-          doc << ''
-          endpoint.outputs.each do |output|
-            if output.kind == :json
-              doc << '**Content-Type:** `application/json`'
-              doc << ''
-              doc << '**Schema:**'
-              doc << '```json'
-              doc << format_schema_example(output.type)
-              doc << '```'
-            elsif output.kind == :status
-              doc << "**Status Code:** #{output.type}"
-            end
-          end
-        end
+        doc.concat(generate_metadata_section(endpoint))
+        doc.concat(generate_path_parameters_section(endpoint))
+        doc.concat(generate_query_parameters_section(endpoint))
+        doc.concat(generate_request_body_section(endpoint))
+        doc.concat(generate_response_section(endpoint))
 
         # Examples
         doc << generate_endpoint_examples(endpoint) if config[:include_examples]
 
         doc.join("\n\n")
+      end
+
+      def generate_metadata_section(endpoint)
+        doc = []
+
+        # Summary and description
+        doc << "**#{endpoint.metadata[:summary]}**" if endpoint.metadata[:summary]
+        doc << endpoint.metadata[:description] if endpoint.metadata[:description]
+
+        doc
+      end
+
+      def generate_path_parameters_section(endpoint)
+        path_params = endpoint.inputs.select { |input| input.kind == :path }
+        return [] unless path_params.any?
+
+        doc = []
+        doc << '### Path Parameters'
+        doc << ''
+        doc << '| Parameter | Type | Description |'
+        doc << '|-----------|------|-------------|'
+        path_params.each do |param|
+          description = (param.options && param.options[:description]) || 'No description'
+          doc << "| `#{param.name}` | #{format_type(param.type)} | #{description} |"
+        end
+
+        doc
+      end
+
+      def generate_query_parameters_section(endpoint)
+        query_params = endpoint.inputs.select { |input| input.kind == :query }
+        return [] unless query_params.any?
+
+        doc = []
+        doc << '### Query Parameters'
+        doc << ''
+        doc << '| Parameter | Type | Required | Description |'
+        doc << '|-----------|------|----------|-------------|'
+        query_params.each do |param|
+          required = param.required? ? 'Yes' : 'No'
+          description = (param.options && param.options[:description]) || 'No description'
+          doc << "| `#{param.name}` | #{format_type(param.type)} | #{required} | #{description} |"
+        end
+
+        doc
+      end
+
+      def generate_request_body_section(endpoint)
+        body_param = endpoint.inputs.find { |input| input.kind == :body }
+        return [] unless body_param
+
+        doc = []
+        doc << '### Request Body'
+        doc << ''
+        doc << '**Content-Type:** `application/json`'
+        doc << ''
+        doc << '**Schema:**'
+        doc << '```json'
+        doc << format_schema_example(body_param.type)
+        doc << '```'
+
+        doc
+      end
+
+      def generate_response_section(endpoint)
+        return [] unless endpoint.outputs.any?
+
+        doc = []
+        doc << '### Response'
+        doc << ''
+        endpoint.outputs.each do |output|
+          if output.kind == :json
+            doc << '**Content-Type:** `application/json`'
+            doc << ''
+            doc << '**Schema:**'
+            doc << '```json'
+            doc << format_schema_example(output.type)
+            doc << '```'
+          elsif output.kind == :status
+            doc << "**Status Code:** #{output.type}"
+          end
+        end
+
+        doc
       end
 
       def generate_endpoint_examples(endpoint)
@@ -284,11 +311,11 @@ module RapiTapir
 
       def format_type(type)
         case type
-        when RapiTapir::Types::String, :string, String
+        when RapiTapir::Types::String, :string
           'string'
-        when RapiTapir::Types::Integer, :integer, Integer
+        when RapiTapir::Types::Integer, :integer
           'integer'
-        when RapiTapir::Types::Float, :float, Float
+        when RapiTapir::Types::Float, :float
           'number'
         when RapiTapir::Types::Boolean, :boolean
           'boolean'
@@ -296,12 +323,29 @@ module RapiTapir
           'date'
         when RapiTapir::Types::DateTime, :datetime
           'datetime'
-        when RapiTapir::Types::Array, Array
+        when RapiTapir::Types::Array
           'array'
-        when RapiTapir::Types::Hash, Hash
+        when RapiTapir::Types::Hash
           'object'
         else
-          type.to_s
+          # Handle Ruby built-in classes
+          case type
+          when String
+            'string'
+          when Integer
+            'integer'
+          when Float
+            'number'
+          else
+            # Check class identity for built-in classes
+            if type == Hash
+              'object'
+            elsif type == Array
+              'array'
+            else
+              type.to_s
+            end
+          end
         end
       end
 

@@ -66,7 +66,7 @@ module RapiTapir
 
     def deprecated(*args, **kwargs)
       # Support both deprecated(true/false) and deprecated(flag: true/false)
-      flag_value = if args.any?
+      flag_value = if args.length.positive?
                      args.first
                    else
                      kwargs.fetch(:flag, true)

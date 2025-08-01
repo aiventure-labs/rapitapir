@@ -53,35 +53,55 @@ module RapiTapir
       def coerce_value(value)
         case value
         when ::Hash
-          coerced = {}
-
-          # Coerce defined fields
-          field_types.each do |field_name, field_type|
-            field_value = value[field_name] || value[field_name.to_s] || value[field_name.to_sym]
-            coerced[field_name] = field_type.coerce(field_value) if field_value || !field_type.optional?
-          end
-
-          # Include additional properties if allowed
-          if constraints[:additional_properties]
-            additional_keys = value.keys - field_types.keys.map { |k| [k, k.to_s, k.to_sym] }.flatten
-            additional_keys.each do |key|
-              coerced[key] = value[key]
-            end
-          end
-
-          coerced
+          coerce_hash_value(value)
         when ::String
-          # Try to parse as JSON
-          require 'json'
-          parsed = JSON.parse(value)
-          raise CoercionError.new(value, 'Hash', 'JSON string did not parse to hash') unless parsed.is_a?(::Hash)
-
-          coerce_value(parsed)
+          coerce_json_string_value(value)
         else
           raise CoercionError.new(value, 'Hash', 'Value cannot be converted to hash')
         end
       rescue JSON::ParserError => e
         raise CoercionError.new(value, 'Hash', "Invalid JSON: #{e.message}")
+      end
+
+      private
+
+      def coerce_hash_value(value)
+        coerced = {}
+
+        # Coerce defined fields
+        coerce_defined_fields(value, coerced)
+
+        # Include additional properties if allowed
+        coerce_additional_properties(value, coerced) if constraints[:additional_properties]
+
+        coerced
+      end
+
+      def coerce_defined_fields(value, coerced)
+        field_types.each do |field_name, field_type|
+          field_value = find_field_value(value, field_name)
+          coerced[field_name] = field_type.coerce(field_value) if field_value || !field_type.optional?
+        end
+      end
+
+      def find_field_value(value, field_name)
+        value[field_name] || value[field_name.to_s] || value[field_name.to_sym]
+      end
+
+      def coerce_additional_properties(value, coerced)
+        additional_keys = value.keys - field_types.keys.map { |k| [k, k.to_s, k.to_sym] }.flatten
+        additional_keys.each do |key|
+          coerced[key] = value[key]
+        end
+      end
+
+      def coerce_json_string_value(value)
+        # Try to parse as JSON
+        require 'json'
+        parsed = JSON.parse(value)
+        raise CoercionError.new(value, 'Hash', 'JSON string did not parse to hash') unless parsed.is_a?(::Hash)
+
+        coerce_value(parsed)
       end
 
       def json_type

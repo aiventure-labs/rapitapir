@@ -15,11 +15,6 @@ module RapiTapir
     # @example Integer with constraints
     #   RapiTapir::Types.integer(minimum: 0, maximum: 100, multiple_of: 5)
     class Integer < Base
-      def initialize(minimum: nil, maximum: nil, exclusive_minimum: nil, exclusive_maximum: nil, multiple_of: nil,
-                     **options)
-        super
-      end
-
       protected
 
       def validate_type(value)
@@ -29,6 +24,17 @@ module RapiTapir
       end
 
       def validate_constraints(value)
+        errors = []
+
+        errors.concat(validate_range_constraints(value))
+        errors.concat(validate_multiple_constraint(value))
+
+        errors
+      end
+
+      private
+
+      def validate_range_constraints(value)
         errors = []
 
         if constraints[:minimum] && value < constraints[:minimum]
@@ -46,6 +52,12 @@ module RapiTapir
         if constraints[:exclusive_maximum] && value >= constraints[:exclusive_maximum]
           errors << "Value #{value} must be less than #{constraints[:exclusive_maximum]}"
         end
+
+        errors
+      end
+
+      def validate_multiple_constraint(value)
+        errors = []
 
         if constraints[:multiple_of] && (value % constraints[:multiple_of]) != 0
           errors << "Value #{value} is not a multiple of #{constraints[:multiple_of]}"

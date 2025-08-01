@@ -218,13 +218,13 @@ module RapiTapir
 
       def type_to_schema(type)
         case type
-        when RapiTapir::Types::String
+        when RapiTapir::Types::String, :string, String
           { type: 'string' }
-        when RapiTapir::Types::Integer
+        when RapiTapir::Types::Integer, :integer, Integer
           { type: 'integer' }
-        when RapiTapir::Types::Float
+        when RapiTapir::Types::Float, :number, Float
           { type: 'number' }
-        when RapiTapir::Types::Boolean
+        when RapiTapir::Types::Boolean, :boolean
           { type: 'boolean' }
         when RapiTapir::Types::Array
           { type: 'array', items: type_to_schema(type.item_type) }
@@ -244,39 +244,16 @@ module RapiTapir
             schema[:required] = required if required.any?
             schema
           end
-        when :integer, Integer
-          { type: 'integer' }
-        when :number, Float
-          { type: 'number' }
-        when :boolean
-          { type: 'boolean' }
-        when :date
-          { type: 'string', format: 'date' }
-        when :datetime
-          { type: 'string', format: 'date-time' }
+        when :date, :datetime
+          format = type == :date ? 'date' : 'date-time'
+          { type: 'string', format: format }
         when Array
           if type.length == 1
             { type: 'array', items: type_to_schema(type.first) }
           else
             { type: 'array', items: { type: 'string' } }
           end
-        when Hash
-          if type.empty?
-            { type: 'object' }
-          else
-            properties = {}
-            required = []
-
-            type.each do |key, value|
-              properties[key.to_s] = type_to_schema(value)
-              required << key.to_s unless value.nil?
-            end
-
-            schema = { type: 'object', properties: properties }
-            schema[:required] = required if required.any?
-            schema
-          end
-        else # Default for unknown types and :string, String
+        else # Default for unknown types, :string, String, and Hash
           { type: 'string' }
         end
       end

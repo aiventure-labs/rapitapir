@@ -96,13 +96,11 @@ module RapiTapir
 
         endpoint.inputs.each do |input|
           value = case input.kind
-                  when :query
+                  when :query, :path
+                    # Both query and path parameters are available in params
                     params[input.name.to_s] || params[input.name.to_sym]
                   when :header
                     request.env["HTTP_#{input.name.to_s.upcase}"]
-                  when :path
-                    # In Sinatra, path parameters are available directly in params
-                    params[input.name.to_s] || params[input.name.to_sym]
                   when :body
                     parse_sinatra_body(request, input)
                   end
@@ -145,11 +143,9 @@ module RapiTapir
         output = endpoint.outputs.find { |o| o.kind == :json } || endpoint.outputs.first
 
         case output&.kind
-        when :json
-          'application/json'
         when :xml
           'application/xml'
-        else
+        else # Default to JSON for :json and unknown formats
           'application/json'
         end
       end

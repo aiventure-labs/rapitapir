@@ -42,7 +42,14 @@ module RapiTapir
           log(:fatal, message, **fields, &block)
         end
 
-        def log_request(method:, path:, status:, duration:, request_id: nil, **extra_fields)
+        def log_request(**options)
+          method = options.fetch(:method)
+          path = options.fetch(:path)
+          status = options.fetch(:status)
+          duration = options.fetch(:duration)
+          request_id = options[:request_id]
+          extra_fields = options.except(:method, :path, :status, :duration, :request_id)
+
           fields = {
             event_type: 'http_request',
             method: method.to_s.upcase,
