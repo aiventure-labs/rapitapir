@@ -2,6 +2,8 @@
 
 module RapiTapir
   module CLI
+    # Validator for RapiTapir endpoint definitions
+    # Validates endpoint configurations for correctness and completeness
     class Validator
       attr_reader :errors, :endpoints
 

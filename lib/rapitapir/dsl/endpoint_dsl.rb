@@ -4,6 +4,8 @@ require_relative '../core/input'
 require_relative '../core/output'
 
 module RapiTapir
+  # Domain Specific Language (DSL) components for RapiTapir
+  # Provides convenient methods for defining API endpoints and their properties
   module DSL
     # DSL helpers for endpoint input definitions
     def query(name, type, options = {})

@@ -4,6 +4,8 @@ require_relative 'base'
 
 module RapiTapir
   module Types
+    # Hash type for validating hash/object structures with schema definitions
+    # Validates hash keys and values according to defined schemas
     class Hash < Base
       attr_reader :field_types
 

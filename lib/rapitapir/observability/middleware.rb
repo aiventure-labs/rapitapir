@@ -4,6 +4,8 @@ require 'securerandom'
 
 module RapiTapir
   module Observability
+    # Observability middleware for request tracking
+    # Middleware that collects metrics, logs, and traces for each request
     class Middleware
       def initialize(app)
         @app = app
@@ -136,6 +138,8 @@ module RapiTapir
       end
     end
 
+    # HTTP endpoint for exposing metrics
+    # Provides an HTTP interface for metrics scraping (Prometheus format)
     class MetricsEndpoint
       def initialize(registry = nil)
         @registry = registry || Metrics.registry&.registry

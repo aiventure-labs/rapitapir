@@ -9,6 +9,8 @@ require_relative 'errors'
 module RapiTapir
   module Auth
     module Middleware
+      # Middleware for handling authentication
+      # Processes incoming requests and attempts to authenticate them using configured schemes
       class AuthenticationMiddleware
         def initialize(app, auth_schemes = {})
           @app = app
@@ -64,6 +66,8 @@ module RapiTapir
         end
       end
 
+      # Middleware for handling authorization
+      # Checks if authenticated users have required permissions/scopes
       class AuthorizationMiddleware
         def initialize(app, required_scopes: [], require_all: true)
           @app = app
@@ -110,6 +114,8 @@ module RapiTapir
         end
       end
 
+      # Middleware for rate limiting requests
+      # Limits the number of requests per client based on configurable rules
       class RateLimitingMiddleware
         def initialize(app, config = {})
           @app = app
@@ -215,6 +221,8 @@ module RapiTapir
         end
       end
 
+      # Middleware for handling Cross-Origin Resource Sharing (CORS)
+      # Adds CORS headers to enable cross-origin requests from browsers
       class CorsMiddleware
         def initialize(app, config = {})
           @app = app
@@ -286,6 +294,8 @@ module RapiTapir
         end
       end
 
+      # Middleware for adding security headers
+      # Adds common security headers to HTTP responses for protection
       class SecurityHeadersMiddleware
         def initialize(app, config = {})
           @app = app

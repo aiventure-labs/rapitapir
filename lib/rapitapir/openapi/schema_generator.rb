@@ -4,6 +4,8 @@ require 'json'
 
 module RapiTapir
   module OpenAPI
+    # OpenAPI schema generator for RapiTapir endpoints
+    # Converts RapiTapir endpoint definitions to OpenAPI 3.0 specifications
     class SchemaGenerator
       attr_reader :endpoints, :info, :servers
 
@@ -284,6 +286,8 @@ module RapiTapir
       def determine_content_type(input)
         case input.type
         when Hash
+          # For hash types, default to JSON
+          return 'application/json'
         end
         'application/json'
       end
@@ -308,6 +312,8 @@ module RapiTapir
           # Default status codes based on output type
           case output.kind
           when :json, :xml
+            # JSON and XML responses default to 200
+            return 200
           end
           200
         end

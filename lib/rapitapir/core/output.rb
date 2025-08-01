@@ -4,6 +4,16 @@ require 'json'
 
 module RapiTapir
   module Core
+    # Output format definition for HTTP endpoints
+    #
+    # Represents different types of response outputs that an endpoint can produce,
+    # including JSON responses, XML responses, status codes, and headers.
+    #
+    # @example JSON response
+    #   RapiTapir::Core::Output.new(kind: :json, type: user_schema)
+    #
+    # @example Status response
+    #   RapiTapir::Core::Output.new(kind: :status, type: 404)
     class Output
       VALID_KINDS = %i[json xml status header].freeze
 

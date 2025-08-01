@@ -4,6 +4,8 @@ require_relative 'base'
 
 module RapiTapir
   module Types
+    # Boolean type for validating true/false values
+    # Accepts true, false, and can coerce from string representations
     class Boolean < Base
       protected
 

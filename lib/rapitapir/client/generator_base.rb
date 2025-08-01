@@ -2,6 +2,8 @@
 
 module RapiTapir
   module Client
+    # Base class for client code generators
+    # Provides common functionality for generating API clients in different languages
     class GeneratorBase
       attr_reader :endpoints, :config
 
@@ -119,8 +121,8 @@ module RapiTapir
             'List[Any]'
           end
         when Hash
-          if type.empty?
-          end
+          return 'Dict[str, Any]' if type.empty?
+
           'Dict[str, Any]'
         else
           'Any'

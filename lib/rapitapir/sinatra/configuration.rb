@@ -33,8 +33,8 @@ module RapiTapir
         @servers << { url: url, description: description }.compact
       end
 
-      # Public paths (no authentication required)
-      def public_paths(*paths)
+      # Add paths that don't require authentication
+      def add_public_paths(*paths)
         @public_paths.concat(paths.flatten.map(&:to_s))
       end
 

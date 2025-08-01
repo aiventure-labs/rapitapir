@@ -2,6 +2,17 @@
 
 module RapiTapir
   module Auth
+    # Configuration class for authentication and security settings
+    #
+    # Provides centralized configuration for authentication schemes, OAuth2,
+    # session management, rate limiting, and CORS settings.
+    #
+    # @example Configure authentication
+    #   RapiTapir::Auth.configure do |config|
+    #     config.jwt_secret = 'your-secret-key'
+    #     config.oauth2.client_id = 'your-client-id'
+    #     config.rate_limiting.requests_per_minute = 100
+    #   end
     class Configuration
       attr_accessor :default_realm, :jwt_secret, :jwt_algorithm
       attr_reader :oauth2, :session, :rate_limiting, :cors
@@ -16,6 +27,10 @@ module RapiTapir
         @cors = CorsConfig.new
       end
 
+      # OAuth2 configuration settings
+      #
+      # Provides configuration for OAuth2 authentication flow including
+      # authorization URLs, token endpoints, and client credentials.
       class OAuth2Config
         attr_accessor :authorization_url, :token_url, :refresh_url, :scopes, :client_id, :client_secret
 
@@ -33,6 +48,10 @@ module RapiTapir
         end
       end
 
+      # Session management configuration
+      #
+      # Provides settings for session-based authentication including
+      # session keys, security settings, and cookie configuration.
       class SessionConfig
         attr_accessor :enabled, :key, :secret, :domain, :path, :secure, :http_only, :same_site
 
@@ -48,6 +67,10 @@ module RapiTapir
         end
       end
 
+      # Rate limiting configuration
+      #
+      # Provides settings for rate limiting including request limits per time period,
+      # burst limits, and client identification methods.
       class RateLimitingConfig
         attr_accessor :enabled, :requests_per_minute, :requests_per_hour,
                       :requests_per_day, :burst_limit, :identifier
@@ -72,6 +95,10 @@ module RapiTapir
         end
       end
 
+      # CORS (Cross-Origin Resource Sharing) configuration
+      #
+      # Provides settings for CORS headers including allowed origins, methods,
+      # headers, and credentials handling.
       class CorsConfig
         attr_accessor :enabled, :allowed_origins, :allowed_methods, :allowed_headers,
                       :exposed_headers, :allow_credentials, :max_age, :preflight_continue

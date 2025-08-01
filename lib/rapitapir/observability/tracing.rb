@@ -2,7 +2,11 @@
 
 module RapiTapir
   module Observability
+    # Distributed tracing system for request flow tracking
+    # Provides span creation and management for tracing requests
     module Tracing
+      # Tracer for creating and managing spans
+      # Creates spans for tracking request execution across services
       class Tracer
         def initialize(service_name:, service_version:)
           @service_name = service_name
@@ -83,6 +87,8 @@ module RapiTapir
         end
       end
 
+      # No-operation span for disabled tracing
+      # Provides a null object pattern when tracing is disabled
       class NoOpSpan
         def add_event(name, attributes: {}); end
         def set_attribute(key, value); end

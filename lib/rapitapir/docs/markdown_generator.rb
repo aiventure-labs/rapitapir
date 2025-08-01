@@ -2,6 +2,8 @@
 
 module RapiTapir
   module Docs
+    # Markdown documentation generator for APIs
+    # Generates human-readable Markdown documentation from endpoint definitions
     class MarkdownGenerator
       attr_reader :endpoints, :config
 

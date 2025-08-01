@@ -2,6 +2,8 @@
 
 module RapiTapir
   module Server
+    # Path matching utility for HTTP routes
+    # Matches request paths against endpoint path patterns with parameter extraction
     class PathMatcher
       attr_reader :path_pattern, :param_names
 

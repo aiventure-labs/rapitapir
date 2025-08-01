@@ -15,7 +15,27 @@ require_relative 'types/optional'
 require_relative 'types/object'
 
 module RapiTapir
+  # Type system for RapiTapir providing validation, coercion, and schema generation
+  #
+  # Provides a comprehensive type system with built-in types for strings, integers,
+  # floats, booleans, dates, arrays, hashes, and objects. Supports validation,
+  # type coercion, constraint checking, and OpenAPI schema generation.
+  #
+  # @example Basic types
+  #   RapiTapir::Types.string(min_length: 1, max_length: 255)
+  #   RapiTapir::Types.integer(minimum: 0, maximum: 100)
+  #   RapiTapir::Types.array(RapiTapir::Types.string)
+  #
+  # @example Custom objects
+  #   user_type = RapiTapir::Types.object do
+  #     field :id, RapiTapir::Types.integer
+  #     field :name, RapiTapir::Types.string
+  #   end
   module Types
+    # Error raised when type validation fails
+    #
+    # Contains information about the validation failure including the
+    # invalid value, expected type, and specific error details.
     class ValidationError < StandardError
       attr_reader :value, :type, :errors
 
@@ -41,6 +61,10 @@ module RapiTapir
       end
     end
 
+    # Error raised when type coercion fails
+    #
+    # Occurs when a value cannot be automatically converted to the expected type,
+    # such as trying to coerce a non-numeric string to an integer.
     class CoercionError < StandardError
       attr_reader :value, :type, :reason
 

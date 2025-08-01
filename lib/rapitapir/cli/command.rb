@@ -5,6 +5,8 @@ require 'fileutils'
 
 module RapiTapir
   module CLI
+    # Command-line interface for RapiTapir operations
+    # Provides commands for generating OpenAPI specs, clients, and documentation
     class Command
       attr_reader :options
 

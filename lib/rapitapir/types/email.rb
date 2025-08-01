@@ -4,6 +4,8 @@ require_relative 'string'
 
 module RapiTapir
   module Types
+    # Email type for validating email address strings
+    # Extends String type with email format validation
     class Email < String
       EMAIL_PATTERN = /\A[\w+\-.]+@[a-z\d-]+(\.[a-z\d-]+)*\.[a-z]+\z/i
 

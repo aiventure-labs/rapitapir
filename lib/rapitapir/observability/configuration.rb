@@ -2,6 +2,8 @@
 
 module RapiTapir
   module Observability
+    # Configuration for observability features
+    # Manages settings for metrics, tracing, logging, and health checks
     class Configuration
       attr_accessor :metrics, :tracing, :logging, :health_check
 
@@ -12,6 +14,8 @@ module RapiTapir
         @health_check = HealthCheckConfig.new
       end
 
+      # Configuration for metrics collection
+      # Defines which metrics to collect and how to expose them
       class MetricsConfig
         attr_accessor :enabled, :provider, :namespace, :custom_labels
 
@@ -34,6 +38,8 @@ module RapiTapir
         end
       end
 
+      # Configuration for distributed tracing
+      # Manages tracing setup and span collection settings
       class TracingConfig
         attr_accessor :enabled, :provider, :service_name, :service_version
 
@@ -56,6 +62,8 @@ module RapiTapir
         end
       end
 
+      # Configuration for structured logging
+      # Controls log levels, formats, and output destinations
       class LoggingConfig
         attr_accessor :enabled, :structured, :level, :format, :fields
 
@@ -75,6 +83,8 @@ module RapiTapir
         end
       end
 
+      # Configuration for health check endpoints
+      # Defines which health checks to run and how to expose them
       class HealthCheckConfig
         attr_accessor :enabled, :endpoint, :checks
 

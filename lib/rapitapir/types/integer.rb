@@ -4,6 +4,16 @@ require_relative 'base'
 
 module RapiTapir
   module Types
+    # Integer type with numeric constraints
+    #
+    # Validates integer values with optional constraints for minimum/maximum values,
+    # exclusive bounds, and multiple-of validation.
+    #
+    # @example Basic integer
+    #   RapiTapir::Types.integer
+    #
+    # @example Integer with constraints
+    #   RapiTapir::Types.integer(minimum: 0, maximum: 100, multiple_of: 5)
     class Integer < Base
       def initialize(minimum: nil, maximum: nil, exclusive_minimum: nil, exclusive_maximum: nil, multiple_of: nil,
                      **options)

@@ -9,13 +9,17 @@ module RapiTapir
       def self.included(base)
         base.extend(ClassMethods)
         base.class_eval do
-          @@rapitapir_adapter = EnhancedRackAdapter.new
+          @rapitapir_adapter = EnhancedRackAdapter.new
         end
       end
 
+      # Class methods for Sinatra integration
+      #
+      # Provides methods to define RapiTapir endpoints and generate documentation
+      # within Sinatra applications.
       module ClassMethods
         def rapitapir_adapter
-          @@rapitapir_adapter
+          @rapitapir_adapter ||= EnhancedRackAdapter.new
         end
 
         # Mount an endpoint in Sinatra

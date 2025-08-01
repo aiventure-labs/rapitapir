@@ -2,6 +2,22 @@
 
 module RapiTapir
   module Types
+    # Base class for all RapiTapir types
+    #
+    # Provides the fundamental interface for type validation, coercion,
+    # constraint checking, and schema generation that all specific types inherit.
+    #
+    # @abstract Subclass and implement {#validate_constraints} and {#coerce_value}
+    # @example Creating a custom type
+    #   class CustomType < Base
+    #     def validate_constraints(value)
+    #       # Validation logic
+    #     end
+    #
+    #     def coerce_value(value)
+    #       # Coercion logic
+    #     end
+    #   end
     class Base
       attr_reader :constraints, :metadata
 

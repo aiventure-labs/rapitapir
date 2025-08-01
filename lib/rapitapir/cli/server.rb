@@ -5,6 +5,8 @@ require 'json'
 
 module RapiTapir
   module CLI
+    # Development server for testing RapiTapir APIs
+    # Provides a simple HTTP server for development and testing
     class Server
       attr_reader :endpoints_file, :port, :config
 

@@ -2,6 +2,8 @@
 
 module RapiTapir
   module Auth
+    # Base authentication error for all authentication-related exceptions
+    # This is the parent class for all authentication errors in RapiTapir
     class AuthenticationError < StandardError
       attr_reader :status, :error_code, :error_description
 
@@ -21,30 +23,40 @@ module RapiTapir
       end
     end
 
+    # Authorization error for insufficient permissions
+    # Raised when a user lacks required permissions to access a resource
     class AuthorizationError < AuthenticationError
       def initialize(message, error_code: 'insufficient_scope', error_description: nil)
         super(message, status: 403, error_code: error_code, error_description: error_description)
       end
     end
 
+    # Error for invalid or expired authentication tokens
+    # Raised when a provided token is malformed, expired, or otherwise invalid
     class InvalidTokenError < AuthenticationError
       def initialize(message = 'Invalid or expired token', error_code: 'invalid_token')
         super
       end
     end
 
+    # Error for missing authentication tokens
+    # Raised when authentication is required but no token was provided
     class MissingTokenError < AuthenticationError
       def initialize(message = 'Authentication token required', error_code: 'missing_token')
         super
       end
     end
 
+    # Error for invalid user credentials
+    # Raised when provided username/password credentials are incorrect
     class InvalidCredentialsError < AuthenticationError
       def initialize(message = 'Invalid credentials', error_code: 'invalid_credentials')
         super
       end
     end
 
+    # Error for exceeded rate limits
+    # Raised when a client exceeds the configured rate limit for requests
     class RateLimitExceededError < AuthenticationError
       attr_reader :retry_after, :limit, :remaining, :reset_time
 
@@ -66,6 +78,8 @@ module RapiTapir
       end
     end
 
+    # Error for insufficient OAuth scopes
+    # Raised when a token lacks the required scopes for an operation
     class ScopeError < AuthorizationError
       attr_reader :required_scopes, :provided_scopes
 

@@ -4,6 +4,8 @@ require_relative 'base'
 
 module RapiTapir
   module Types
+    # Float type for validating floating-point numbers with range constraints
+    # Supports minimum, maximum, and multiple validation rules
     class Float < Base
       def initialize(minimum: nil, maximum: nil, exclusive_minimum: nil, exclusive_maximum: nil, multiple_of: nil,
                      **options)

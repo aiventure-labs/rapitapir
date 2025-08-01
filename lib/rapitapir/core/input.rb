@@ -2,6 +2,16 @@
 
 module RapiTapir
   module Core
+    # Input parameter definition for HTTP endpoints
+    #
+    # Represents different types of input parameters that an endpoint can accept,
+    # including query parameters, path parameters, headers, and request body.
+    #
+    # @example Query parameter
+    #   RapiTapir::Core::Input.new(kind: :query, name: :limit, type: :integer)
+    #
+    # @example Path parameter
+    #   RapiTapir::Core::Input.new(kind: :path, name: :id, type: :string)
     class Input
       VALID_KINDS = %i[query path header body].freeze
       VALID_TYPES = %i[string integer float boolean date datetime].freeze

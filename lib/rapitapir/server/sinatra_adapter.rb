@@ -4,6 +4,8 @@ require 'json'
 
 module RapiTapir
   module Server
+    # Sinatra integration adapter for RapiTapir
+    # Provides seamless integration with Sinatra applications
     class SinatraAdapter
       attr_reader :app, :endpoints
 

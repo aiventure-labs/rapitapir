@@ -5,6 +5,8 @@ require 'date'
 
 module RapiTapir
   module Types
+    # Date type for validating date values in various formats
+    # Accepts Date objects and string representations that can be parsed
     class Date < Base
       def initialize(format: nil, **options)
         super

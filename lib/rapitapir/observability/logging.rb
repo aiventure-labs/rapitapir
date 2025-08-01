@@ -6,7 +6,11 @@ require 'securerandom'
 
 module RapiTapir
   module Observability
+    # Structured logging system for RapiTapir
+    # Provides structured logging with multiple formatters and levels
     module Logging
+      # Structured logger with contextual information
+      # Enhanced logger that adds structured data to log entries
       class StructuredLogger
         attr_reader :logger, :formatter
 
@@ -122,6 +126,8 @@ module RapiTapir
         end
       end
 
+      # JSON formatter for structured log output
+      # Formats log entries as JSON for machine-readable logs
       class JsonFormatter
         def call(severity, timestamp, _progname, msg)
           case msg
@@ -132,15 +138,17 @@ module RapiTapir
             )
             "#{JSON.generate(msg_with_metadata)}\n"
           else
-            JSON.generate(
+            "#{JSON.generate(
               level: severity,
               timestamp: timestamp.utc.iso8601,
               message: msg.to_s
-            ) + "\n"
+            )}\n"
           end
         end
       end
 
+      # Logfmt formatter for key-value log output
+      # Formats log entries using the logfmt key=value format
       class LogfmtFormatter
         def call(severity, timestamp, _progname, msg)
           case msg
@@ -166,6 +174,8 @@ module RapiTapir
         end
       end
 
+      # Plain text formatter for human-readable logs
+      # Formats log entries as readable text for development
       class TextFormatter
         def call(severity, timestamp, _progname, msg)
           case msg

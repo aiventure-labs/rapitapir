@@ -4,6 +4,8 @@ require_relative 'base'
 
 module RapiTapir
   module Types
+    # Optional type wrapper for nullable values
+    # Wraps other types to allow nil values in addition to the wrapped type
     class Optional < Base
       attr_reader :wrapped_type
 

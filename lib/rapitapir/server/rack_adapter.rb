@@ -7,6 +7,8 @@ require_relative 'path_matcher'
 
 module RapiTapir
   module Server
+    # Rack adapter for RapiTapir endpoints
+    # Integrates RapiTapir with Rack-based applications and frameworks
     class RackAdapter
       attr_reader :endpoints, :middleware_stack
 

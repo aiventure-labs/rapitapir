@@ -3,6 +3,8 @@
 require_relative '../core/endpoint'
 require_relative 'fluent_endpoint_builder'
 
+# RapiTapir Ruby library for building type-safe HTTP APIs
+# Provides a declarative way to define REST APIs with automatic validation
 module RapiTapir
   # Fluent DSL for defining HTTP endpoints
   # Provides chainable methods for declarative API definition

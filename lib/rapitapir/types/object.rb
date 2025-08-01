@@ -4,6 +4,8 @@ require_relative 'base'
 
 module RapiTapir
   module Types
+    # Object type for validating complex object structures with typed properties
+    # Defines objects with named properties and their respective types
     class Object < Base
       attr_reader :fields
 
@@ -123,6 +125,8 @@ module RapiTapir
         hash[field_name] || hash[field_name.to_s] || hash[field_name.to_sym]
       end
 
+      # Builder for constructing Object type definitions
+      # Provides a fluent interface for defining object properties
       class ObjectBuilder
         def initialize(object_type)
           @object_type = object_type

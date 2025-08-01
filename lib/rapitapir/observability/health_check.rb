@@ -2,7 +2,11 @@
 
 module RapiTapir
   module Observability
+    # Health check system for monitoring application status
+    # Provides health check registration and execution
     module HealthCheck
+      # Individual health check definition
+      # Represents a single health check with execution logic
       class Check
         attr_reader :name, :description, :check_block
 
@@ -50,6 +54,8 @@ module RapiTapir
         end
       end
 
+      # Registry for managing health checks
+      # Centralized registry for registering and executing health checks
       class Registry
         def initialize
           @checks = []
@@ -120,6 +126,8 @@ module RapiTapir
         end
       end
 
+      # HTTP endpoint for health check exposure
+      # Provides an HTTP interface for accessing health check results
       class Endpoint
         def initialize(registry, path = '/health')
           @registry = registry

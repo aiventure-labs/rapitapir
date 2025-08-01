@@ -65,6 +65,18 @@ rescue LoadError
   # Documentation or CLI dependencies not available
 end
 
+# RapiTapir - A Ruby library for defining HTTP APIs declaratively
+#
+# Inspired by Scala's Tapir, this library provides type-safe input/output definitions,
+# automatic OpenAPI documentation generation, and seamless integration with multiple Ruby stacks.
+#
+# @example Basic usage
+#   endpoint = RapiTapir.get('/users/{id}')
+#     .path_param(:id, :integer)
+#     .ok(:json, { id: :integer, name: :string })
+#     .build
+#
+# @see https://github.com/riccardomerolla/ruby-tapir
 module RapiTapir
   # Will be extended with FluentDSL later
   @endpoints = []

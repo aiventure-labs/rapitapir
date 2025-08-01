@@ -4,6 +4,8 @@ require_relative 'string'
 
 module RapiTapir
   module Types
+    # UUID type for validating UUID (Universally Unique Identifier) strings
+    # Extends String type with UUID format validation
     class UUID < String
       UUID_PATTERN = /\A[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/i
 

@@ -7,6 +7,20 @@ require_relative 'auth/schemes'
 require_relative 'auth/middleware'
 
 module RapiTapir
+  # Authentication and authorization module for RapiTapir
+  #
+  # Provides comprehensive authentication schemes including Bearer tokens, API keys,
+  # JWT, OAuth2, and basic authentication. Also includes authorization middleware,
+  # rate limiting, CORS support, and security features.
+  #
+  # @example Configure authentication
+  #   RapiTapir::Auth.configure do |config|
+  #     config.jwt_secret = 'your-secret'
+  #     config.rate_limiting.requests_per_minute = 100
+  #   end
+  #
+  # @example Create authentication schemes
+  #   bearer_auth = RapiTapir::Auth.bearer_token(:bearer, { token_validator: proc { |token| ... } })
   module Auth
     class << self
       attr_accessor :configuration

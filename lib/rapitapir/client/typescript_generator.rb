@@ -4,6 +4,8 @@ require_relative 'generator_base'
 
 module RapiTapir
   module Client
+    # TypeScript client generator for RapiTapir APIs
+    # Generates strongly-typed TypeScript clients from endpoint definitions
     class TypescriptGenerator < GeneratorBase
       def generate
         [

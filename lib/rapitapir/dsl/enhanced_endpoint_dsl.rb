@@ -116,7 +116,11 @@ module RapiTapir
       def generate_metric_name
         # Generate a metric name based on HTTP method and path
         method = @method&.downcase || 'unknown'
-        path = @path&.gsub(%r{[/:]}, '_')&.gsub(/_{2,}/, '_')&.strip('_') || 'unknown'
+        path = if @path
+                 @path.gsub(%r{[/:]}, '_').gsub(/_{2,}/, '_').strip('_')
+               else
+                 'unknown'
+               end
         "#{method}_#{path}"
       end
 

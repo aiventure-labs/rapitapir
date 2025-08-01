@@ -2,6 +2,21 @@
 
 module RapiTapir
   module Auth
+    # Authentication context containing user information and authorization data
+    #
+    # Represents the authenticated state of a request, including user details,
+    # granted scopes, authentication tokens, and session information.
+    #
+    # @example Create a context
+    #   context = RapiTapir::Auth::Context.new(
+    #     user: { id: 123, name: 'John' },
+    #     scopes: ['read', 'write'],
+    #     token: 'bearer-token-123'
+    #   )
+    #
+    # @example Check permissions
+    #   context.authenticated?        # => true
+    #   context.has_scope?('read')    # => true
     class Context
       attr_reader :user, :scopes, :token, :session, :metadata
 

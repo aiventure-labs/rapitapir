@@ -2,6 +2,18 @@
 
 module RapiTapir
   module Core
+    # Core endpoint definition representing an HTTP API endpoint
+    #
+    # Encapsulates the definition of an HTTP endpoint including its method, path,
+    # input parameters, output formats, error responses, and metadata.
+    #
+    # @example Create an endpoint
+    #   endpoint = RapiTapir::Core::Endpoint.new(
+    #     method: :get,
+    #     path: '/users/{id}',
+    #     inputs: [path_param(:id, :integer)],
+    #     outputs: [json_output(user_schema)]
+    #   )
     class Endpoint
       HTTP_METHODS = %i[get post put patch delete options head].freeze
 

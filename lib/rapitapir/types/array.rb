@@ -4,6 +4,8 @@ require_relative 'base'
 
 module RapiTapir
   module Types
+    # Array type for validating array values with element type constraints
+    # Validates arrays with specific element types and size constraints
     class Array < Base
       attr_reader :item_type
 

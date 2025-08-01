@@ -2,7 +2,11 @@
 
 module RapiTapir
   module Observability
+    # Metrics collection and management system
+    # Provides counters, gauges, and histograms for monitoring
     module Metrics
+      # Registry for metrics collection and storage
+      # Manages metric definitions and their current values
       class Registry
         def initialize
           @metrics = {}
@@ -122,6 +126,8 @@ module RapiTapir
         end
       end
 
+      # Metrics collector for automatic metric gathering
+      # Automatically collects and updates metrics from various sources
       class Collector
         def initialize(registry)
           @registry = registry

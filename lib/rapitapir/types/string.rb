@@ -4,6 +4,16 @@ require_relative 'base'
 
 module RapiTapir
   module Types
+    # String type with length and format validation
+    #
+    # Validates string values with optional constraints for length, pattern matching,
+    # and format validation (email, URI, etc.).
+    #
+    # @example Basic string
+    #   RapiTapir::Types.string
+    #
+    # @example String with constraints
+    #   RapiTapir::Types.string(min_length: 1, max_length: 255, format: :email)
     class String < Base
       def initialize(min_length: nil, max_length: nil, pattern: nil, format: nil, **options)
         super

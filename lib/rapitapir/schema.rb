@@ -3,7 +3,11 @@
 require_relative 'types'
 
 module RapiTapir
+  # Schema definition and validation module
+  # Provides tools for defining and validating data schemas
   module Schema
+    # Error for schema validation failures
+    # Raised when data does not conform to defined schema constraints
     class ValidationError < StandardError
       attr_reader :errors
 
@@ -94,6 +98,8 @@ module RapiTapir
       object_type
     end
 
+    # Builder for constructing complex schemas from definitions
+    # Provides a fluent interface for schema creation
     class SchemaBuilder
       def initialize
         @object_type = Types.object

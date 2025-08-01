@@ -10,6 +10,8 @@ require_relative 'context'
 module RapiTapir
   module Auth
     module Schemes
+      # Base class for all authentication schemes
+      # Defines the interface that all authentication schemes must implement
       class Base
         attr_reader :name, :config
 
@@ -38,6 +40,8 @@ module RapiTapir
         end
       end
 
+      # Bearer token authentication scheme
+      # Authenticates using tokens in the Authorization header
       class BearerToken < Base
         def initialize(name, config = {})
           super
@@ -87,6 +91,8 @@ module RapiTapir
         end
       end
 
+      # API key authentication scheme
+      # Authenticates using API keys in headers or query parameters
       class ApiKey < Base
         def initialize(name, config = {})
           super
@@ -145,6 +151,8 @@ module RapiTapir
         end
       end
 
+      # HTTP Basic authentication scheme
+      # Authenticates using username and password in the Authorization header
       class BasicAuth < Base
         def initialize(name, config = {})
           super
@@ -205,6 +213,8 @@ module RapiTapir
         end
       end
 
+      # OAuth2 authentication scheme
+      # Authenticates using OAuth2 tokens with optional token introspection
       class OAuth2 < Base
         def initialize(name, config = {})
           super
@@ -278,6 +288,8 @@ module RapiTapir
         end
       end
 
+      # JWT (JSON Web Token) authentication scheme
+      # Authenticates using signed JWT tokens with verification
       class JWT < Base
         def initialize(name, config = {})
           super

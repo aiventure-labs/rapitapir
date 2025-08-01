@@ -5,6 +5,8 @@ require 'date'
 
 module RapiTapir
   module Types
+    # DateTime type for validating datetime values with timezone handling
+    # Accepts DateTime objects and string representations in various formats
     class DateTime < Base
       def initialize(format: nil, **options)
         super
