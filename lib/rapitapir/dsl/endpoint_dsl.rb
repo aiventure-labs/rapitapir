@@ -16,9 +16,6 @@ module RapiTapir
       Core::Input.new(kind: :path, name: name, type: type, options: options)
     end
 
-    # Alias for path_param for convenience
-    alias path path_param
-
     def header(name, type, options = {})
       validate_input_params!(name, type)
       Core::Input.new(kind: :header, name: name, type: type, options: options)

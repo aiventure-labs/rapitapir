@@ -29,10 +29,10 @@ module RapiTapir
 
         def create_request(env)
           # Create a simple request object
-          OpenStruct.new(
-            env: env,
-            params: parse_query_params(env['QUERY_STRING']),
-            headers: extract_headers(env)
+          Struct.new(:env, :params, :headers).new(
+            env,
+            parse_query_params(env['QUERY_STRING']),
+            extract_headers(env)
           )
         end
 

@@ -78,7 +78,8 @@ module RapiTapir
             c.use_all # Use all available instrumentation
           end
         rescue LoadError
-          warn "OpenTelemetry SDK not available. Install 'opentelemetry-sdk' and 'opentelemetry-instrumentation-all' gems."
+          warn 'OpenTelemetry SDK not available. Install opentelemetry-sdk and ' \
+               'opentelemetry-instrumentation-all gems.'
         end
       end
 

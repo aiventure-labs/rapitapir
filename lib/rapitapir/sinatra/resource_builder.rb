@@ -37,8 +37,10 @@ module RapiTapir
         endpoint = RapiTapir.get(@base_path)
                             .summary(options[:summary] || "List all #{resource_name}")
                             .description(options[:description] || "Retrieve a list of #{resource_name}")
-                            .query(:limit, RapiTapir::Types.optional(RapiTapir::Types.integer), description: 'Maximum number of results')
-                            .query(:offset, RapiTapir::Types.optional(RapiTapir::Types.integer), description: 'Number of results to skip')
+                            .query(:limit, RapiTapir::Types.optional(RapiTapir::Types.integer),
+                                   description: 'Maximum number of results')
+                            .query(:offset, RapiTapir::Types.optional(RapiTapir::Types.integer),
+                                   description: 'Number of results to skip')
                             .ok(RapiTapir::Types.array(@schema))
                             .build
 

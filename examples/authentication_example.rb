@@ -79,20 +79,20 @@ jwt_auth = RapiTapir::Auth.jwt(:jwt, {
 puts '=== Authentication Examples ==='
 
 # Create a mock request for Bearer token
-bearer_request = OpenStruct.new(
-  env: { 'HTTP_AUTHORIZATION' => 'Bearer valid-token-123' },
-  params: {},
-  headers: { 'authorization' => 'Bearer valid-token-123' }
+bearer_request = Struct.new(:env, :params, :headers).new(
+  { 'HTTP_AUTHORIZATION' => 'Bearer valid-token-123' },
+  {},
+  { 'authorization' => 'Bearer valid-token-123' }
 )
 
 context = bearer_auth.authenticate(bearer_request)
 puts "Bearer auth result: #{context&.authenticated?} - User: #{context&.user}"
 
 # Create a mock request for API key
-api_key_request = OpenStruct.new(
-  env: { 'HTTP_X_API_KEY' => 'api-key-789' },
-  params: {},
-  headers: { 'x-api-key' => 'api-key-789' }
+api_key_request = Struct.new(:env, :params, :headers).new(
+  { 'HTTP_X_API_KEY' => 'api-key-789' },
+  {},
+  { 'x-api-key' => 'api-key-789' }
 )
 
 context = api_key_auth.authenticate(api_key_request)
@@ -112,10 +112,10 @@ jwt_payload = {
 jwt_token = create_simple_jwt(jwt_payload, 'your-jwt-secret')
 puts "Generated JWT: #{jwt_token[0..20]}..."
 
-jwt_request = OpenStruct.new(
-  env: { 'HTTP_AUTHORIZATION' => "Bearer #{jwt_token}" },
-  params: {},
-  headers: { 'authorization' => "Bearer #{jwt_token}" }
+jwt_request = Struct.new(:env, :params, :headers).new(
+  { 'HTTP_AUTHORIZATION' => "Bearer #{jwt_token}" },
+  {},
+  { 'authorization' => "Bearer #{jwt_token}" }
 )
 
 context = jwt_auth.authenticate(jwt_request)

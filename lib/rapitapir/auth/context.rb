@@ -73,7 +73,8 @@ module RapiTapir
       end
 
       def inspect
-        "#<RapiTapir::Auth::Context user_id=#{user_id.inspect} scopes=#{@scopes.inspect} authenticated=#{authenticated?}>"
+        "#<RapiTapir::Auth::Context user_id=#{user_id.inspect} " \
+          "scopes=#{@scopes.inspect} authenticated=#{authenticated?}>"
       end
     end
 

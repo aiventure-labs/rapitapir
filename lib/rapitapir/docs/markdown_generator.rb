@@ -99,7 +99,8 @@ module RapiTapir
           doc << '| Parameter | Type | Description |'
           doc << '|-----------|------|-------------|'
           path_params.each do |param|
-            doc << "| `#{param.name}` | #{format_type(param.type)} | #{(param.options && param.options[:description]) || 'No description'} |"
+            description = (param.options && param.options[:description]) || 'No description'
+            doc << "| `#{param.name}` | #{format_type(param.type)} | #{description} |"
           end
         end
 
@@ -112,7 +113,8 @@ module RapiTapir
           doc << '|-----------|------|----------|-------------|'
           query_params.each do |param|
             required = param.required? ? 'Yes' : 'No'
-            doc << "| `#{param.name}` | #{format_type(param.type)} | #{required} | #{(param.options && param.options[:description]) || 'No description'} |"
+            description = (param.options && param.options[:description]) || 'No description'
+            doc << "| `#{param.name}` | #{format_type(param.type)} | #{required} | #{description} |"
           end
         end
 

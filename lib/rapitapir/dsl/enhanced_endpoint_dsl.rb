@@ -17,7 +17,6 @@ module RapiTapir
         type = resolve_type(type_def)
         create_input(:path, name, type, **options)
       end
-      alias path path_param
 
       def header(name, type_def, **options)
         type = resolve_type(type_def)

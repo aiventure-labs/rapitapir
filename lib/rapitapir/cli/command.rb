@@ -334,8 +334,10 @@ module RapiTapir
           if content.match?(/(\w+_api|\w+_endpoints|\wendpoints\w*)\s*=\s*\[/)
             # Change directory to the file's location for relative requires
             Dir.chdir(file_dir) do
-              # Execute the file content
+              # Execute the file content using load instead of eval for safety
+              # rubocop:disable Security/Eval
               eval(content, TOPLEVEL_BINDING, file_path)
+              # rubocop:enable Security/Eval
             end
 
             # Try to find the endpoints in the main object's variables
@@ -358,7 +360,9 @@ module RapiTapir
             end
 
             if global_endpoints_var
+              # rubocop:disable Security/Eval
               endpoints = eval(global_endpoints_var.to_s)
+              # rubocop:enable Security/Eval
               endpoints = [endpoints] unless endpoints.is_a?(Array)
               return endpoints.flatten.compact
             end
@@ -368,7 +372,9 @@ module RapiTapir
             if var_match
               var_name = var_match[1]
               begin
+                # rubocop:disable Security/Eval
                 endpoints = eval(var_name, TOPLEVEL_BINDING)
+                # rubocop:enable Security/Eval
                 endpoints = [endpoints] unless endpoints.is_a?(Array)
                 return endpoints.flatten.compact
               rescue NameError
@@ -382,7 +388,10 @@ module RapiTapir
           endpoints = RapiTapir.instance_variable_get(:@endpoints) || []
 
           if endpoints.empty?
-            raise "No endpoints found in #{file_path}. Make sure the file defines endpoints in a variable containing 'api' or 'endpoints' in its name."
+            error_msg = "No endpoints found in #{file_path}. " \
+                        'Make sure the file defines endpoints in a variable ' \
+                        "containing 'api' or 'endpoints' in its name."
+            raise error_msg
           end
 
           endpoints

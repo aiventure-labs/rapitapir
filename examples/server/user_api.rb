@@ -172,7 +172,8 @@ if __FILE__ == $PROGRAM_NAME
   puts 'Example requests:'
   puts '  curl http://localhost:9292/users'
   puts '  curl http://localhost:9292/users/1'
-  puts "  curl -X POST http://localhost:9292/users -H 'Content-Type: application/json' -d '{\"name\":\"Bob\",\"email\":\"bob@example.com\"}'"
+  puts "  curl -X POST http://localhost:9292/users -H 'Content-Type: application/json' " \
+       "-d '{\"name\":\"Bob\",\"email\":\"bob@example.com\"}'"
 
   Rack::Handler::WEBrick.run(user_api.app, Port: 9292)
 end

@@ -164,10 +164,14 @@ module TaskAPI
       RapiTapir.get('/api/v1/tasks')
                .summary('List all tasks')
                .description('Retrieve a list of all tasks in the system. Requires read permission.')
-               .query(:status, RapiTapir::Types.optional(RapiTapir::Types.string), description: 'Filter by task status')
-               .query(:assignee_id, RapiTapir::Types.optional(RapiTapir::Types.integer), description: 'Filter by assignee ID')
-               .query(:limit, RapiTapir::Types.optional(RapiTapir::Types.integer), description: 'Maximum number of results')
-               .query(:offset, RapiTapir::Types.optional(RapiTapir::Types.integer), description: 'Number of results to skip')
+               .query(:status, RapiTapir::Types.optional(RapiTapir::Types.string),
+                      description: 'Filter by task status')
+               .query(:assignee_id, RapiTapir::Types.optional(RapiTapir::Types.integer),
+                      description: 'Filter by assignee ID')
+               .query(:limit, RapiTapir::Types.optional(RapiTapir::Types.integer),
+                      description: 'Maximum number of results')
+               .query(:offset, RapiTapir::Types.optional(RapiTapir::Types.integer),
+                      description: 'Number of results to skip')
                .ok(RapiTapir::Types.array(TASK_SCHEMA))
                .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
                .error_response(403, ERROR_SCHEMA, description: 'Insufficient permissions')

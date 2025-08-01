@@ -20,7 +20,9 @@ class UsersController < ApplicationController
   rapitapir_endpoint :index, RapiTapir.get('/users')
                                       .summary('List all users')
                                       .description('Returns a list of all users in the system')
-                                      .out(RapiTapir::Core::Output.new(kind: :json, type: { users: Array })) do |_inputs|
+                                      .out(RapiTapir::Core::Output.new(
+                                             kind: :json, type: { users: Array }
+                                           )) do |_inputs|
     { users: @users.values }
   end
 
@@ -28,7 +30,10 @@ class UsersController < ApplicationController
                                      .summary('Get user by ID')
                                      .description('Returns a single user by their ID')
                                      .in(RapiTapir::Core::Input.new(kind: :path, name: :id, type: :integer))
-                                     .out(RapiTapir::Core::Output.new(kind: :json, type: { id: :integer, name: :string, email: :string })) do |inputs|
+                                     .out(RapiTapir::Core::Output.new(
+                                            kind: :json,
+                                            type: { id: :integer, name: :string, email: :string }
+                                          )) do |inputs|
     user_id = inputs[:id]
     user = @users[user_id]
 
@@ -41,7 +46,10 @@ class UsersController < ApplicationController
                                        .summary('Create a new user')
                                        .description('Creates a new user with the provided data')
                                        .in(RapiTapir::Core::Input.new(kind: :body, name: :user_data, type: Hash))
-                                       .out(RapiTapir::Core::Output.new(kind: :json, type: { id: :integer, name: :string, email: :string })) do |inputs|
+                                       .out(RapiTapir::Core::Output.new(
+                                              kind: :json,
+                                              type: { id: :integer, name: :string, email: :string }
+                                            )) do |inputs|
     user_data = inputs[:user_data]
     new_id = (@users.keys.max || 0) + 1
 
@@ -60,7 +68,10 @@ class UsersController < ApplicationController
                                        .description('Updates an existing user with the provided data')
                                        .in(RapiTapir::Core::Input.new(kind: :path, name: :id, type: :integer))
                                        .in(RapiTapir::Core::Input.new(kind: :body, name: :user_data, type: Hash))
-                                       .out(RapiTapir::Core::Output.new(kind: :json, type: { id: :integer, name: :string, email: :string })) do |inputs|
+                                       .out(RapiTapir::Core::Output.new(
+                                              kind: :json,
+                                              type: { id: :integer, name: :string, email: :string }
+                                            )) do |inputs|
     user_id = inputs[:id]
     user_data = inputs[:user_data]
 
@@ -78,7 +89,9 @@ class UsersController < ApplicationController
                                         .summary('Delete a user')
                                         .description('Deletes a user by their ID')
                                         .in(RapiTapir::Core::Input.new(kind: :path, name: :id, type: :integer))
-                                        .out(RapiTapir::Core::Output.new(kind: :json, type: { message: :string })) do |inputs|
+                                        .out(RapiTapir::Core::Output.new(
+                                               kind: :json, type: { message: :string }
+                                             )) do |inputs|
     user_id = inputs[:id]
 
     raise ArgumentError, 'User not found' unless @users[user_id]

@@ -14,10 +14,12 @@ module RapiTapir
         class_methods do
           # Register an endpoint for this controller
           def rapitapir_endpoint(action_name, endpoint, &handler)
-            raise ArgumentError, 'Endpoint must be a RapiTapir::Core::Endpoint' unless endpoint.is_a?(RapiTapir::Core::Endpoint)
-            
+            unless endpoint.is_a?(RapiTapir::Core::Endpoint)
+              raise ArgumentError, 'Endpoint must be a RapiTapir::Core::Endpoint'
+            end
+
             endpoint.validate!
-            
+
             self.rapitapir_endpoints = rapitapir_endpoints.merge(
               action_name.to_sym => {
                 endpoint: endpoint,
@@ -31,9 +33,9 @@ module RapiTapir
 
         # Process a RapiTapir endpoint within a Rails action
         def process_rapitapir_endpoint(action_name = nil)
-          action_name ||= action_name
+          action_name ||= params[:action]&.to_sym || :index
           endpoint_config = self.class.rapitapir_endpoints[action_name.to_sym]
-          
+
           unless endpoint_config
             render json: { error: 'Endpoint not configured' }, status: 500
             return
@@ -45,10 +47,10 @@ module RapiTapir
           begin
             # Extract inputs from Rails request
             processed_inputs = extract_rails_inputs(request, endpoint)
-            
+
             # Call the handler in the context of the controller
             result = instance_exec(processed_inputs, &handler)
-            
+
             # Render the response
             render_rapitapir_response(result, endpoint)
           rescue ArgumentError => e
@@ -60,7 +62,7 @@ module RapiTapir
 
         def extract_rails_inputs(request, endpoint)
           inputs = {}
-          
+
           endpoint.inputs.each do |input|
             value = case input.kind
                     when :query
@@ -71,14 +73,10 @@ module RapiTapir
                       params[input.name.to_s]
                     when :body
                       parse_rails_body(request, input)
-                    else
-                      nil
                     end
 
             # Validate and coerce the value
-            if value.nil? && input.required?
-              raise ArgumentError, "Required input '#{input.name}' is missing"
-            end
+            raise ArgumentError, "Required input '#{input.name}' is missing" if value.nil? && input.required?
 
             inputs[input.name] = input.coerce(value) if value || !input.required?
           end
@@ -90,13 +88,13 @@ module RapiTapir
           # Rails typically parses JSON automatically into params
           if input.type == Hash || input.type.is_a?(Hash)
             # Try to get from parsed params first
-            request.request_parameters.presence || 
-            # Fall back to parsing raw body
-            begin
-              JSON.parse(request.raw_post)
-            rescue JSON::ParserError
-              raise ArgumentError, "Invalid JSON in request body"
-            end
+            request.request_parameters.presence ||
+              # Fall back to parsing raw body
+              begin
+                JSON.parse(request.raw_post)
+              rescue JSON::ParserError
+                raise ArgumentError, 'Invalid JSON in request body'
+              end
           else
             request.raw_post
           end
@@ -105,7 +103,7 @@ module RapiTapir
         def render_rapitapir_response(result, endpoint)
           output = endpoint.outputs.find { |o| o.kind == :json } || endpoint.outputs.first
           status_code = determine_rails_status_code(endpoint)
-          
+
           if output
             case output.kind
             when :json
@@ -136,10 +134,12 @@ module RapiTapir
 
         # Register an endpoint and generate Rails routes
         def register_endpoint(endpoint, controller_class, action_name)
-          raise ArgumentError, 'Endpoint must be a RapiTapir::Core::Endpoint' unless endpoint.is_a?(RapiTapir::Core::Endpoint)
-          
+          unless endpoint.is_a?(RapiTapir::Core::Endpoint)
+            raise ArgumentError, 'Endpoint must be a RapiTapir::Core::Endpoint'
+          end
+
           endpoint.validate!
-          
+
           @endpoints << {
             endpoint: endpoint,
             controller: controller_class,
@@ -153,11 +153,11 @@ module RapiTapir
             endpoint = endpoint_config[:endpoint]
             controller = endpoint_config[:controller]
             action = endpoint_config[:action]
-            
+
             method_name = endpoint.method.to_s.downcase
             path_pattern = convert_path_to_rails(endpoint.path)
             controller_name = controller.name.underscore.sub(/_controller$/, '')
-            
+
             rails_routes.send(method_name, path_pattern, to: "#{controller_name}##{action}")
           end
         end

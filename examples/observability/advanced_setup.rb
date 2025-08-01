@@ -101,7 +101,7 @@ RapiTapir.configure do |config|
 end
 
 # Define order schema
-OrderSchema = {
+ORDER_SCHEMA = {
   customer_id: :uuid,
   items: [{
     product_id: :uuid,
@@ -127,7 +127,7 @@ RapiTapir.endpoint
          .in('/orders')
          .header(:authorization, Types.string(pattern: /\ABearer .+\z/), description: 'JWT token')
          .header(:'x-tenant-id', :uuid, description: 'Tenant identifier')
-         .json_body(OrderSchema)
+         .json_body(ORDER_SCHEMA)
          .out_json({
                      id: :uuid,
                      status: { type: :string,
