@@ -74,59 +74,72 @@ module RapiTapir
 
       def create_option_parser
         OptionParser.new do |opts|
-          opts.banner = 'Usage: rapitapir [options] command [args]'
-          opts.separator ''
-          opts.separator 'Commands:'
-          opts.separator '  generate TYPE    Generate clients or documentation'
-          opts.separator '  serve           Start documentation server'
-          opts.separator '  validate        Validate endpoint definitions'
-          opts.separator '  version         Show version'
-          opts.separator '  help            Show this help'
-          opts.separator ''
-          opts.separator 'Options:'
+          setup_banner_and_commands(opts)
+          setup_file_options(opts)
+          setup_config_options(opts)
+          setup_help_and_version_options(opts)
+        end
+      end
 
-          opts.on('-i', '--input FILE', '--endpoints FILE', 'Input Ruby file with endpoint definitions') do |file|
-            @options[:input] = file
-          end
+      def setup_banner_and_commands(opts)
+        opts.banner = 'Usage: rapitapir [options] command [args]'
+        opts.separator ''
+        opts.separator 'Commands:'
+        opts.separator '  generate TYPE    Generate clients or documentation'
+        opts.separator '  serve           Start documentation server'
+        opts.separator '  validate        Validate endpoint definitions'
+        opts.separator '  version         Show version'
+        opts.separator '  help            Show this help'
+        opts.separator ''
+        opts.separator 'Options:'
+      end
 
-          opts.on('-o', '--output FILE', 'Output file path') do |file|
-            @options[:output] = file
-          end
+      def setup_file_options(opts)
+        opts.on('-i', '--input FILE', '--endpoints FILE', 'Input Ruby file with endpoint definitions') do |file|
+          @options[:input] = file
+        end
 
-          opts.on('-f', '--format FORMAT', 'Output format (json, yaml, ts, py, md, html)') do |format|
-            @options[:format] = format
-          end
+        opts.on('-o', '--output FILE', 'Output file path') do |file|
+          @options[:output] = file
+        end
 
-          opts.on('-c', '--config KEY=VALUE', 'Configuration option (can be used multiple times)') do |config|
-            key, value = config.split('=', 2)
-            @options[:config][key.to_sym] = value
-          end
+        opts.on('-f', '--format FORMAT', 'Output format (json, yaml, ts, py, md, html)') do |format|
+          @options[:format] = format
+        end
+      end
 
-          opts.on('--base-url URL', 'Base URL for the API') do |url|
-            @options[:config][:base_url] = url
-          end
+      def setup_config_options(opts)
+        opts.on('-c', '--config KEY=VALUE', 'Configuration option (can be used multiple times)') do |config|
+          key, value = config.split('=', 2)
+          @options[:config][key.to_sym] = value
+        end
 
-          opts.on('--client-name NAME', 'Name for generated client class') do |name|
-            @options[:config][:client_name] = name
-          end
+        opts.on('--base-url URL', 'Base URL for the API') do |url|
+          @options[:config][:base_url] = url
+        end
 
-          opts.on('--package-name NAME', 'Package name for generated client') do |name|
-            @options[:config][:package_name] = name
-          end
+        opts.on('--client-name NAME', 'Name for generated client class') do |name|
+          @options[:config][:client_name] = name
+        end
 
-          opts.on('--client-version VERSION', 'Version for generated client') do |version|
-            @options[:config][:version] = version
-          end
+        opts.on('--package-name NAME', 'Package name for generated client') do |name|
+          @options[:config][:package_name] = name
+        end
 
-          opts.on('-v', '--version', 'Show RapiTapir version') do
-            puts "RapiTapir version #{RapiTapir::VERSION}"
-            exit
-          end
+        opts.on('--client-version VERSION', 'Version for generated client') do |version|
+          @options[:config][:version] = version
+        end
+      end
 
-          opts.on('-h', '--help', 'Show this help') do
-            puts opts
-            exit
-          end
+      def setup_help_and_version_options(opts)
+        opts.on('-v', '--version', 'Show RapiTapir version') do
+          puts "RapiTapir version #{RapiTapir::VERSION}"
+          exit
+        end
+
+        opts.on('-h', '--help', 'Show this help') do
+          puts opts
+          exit
         end
       end
 
@@ -188,6 +201,19 @@ module RapiTapir
       end
 
       def generate_openapi
+        validate_openapi_options
+        
+        begin
+          endpoints = load_endpoints(@options[:input])
+          generator = create_openapi_generator(endpoints)
+          content = generate_openapi_content(generator)
+          save_openapi_output(content)
+        rescue StandardError => e
+          handle_openapi_error(e)
+        end
+      end
+
+      def validate_openapi_options
         unless @options[:input]
           puts 'Error: --endpoints is required'
           exit 1
@@ -195,51 +221,71 @@ module RapiTapir
 
         unless @options[:output]
           puts 'Error: --output is required'
-          exit 1
-        end
-
-        begin
-          endpoints = load_endpoints(@options[:input])
-
-          require_relative '../openapi/schema_generator'
-
-          # Prepare config for OpenAPI generator
-          openapi_info = {
-            title: @options[:config][:title] || 'API Documentation',
-            version: @options[:config][:version] || '1.0.0',
-            description: @options[:config][:description] || 'Auto-generated API documentation'
-          }
-
-          openapi_servers = []
-          openapi_servers << { url: @options[:config][:base_url] } if @options[:config][:base_url]
-
-          generator = RapiTapir::OpenAPI::SchemaGenerator.new(
-            endpoints: endpoints,
-            info: openapi_info,
-            servers: openapi_servers
-          )
-
-          content = case @options[:format]
-                    when 'yaml', 'yml'
-                      generator.to_yaml
-                    else
-                      generator.to_json
-                    end
-
-          if @options[:output]
-            File.write(@options[:output], content)
-            puts "OpenAPI schema saved to #{@options[:output]}"
-          else
-            puts content
-          end
-        rescue StandardError => e
-          puts "Error generating OpenAPI schema: #{e.message}"
-          puts "Backtrace: #{e.backtrace.first(5).join("\n")}"
           exit 1
         end
       end
 
+      def create_openapi_generator(endpoints)
+        require_relative '../openapi/schema_generator'
+
+        openapi_info = build_openapi_info
+        openapi_servers = build_openapi_servers
+
+        RapiTapir::OpenAPI::SchemaGenerator.new(
+          endpoints: endpoints,
+          info: openapi_info,
+          servers: openapi_servers
+        )
+      end
+
+      def build_openapi_info
+        {
+          title: @options[:config][:title] || 'API Documentation',
+          version: @options[:config][:version] || '1.0.0',
+          description: @options[:config][:description] || 'Auto-generated API documentation'
+        }
+      end
+
+      def build_openapi_servers
+        servers = []
+        servers << { url: @options[:config][:base_url] } if @options[:config][:base_url]
+        servers
+      end
+
+      def generate_openapi_content(generator)
+        case @options[:format]
+        when 'yaml', 'yml'
+          generator.to_yaml
+        else
+          generator.to_json
+        end
+      end
+
+      def save_openapi_output(content)
+        if @options[:output]
+          File.write(@options[:output], content)
+          puts "OpenAPI schema saved to #{@options[:output]}"
+        else
+          puts content
+        end
+      end
+
+      def handle_openapi_error(error)
+        puts "Error generating OpenAPI schema: #{error.message}"
+        puts "Backtrace: #{error.backtrace.first(5).join("\n")}"
+        exit 1
+      end
+
       def generate_client(client_type)
+        validate_client_options
+        
+        endpoints = load_endpoints(@options[:input])
+        generator, extension = create_client_generator(client_type, endpoints)
+        content = generator.generate
+        save_client_output(content, client_type, extension)
+      end
+
+      def validate_client_options
         unless @options[:input]
           puts 'Error: --endpoints is required'
           exit 1
@@ -249,34 +295,44 @@ module RapiTapir
           puts 'Error: --output is required'
           exit 1
         end
+      end
 
-        endpoints = load_endpoints(@options[:input])
-
+      def create_client_generator(client_type, endpoints)
         case client_type
         when 'typescript', 'ts'
-          require_relative '../client/typescript_generator'
-          generator = RapiTapir::Client::TypescriptGenerator.new(
-            endpoints: endpoints,
-            config: @options[:config]
-          )
-          extension = 'ts'
+          generator = create_typescript_generator(endpoints)
+          [generator, 'ts']
         when 'python', 'py'
-          # TODO: Implement Python generator
-          puts 'Error: Python client generator not implemented yet'
-          exit 1
+          handle_python_generator_not_implemented
         else
-          puts "Error: Unknown client type: #{client_type}"
-          puts 'Available types: typescript, python'
-          exit 1
+          handle_unknown_client_type(client_type)
         end
+      end
 
-        content = generator.generate
+      def create_typescript_generator(endpoints)
+        require_relative '../client/typescript_generator'
+        RapiTapir::Client::TypescriptGenerator.new(
+          endpoints: endpoints,
+          config: @options[:config]
+        )
+      end
 
+      def handle_python_generator_not_implemented
+        puts 'Error: Python client generator not implemented yet'
+        exit 1
+      end
+
+      def handle_unknown_client_type(client_type)
+        puts "Error: Unknown client type: #{client_type}"
+        puts 'Available types: typescript, python'
+        exit 1
+      end
+
+      def save_client_output(content, client_type, extension)
         if @options[:output]
           File.write(@options[:output], content)
           puts "#{client_type.capitalize} client saved to #{@options[:output]}"
         else
-          # Generate default filename
           default_output = "api-client.#{extension}"
           File.write(default_output, content)
           puts "#{client_type.capitalize} client saved to #{default_output}"
@@ -284,6 +340,15 @@ module RapiTapir
       end
 
       def generate_docs(docs_type)
+        validate_docs_options
+        
+        endpoints = load_endpoints(@options[:input])
+        generator, extension = create_docs_generator(docs_type, endpoints)
+        content = generator.generate
+        save_docs_output(content, docs_type, extension)
+      end
+
+      def validate_docs_options
         unless @options[:input]
           puts 'Error: --endpoints is required'
           exit 1
@@ -293,37 +358,48 @@ module RapiTapir
           puts 'Error: --output is required'
           exit 1
         end
+      end
 
-        endpoints = load_endpoints(@options[:input])
-
+      def create_docs_generator(docs_type, endpoints)
         case docs_type
         when 'markdown', 'md'
-          require_relative '../docs/markdown_generator'
-          generator = RapiTapir::Docs::MarkdownGenerator.new(
-            endpoints: endpoints,
-            config: @options[:config]
-          )
-          extension = 'md'
+          generator = create_markdown_generator(endpoints)
+          [generator, 'md']
         when 'html'
-          require_relative '../docs/html_generator'
-          generator = RapiTapir::Docs::HtmlGenerator.new(
-            endpoints: endpoints,
-            config: @options[:config]
-          )
-          extension = 'html'
+          generator = create_html_generator(endpoints)
+          [generator, 'html']
         else
-          puts "Error: Unknown documentation type: #{docs_type}"
-          puts 'Available types: markdown, html'
-          exit 1
+          handle_unknown_docs_type(docs_type)
         end
+      end
 
-        content = generator.generate
+      def create_markdown_generator(endpoints)
+        require_relative '../docs/markdown_generator'
+        RapiTapir::Docs::MarkdownGenerator.new(
+          endpoints: endpoints,
+          config: @options[:config]
+        )
+      end
 
+      def create_html_generator(endpoints)
+        require_relative '../docs/html_generator'
+        RapiTapir::Docs::HtmlGenerator.new(
+          endpoints: endpoints,
+          config: @options[:config]
+        )
+      end
+
+      def handle_unknown_docs_type(docs_type)
+        puts "Error: Unknown documentation type: #{docs_type}"
+        puts 'Available types: markdown, html'
+        exit 1
+      end
+
+      def save_docs_output(content, docs_type, extension)
         if @options[:output]
           File.write(@options[:output], content)
           puts "#{docs_type.capitalize} documentation saved to #{@options[:output]}"
         else
-          # Generate default filename
           default_output = "api-docs.#{extension}"
           File.write(default_output, content)
           puts "#{docs_type.capitalize} documentation saved to #{default_output}"

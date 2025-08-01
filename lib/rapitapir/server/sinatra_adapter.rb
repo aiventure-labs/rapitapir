@@ -47,41 +47,48 @@ module RapiTapir
         method_name = endpoint_info[:endpoint].method.to_s.downcase.to_sym
         path_pattern = convert_path_to_sinatra(endpoint_info[:endpoint].path)
         endpoint_id = endpoint_info[:id]
-        adapter = self # Capture the adapter in a local variable
+        adapter = self
 
-        # Define the route on the Sinatra app instance
         @app.send(method_name, path_pattern) do
-          endpoint_data = adapter.endpoints[endpoint_id]
-
-          begin
-            # Extract inputs using Sinatra's params (which includes path parameters)
-            processed_inputs = adapter.extract_sinatra_inputs(request, params, endpoint_data[:endpoint])
-
-            # Call the handler in the app context with access to instance variables
-            result = case endpoint_data[:handler]
-                     when Proc
-                       instance_exec(processed_inputs, &endpoint_data[:handler])
-                     else
-                       if endpoint_data[:handler].respond_to?(:call)
-                         endpoint_data[:handler].call(processed_inputs)
-                       else
-                         instance_exec(
-                           processed_inputs, &endpoint_data[:handler]
-                         )
-                       end
-                     end
-
-            # Set content type and return response
-            content_type adapter.determine_content_type(endpoint_data[:endpoint])
-            status adapter.determine_status_code(endpoint_data[:endpoint])
-
-            adapter.serialize_response(result, endpoint_data[:endpoint])
-          rescue ArgumentError => e
-            halt 400, { error: e.message }.to_json
-          rescue StandardError => e
-            halt 500, { error: 'Internal Server Error', message: e.message }.to_json
-          end
+          handle_sinatra_request(adapter, endpoint_id, request, params)
         end
+      end
+
+      def handle_sinatra_request(adapter, endpoint_id, request, params)
+        endpoint_data = adapter.endpoints[endpoint_id]
+
+        begin
+          processed_inputs = adapter.extract_sinatra_inputs(request, params, endpoint_data[:endpoint])
+          result = execute_endpoint_handler(endpoint_data, processed_inputs)
+          send_successful_response(adapter, endpoint_data, result)
+        rescue ArgumentError => e
+          halt 400, { error: e.message }.to_json
+        rescue StandardError => e
+          halt 500, { error: 'Internal Server Error', message: e.message }.to_json
+        end
+      end
+
+      def execute_endpoint_handler(endpoint_data, processed_inputs)
+        case endpoint_data[:handler]
+        when Proc
+          instance_exec(processed_inputs, &endpoint_data[:handler])
+        else
+          call_handler_method(endpoint_data[:handler], processed_inputs)
+        end
+      end
+
+      def call_handler_method(handler, processed_inputs)
+        if handler.respond_to?(:call)
+          handler.call(processed_inputs)
+        else
+          instance_exec(processed_inputs, &handler)
+        end
+      end
+
+      def send_successful_response(adapter, endpoint_data, result)
+        content_type adapter.determine_content_type(endpoint_data[:endpoint])
+        status adapter.determine_status_code(endpoint_data[:endpoint])
+        adapter.serialize_response(result, endpoint_data[:endpoint])
       end
 
       public

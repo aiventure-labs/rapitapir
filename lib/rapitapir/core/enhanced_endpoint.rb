@@ -88,63 +88,12 @@ module RapiTapir
 
       # Generate OpenAPI specification for this endpoint
       def to_openapi_spec
-        spec = {
-          summary: metadata[:summary],
-          description: metadata[:description],
-          tags: Array(metadata[:tags]),
-          parameters: [],
-          responses: {}
-        }
-
-        # Add parameters
-        inputs.each do |input|
-          next if input.kind == :body
-
-          spec[:parameters] << input.to_openapi_parameter
-        end
-
-        # Add request body
-        body_input = inputs.find { |i| i.kind == :body }
-        if body_input
-          spec[:requestBody] = {
-            required: body_input.required?,
-            content: {
-              'application/json' => {
-                schema: body_input.type.to_json_schema
-              }
-            }
-          }
-        end
-
-        # Add responses
-        outputs.each do |output|
-          next if output.kind == :status
-
-          status_code = find_status_code || 200
-          spec[:responses][status_code.to_s] = output.to_openapi_response
-        end
-
-        # Add error responses
-        errors.each do |error|
-          spec[:responses][error[:code].to_s] = error[:output].to_openapi_response
-        end
-
-        # Add security if present
-        if security_schemes.any?
-          spec[:security] = security_schemes.map do |scheme|
-            case scheme.options[:auth_type]
-            when :bearer
-              { 'bearerAuth' => [] }
-            when :api_key
-              { 'apiKeyAuth' => [] }
-            when :basic
-              { 'basicAuth' => [] }
-            else
-              {}
-            end
-          end
-        end
-
+        spec = build_base_spec
+        add_parameters_to_spec(spec)
+        add_request_body_to_spec(spec)
+        add_responses_to_spec(spec)
+        add_error_responses_to_spec(spec)
+        add_security_to_spec(spec)
         spec.compact
       end
 
@@ -155,6 +104,76 @@ module RapiTapir
         # Additional validations for enhanced features
         validate_security_schemes!
         validate_type_consistency!
+      end
+
+      private
+
+      def build_base_spec
+        {
+          summary: metadata[:summary],
+          description: metadata[:description],
+          tags: Array(metadata[:tags]),
+          parameters: [],
+          responses: {}
+        }
+      end
+
+      def add_parameters_to_spec(spec)
+        inputs.each do |input|
+          next if input.kind == :body
+
+          spec[:parameters] << input.to_openapi_parameter
+        end
+      end
+
+      def add_request_body_to_spec(spec)
+        body_input = inputs.find { |i| i.kind == :body }
+        return unless body_input
+
+        spec[:requestBody] = {
+          required: body_input.required?,
+          content: {
+            'application/json' => {
+              schema: body_input.type.to_json_schema
+            }
+          }
+        }
+      end
+
+      def add_responses_to_spec(spec)
+        outputs.each do |output|
+          next if output.kind == :status
+
+          status_code = find_status_code || 200
+          spec[:responses][status_code.to_s] = output.to_openapi_response
+        end
+      end
+
+      def add_error_responses_to_spec(spec)
+        errors.each do |error|
+          spec[:responses][error[:code].to_s] = error[:output].to_openapi_response
+        end
+      end
+
+      def add_security_to_spec(spec)
+        return unless security_schemes.any?
+
+        spec[:security] = security_schemes.map do |scheme|
+          map_security_scheme_to_openapi(scheme)
+        end
+      end
+
+      def map_security_scheme_to_openapi(scheme)
+        case scheme.options[:auth_type]
+        when :bearer
+          { 'bearerAuth' => [] }
+        when :api_key
+          { 'apiKeyAuth' => [] }
+        when :basic
+          { 'basicAuth' => [] }
+        else
+          {}
+        end
       end
 
       private

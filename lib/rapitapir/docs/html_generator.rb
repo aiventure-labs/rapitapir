@@ -527,41 +527,7 @@ module RapiTapir
         path = endpoint.path
         endpoint_id = generate_anchor(method, path).gsub('-', '_')
 
-        # Generate form fields for parameters
-        # Path parameters
-        path_params = endpoint.inputs.select { |input| input.kind == :path }
-        form_fields = path_params.map do |param|
-          <<~HTML
-            <div class="form-group">
-              <label for="#{endpoint_id}_#{param.name}">#{param.name} (path parameter)</label>
-              <input type="text" id="#{endpoint_id}_#{param.name}" name="#{param.name}" placeholder="Enter #{param.name}" required>
-            </div>
-          HTML
-        end
-
-        # Query parameters
-        query_params = endpoint.inputs.select { |input| input.kind == :query }
-        query_params.each do |param|
-          required = param.required? ? 'required' : ''
-          form_fields << <<~HTML
-            <div class="form-group">
-              <label for="#{endpoint_id}_#{param.name}">#{param.name} (query parameter)</label>
-              <input type="text" id="#{endpoint_id}_#{param.name}" name="#{param.name}" placeholder="Enter #{param.name}" #{required}>
-            </div>
-          HTML
-        end
-
-        # Request body
-        body_param = endpoint.inputs.find { |input| input.kind == :body }
-        if body_param
-          example = format_schema_example(body_param.type)
-          form_fields << <<~HTML
-            <div class="form-group">
-              <label for="#{endpoint_id}_body">Request Body (JSON)</label>
-              <textarea id="#{endpoint_id}_body" name="body" rows="6" placeholder="Enter JSON body">#{html_escape(example)}</textarea>
-            </div>
-          HTML
-        end
+        form_fields = build_try_it_form_fields(endpoint, endpoint_id)
 
         <<~HTML
           <div class="try-it-section">
@@ -574,6 +540,54 @@ module RapiTapir
               <h5>Response</h5>
               <div class="code-block" id="#{endpoint_id}_response_content"></div>
             </div>
+          </div>
+        HTML
+      end
+
+      def build_try_it_form_fields(endpoint, endpoint_id)
+        form_fields = []
+        
+        form_fields.concat(build_path_parameter_fields(endpoint, endpoint_id))
+        form_fields.concat(build_query_parameter_fields(endpoint, endpoint_id))
+        form_fields.concat(build_body_parameter_field(endpoint, endpoint_id))
+        
+        form_fields
+      end
+
+      def build_path_parameter_fields(endpoint, endpoint_id)
+        path_params = endpoint.inputs.select { |input| input.kind == :path }
+        path_params.map do |param|
+          <<~HTML
+            <div class="form-group">
+              <label for="#{endpoint_id}_#{param.name}">#{param.name} (path parameter)</label>
+              <input type="text" id="#{endpoint_id}_#{param.name}" name="#{param.name}" placeholder="Enter #{param.name}" required>
+            </div>
+          HTML
+        end
+      end
+
+      def build_query_parameter_fields(endpoint, endpoint_id)
+        query_params = endpoint.inputs.select { |input| input.kind == :query }
+        query_params.map do |param|
+          required = param.required? ? 'required' : ''
+          <<~HTML
+            <div class="form-group">
+              <label for="#{endpoint_id}_#{param.name}">#{param.name} (query parameter)</label>
+              <input type="text" id="#{endpoint_id}_#{param.name}" name="#{param.name}" placeholder="Enter #{param.name}" #{required}>
+            </div>
+          HTML
+        end
+      end
+
+      def build_body_parameter_field(endpoint, endpoint_id)
+        body_param = endpoint.inputs.find { |input| input.kind == :body }
+        return [] unless body_param
+
+        example = format_schema_example(body_param.type)
+        [<<~HTML]
+          <div class="form-group">
+            <label for="#{endpoint_id}_body">Request Body (JSON)</label>
+            <textarea id="#{endpoint_id}_body" name="body" rows="6" placeholder="Enter JSON body">#{html_escape(example)}</textarea>
           </div>
         HTML
       end
