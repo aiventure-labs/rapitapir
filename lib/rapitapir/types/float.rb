@@ -30,16 +30,31 @@ module RapiTapir
       def validate_range_constraints(float_value)
         errors = []
 
+        errors.concat(validate_minimum_constraints(float_value))
+        errors.concat(validate_maximum_constraints(float_value))
+
+        errors
+      end
+
+      def validate_minimum_constraints(float_value)
+        errors = []
+
         if constraints[:minimum] && float_value < constraints[:minimum]
           errors << "Value #{float_value} is below minimum #{constraints[:minimum]}"
         end
 
-        if constraints[:maximum] && float_value > constraints[:maximum]
-          errors << "Value #{float_value} exceeds maximum #{constraints[:maximum]}"
-        end
-
         if constraints[:exclusive_minimum] && float_value <= constraints[:exclusive_minimum]
           errors << "Value #{float_value} must be greater than #{constraints[:exclusive_minimum]}"
+        end
+
+        errors
+      end
+
+      def validate_maximum_constraints(float_value)
+        errors = []
+
+        if constraints[:maximum] && float_value > constraints[:maximum]
+          errors << "Value #{float_value} exceeds maximum #{constraints[:maximum]}"
         end
 
         if constraints[:exclusive_maximum] && float_value >= constraints[:exclusive_maximum]
@@ -63,18 +78,29 @@ module RapiTapir
         case value
         when ::Float then value
         when ::Integer then value.to_f
-        when ::String
-          Kernel.Float(value.strip)
-        when true then 1.0
-        when false then 0.0
+        when ::String then coerce_string_to_float(value)
+        when true, false then coerce_boolean_to_float(value)
         else
-          raise CoercionError.new(value, 'Float', 'Value cannot be converted to float') unless value.respond_to?(:to_f)
-
-          value.to_f
-
+          coerce_other_to_float(value)
         end
       rescue ArgumentError => e
         raise CoercionError.new(value, 'Float', e.message)
+      end
+
+      def coerce_string_to_float(value)
+        Kernel.Float(value.strip)
+      end
+
+      def coerce_boolean_to_float(value)
+        value ? 1.0 : 0.0
+      end
+
+      def coerce_other_to_float(value)
+        unless value.respond_to?(:to_f)
+          raise CoercionError.new(value, 'Float', 'Value cannot be converted to float')
+        end
+
+        value.to_f
       end
 
       def json_type

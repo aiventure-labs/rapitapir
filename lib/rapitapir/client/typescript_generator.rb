@@ -63,49 +63,66 @@ module RapiTapir
         types = []
         method_name = method_name_for_endpoint(endpoint)
 
-        # Generate request type if there are parameters
+        types.concat(generate_request_type(endpoint, method_name))
+        types.concat(generate_response_type(endpoint, method_name))
+
+        types.join("\n\n")
+      end
+
+      def generate_request_type(endpoint, method_name)
         params = path_parameters(endpoint) + query_parameters(endpoint)
         body = request_body(endpoint)
 
-        if params.any? || body
-          request_props = []
+        return [] unless params.any? || body
 
-          # Path parameters
-          path_parameters(endpoint).each do |param|
-            ts_type = convert_type(param.type, language: :typescript)
-            request_props << "  #{param.name}: #{ts_type};"
-          end
+        request_props = build_request_properties(endpoint, body)
+        return [] unless request_props.any?
 
-          # Query parameters
-          query_parameters(endpoint).each do |param|
-            ts_type = convert_type(param.type, language: :typescript)
-            optional = param.required? ? '' : '?'
-            request_props << "  #{param.name}#{optional}: #{ts_type};"
-          end
+        [<<~TYPESCRIPT]
+          export interface #{method_name.capitalize}Request {
+          #{request_props.join("\n")}
+          }
+        TYPESCRIPT
+      end
 
-          # Request body
-          if body
-            ts_type = convert_type(body.type, language: :typescript)
-            request_props << "  body: #{ts_type};"
-          end
+      def build_request_properties(endpoint, body)
+        props = []
 
-          if request_props.any?
-            types << <<~TYPESCRIPT
-              export interface #{method_name.capitalize}Request {
-              #{request_props.join("\n")}
-              }
-            TYPESCRIPT
-          end
+        props.concat(build_path_parameter_properties(endpoint))
+        props.concat(build_query_parameter_properties(endpoint))
+        props.concat(build_body_properties(body))
+
+        props
+      end
+
+      def build_path_parameter_properties(endpoint)
+        path_parameters(endpoint).map do |param|
+          ts_type = convert_type(param.type, language: :typescript)
+          "  #{param.name}: #{ts_type};"
         end
+      end
 
-        # Generate response type
+      def build_query_parameter_properties(endpoint)
+        query_parameters(endpoint).map do |param|
+          ts_type = convert_type(param.type, language: :typescript)
+          optional = param.required? ? '' : '?'
+          "  #{param.name}#{optional}: #{ts_type};"
+        end
+      end
+
+      def build_body_properties(body)
+        return [] unless body
+
+        ts_type = convert_type(body.type, language: :typescript)
+        ["  body: #{ts_type};"]
+      end
+
+      def generate_response_type(endpoint, method_name)
         response = response_type(endpoint)
-        if response
-          ts_type = convert_type(response, language: :typescript)
-          types << "export type #{method_name.capitalize}Response = #{ts_type};"
-        end
+        return [] unless response
 
-        types.join("\n\n")
+        ts_type = convert_type(response, language: :typescript)
+        ["export type #{method_name.capitalize}Response = #{ts_type};"]
       end
 
       def generate_client_class
@@ -212,75 +229,114 @@ module RapiTapir
         http_method = endpoint.method.to_s.upcase
         path = endpoint.path
 
-        # Build method parameters
+        params = build_method_parameters(endpoint, method_name)
+        has_params = has_method_parameters?(endpoint)
+        
+        method_signature = build_method_signature(method_name, params, has_params, endpoint)
+        method_body = build_method_body(method_signature, endpoint, has_params, http_method, path)
+
+        method_body.join("\n")
+      end
+
+      def build_method_parameters(endpoint, method_name)
         params = []
-        path_params = path_parameters(endpoint)
-        query_params = query_parameters(endpoint)
-        body_param = request_body(endpoint)
-
-        # Check if we need a request object
-        has_params = path_params.any? || query_params.any? || body_param
-
+        has_params = has_method_parameters?(endpoint)
         params << "request: #{method_name.capitalize}Request" if has_params
+        params
+      end
 
-        # Build path with parameter substitution
-        path.gsub(/:(\w+)/) { "{request.#{::Regexp.last_match(1)}}" }
+      def has_method_parameters?(endpoint)
+        path_parameters(endpoint).any? || query_parameters(endpoint).any? || request_body(endpoint)
+      end
 
-        # Build query parameters object
-        query_params_obj = if query_params.any?
-                             param_assignments = query_params.map do |param|
-                               "#{param.name}: request.#{param.name}"
-                             end
-                             "{ #{param_assignments.join(', ')} }"
-                           else
-                             'undefined'
-                           end
-
-        # Build request body
-        request_body_obj = body_param ? 'request.body' : 'undefined'
-
-        # Determine response type
-        response_type_name = if response_type(endpoint)
-                               "#{method_name.capitalize}Response"
-                             else
-                               'void'
-                             end
-
-        # Build method signature and body
-        method_signature = if has_params
-                             "async #{method_name}(#{params.join(', ')}): Promise<ApiResponse<#{response_type_name}>>"
-                           else
-                             "async #{method_name}(): Promise<ApiResponse<#{response_type_name}>>"
-                           end
-
-        # Build the actual path for the request
-        actual_path = if path_params.any?
-                        path.gsub(/:(\w+)/) { "${request.#{::Regexp.last_match(1)}}" }
-                        "`#{path.gsub(/:(\w+)/, '${request.\1}')}`"
-                      else
-                        "'#{path}'"
-                      end
-
-        method_body = []
-        method_body << "  #{method_signature} {"
+      def build_method_signature(method_name, params, has_params, endpoint)
+        response_type_name = determine_response_type_name(endpoint, method_name)
 
         if has_params
-          method_body << "    return this.request<#{response_type_name}>('#{http_method}', #{actual_path}, {"
-
-          request_options = []
-          request_options << "params: #{query_params_obj}" if query_params.any?
-          request_options << "body: #{request_body_obj}" if body_param
-
-          method_body << "      #{request_options.join(',')}" if request_options.any?
-
-          method_body << '    });'
+          "async #{method_name}(#{params.join(', ')}): Promise<ApiResponse<#{response_type_name}>>"
         else
-          method_body << "    return this.request<#{response_type_name}>('#{http_method}', '#{path}');"
+          "async #{method_name}(): Promise<ApiResponse<#{response_type_name}>>"
+        end
+      end
+
+      def determine_response_type_name(endpoint, method_name)
+        if response_type(endpoint)
+          "#{method_name.capitalize}Response"
+        else
+          'void'
+        end
+      end
+
+      def build_method_body(method_signature, endpoint, has_params, http_method, path)
+        method_body = ["  #{method_signature} {"]
+
+        if has_params
+          method_body.concat(build_method_body_with_params(endpoint, http_method, path))
+        else
+          method_body.concat(build_method_body_without_params(endpoint, http_method, path))
         end
 
         method_body << '  }'
+        method_body
+      end
 
-        method_body.join("\n")
+      def build_method_body_with_params(endpoint, http_method, path)
+        method_name = method_name_for_endpoint(endpoint)
+        response_type_name = determine_response_type_name(endpoint, method_name)
+        actual_path = build_actual_path(endpoint, path)
+        
+        body = ["    return this.request<#{response_type_name}>('#{http_method}', #{actual_path}, {"]
+        
+        request_options = build_request_options(endpoint)
+        body << "      #{request_options.join(',')}" if request_options.any?
+        body << '    });'
+        
+        body
+      end
+
+      def build_method_body_without_params(endpoint, http_method, path)
+        method_name = method_name_for_endpoint(endpoint)
+        response_type_name = determine_response_type_name(endpoint, method_name)
+        ["    return this.request<#{response_type_name}>('#{http_method}', '#{path}');"]
+      end
+
+      def build_actual_path(endpoint, path)
+        path_params = path_parameters(endpoint)
+        
+        if path_params.any?
+          "`#{path.gsub(/:(\w+)/, '${request.\1}')}`"
+        else
+          "'#{path}'"
+        end
+      end
+
+      def build_request_options(endpoint)
+        options = []
+        
+        query_params_obj = build_query_params_object(endpoint)
+        options << "params: #{query_params_obj}" if query_parameters(endpoint).any?
+        
+        request_body_obj = build_request_body_object(endpoint)
+        options << "body: #{request_body_obj}" if request_body(endpoint)
+        
+        options
+      end
+
+      def build_query_params_object(endpoint)
+        query_params = query_parameters(endpoint)
+        
+        if query_params.any?
+          param_assignments = query_params.map do |param|
+            "#{param.name}: request.#{param.name}"
+          end
+          "{ #{param_assignments.join(', ')} }"
+        else
+          'undefined'
+        end
+      end
+
+      def build_request_body_object(endpoint)
+        request_body(endpoint) ? 'request.body' : 'undefined'
       end
 
       def generate_exports

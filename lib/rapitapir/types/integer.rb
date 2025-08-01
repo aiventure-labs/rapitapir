@@ -37,16 +37,31 @@ module RapiTapir
       def validate_range_constraints(value)
         errors = []
 
+        errors.concat(validate_minimum_constraints(value))
+        errors.concat(validate_maximum_constraints(value))
+
+        errors
+      end
+
+      def validate_minimum_constraints(value)
+        errors = []
+
         if constraints[:minimum] && value < constraints[:minimum]
           errors << "Value #{value} is below minimum #{constraints[:minimum]}"
         end
 
-        if constraints[:maximum] && value > constraints[:maximum]
-          errors << "Value #{value} exceeds maximum #{constraints[:maximum]}"
-        end
-
         if constraints[:exclusive_minimum] && value <= constraints[:exclusive_minimum]
           errors << "Value #{value} must be greater than #{constraints[:exclusive_minimum]}"
+        end
+
+        errors
+      end
+
+      def validate_maximum_constraints(value)
+        errors = []
+
+        if constraints[:maximum] && value > constraints[:maximum]
+          errors << "Value #{value} exceeds maximum #{constraints[:maximum]}"
         end
 
         if constraints[:exclusive_maximum] && value >= constraints[:exclusive_maximum]
@@ -70,20 +85,29 @@ module RapiTapir
         case value
         when ::Integer then value
         when ::Float then value.to_i
-        when ::String
-          Kernel.Integer(value.strip)
-        when true then 1
-        when false then 0
+        when ::String then coerce_string_to_integer(value)
+        when true, false then coerce_boolean_to_integer(value)
         else
-          unless value.respond_to?(:to_i)
-            raise CoercionError.new(value, 'Integer', 'Value cannot be converted to integer')
-          end
-
-          value.to_i
-
+          coerce_other_to_integer(value)
         end
       rescue ArgumentError => e
         raise CoercionError.new(value, 'Integer', e.message)
+      end
+
+      def coerce_string_to_integer(value)
+        Kernel.Integer(value.strip)
+      end
+
+      def coerce_boolean_to_integer(value)
+        value ? 1 : 0
+      end
+
+      def coerce_other_to_integer(value)
+        unless value.respond_to?(:to_i)
+          raise CoercionError.new(value, 'Integer', 'Value cannot be converted to integer')
+        end
+
+        value.to_i
       end
 
       def json_type

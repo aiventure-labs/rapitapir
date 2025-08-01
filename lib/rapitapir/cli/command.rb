@@ -25,34 +25,49 @@ module RapiTapir
 
         begin
           parser.parse!(@args)
-
           command = @args.shift
-          case command
-          when 'generate'
-            run_generate(@args)
-          when 'serve'
-            run_serve(@args)
-          when 'validate'
-            run_validate(@args)
-          when 'version'
-            puts "RapiTapir version #{RapiTapir::VERSION}"
-          when 'help', nil
-            puts parser.help
-          else
-            puts "Unknown command: #{command}"
-            puts parser.help
-            exit 1
-          end
+          dispatch_command(command, parser)
         rescue OptionParser::InvalidOption => e
-          puts "Error: #{e.message}"
-          puts parser.help
-          exit 1
+          handle_option_error(e, parser)
         rescue StandardError => e
-          puts "Error: #{e.message}"
-          raise e if ENV['RSPEC_RUNNING']
-
-          exit 1
+          handle_general_error(e)
         end
+      end
+
+      def dispatch_command(command, parser)
+        case command
+        when 'generate'
+          run_generate(@args)
+        when 'serve'
+          run_serve(@args)
+        when 'validate'
+          run_validate(@args)
+        when 'version'
+          puts "RapiTapir version #{RapiTapir::VERSION}"
+        when 'help', nil
+          puts parser.help
+        else
+          handle_unknown_command(command, parser)
+        end
+      end
+
+      def handle_unknown_command(command, parser)
+        puts "Unknown command: #{command}"
+        puts parser.help
+        exit 1
+      end
+
+      def handle_option_error(error, parser)
+        puts "Error: #{error.message}"
+        puts parser.help
+        exit 1
+      end
+
+      def handle_general_error(error)
+        puts "Error: #{error.message}"
+        raise error if ENV['RSPEC_RUNNING']
+
+        exit 1
       end
 
       private

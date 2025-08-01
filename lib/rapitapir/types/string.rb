@@ -30,6 +30,16 @@ module RapiTapir
       def validate_constraints(value)
         errors = []
 
+        errors.concat(validate_length_constraints(value))
+        errors.concat(validate_pattern_constraint(value))
+        errors.concat(validate_format_constraint(value))
+
+        errors
+      end
+
+      def validate_length_constraints(value)
+        errors = []
+
         if constraints[:min_length] && value.length < constraints[:min_length]
           errors << "String length #{value.length} is below minimum #{constraints[:min_length]}"
         end
@@ -38,16 +48,19 @@ module RapiTapir
           errors << "String length #{value.length} exceeds maximum #{constraints[:max_length]}"
         end
 
-        if constraints[:pattern] && !constraints[:pattern].match?(value)
-          errors << "String '#{value}' does not match pattern #{constraints[:pattern].inspect}"
-        end
-
-        if constraints[:format]
-          format_errors = validate_format(value, constraints[:format])
-          errors.concat(format_errors)
-        end
-
         errors
+      end
+
+      def validate_pattern_constraint(value)
+        return [] unless constraints[:pattern] && !constraints[:pattern].match?(value)
+
+        ["String '#{value}' does not match pattern #{constraints[:pattern].inspect}"]
+      end
+
+      def validate_format_constraint(value)
+        return [] unless constraints[:format]
+
+        validate_format(value, constraints[:format])
       end
 
       def coerce_value(value)
