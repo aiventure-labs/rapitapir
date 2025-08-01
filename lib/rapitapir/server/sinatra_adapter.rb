@@ -43,10 +43,10 @@ module RapiTapir
         method_name = endpoint_info[:endpoint].method.to_s.downcase.to_sym
         path_pattern = convert_path_to_sinatra(endpoint_info[:endpoint].path)
         endpoint_id = endpoint_info[:id]
+        adapter = self  # Capture the adapter in a local variable
         
-        # Define the route on the Sinatra app class
-        @app.class.send(method_name, path_pattern) do
-          adapter = @rapitapir_adapter
+        # Define the route on the Sinatra app instance
+        @app.send(method_name, path_pattern) do
           endpoint_data = adapter.endpoints[endpoint_id]
           
           begin

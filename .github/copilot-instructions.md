@@ -30,6 +30,8 @@ Please follow these conventions when generating or suggesting code in this repos
 - Write tests for all new features and bug fixes.
 - Use RSpec for tests, following the conventions in `spec/`.
 - Run tests with `bundle exec rspec` and ensure they pass before submitting changes.
+- When suggesting code, ensure it adheres to the above conventions and is relevant to the current context.
+- When writing examples, ensure they are clear, concise, and demonstrate the intended usage of the API, and that they actually work with the current implementation.
 
 ### File Layout
 

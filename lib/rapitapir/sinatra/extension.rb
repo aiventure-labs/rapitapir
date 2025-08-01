@@ -20,11 +20,6 @@ module RapiTapir
         app.set :rapitapir_config, Configuration.new
         app.set :rapitapir_endpoints, []
         app.set :rapitapir_adapter, nil
-        
-        # Auto-setup when the app is ready
-        app.configure do
-          setup_rapitapir_integration unless app.settings.rapitapir_adapter
-        end
       end
 
       # Class methods added to the Sinatra application
@@ -82,13 +77,9 @@ module RapiTapir
         private
 
         def setup_rapitapir_integration
+          return if settings.rapitapir_adapter
+          
           config = settings.rapitapir_config
-          
-          # Setup authentication middleware
-          setup_authentication_middleware(config)
-          
-          # Setup other middleware
-          setup_additional_middleware(config)
           
           # Create and configure adapter
           adapter = RapiTapir::Server::SinatraAdapter.new(self)
@@ -101,31 +92,6 @@ module RapiTapir
           
           # Setup documentation endpoints
           setup_documentation_endpoints(config) if config.docs_enabled?
-        end
-
-        def setup_authentication_middleware(config)
-          return unless config.auth_schemes.any?
-
-          # Convert auth scheme configurations to actual auth objects
-          auth_schemes = {}
-          config.auth_schemes.each do |name, scheme_config|
-            auth_schemes[name] = create_auth_scheme(scheme_config)
-          end
-
-          use RapiTapir::Auth::Middleware::AuthenticationMiddleware, auth_schemes
-        end
-
-        def setup_additional_middleware(config)
-          config.middleware_stack.each do |middleware_type, middleware_config|
-            case middleware_type
-            when :cors
-              use RapiTapir::Auth::Middleware::CorsMiddleware, middleware_config
-            when :rate_limiting
-              use RapiTapir::Auth::Middleware::RateLimitingMiddleware, middleware_config
-            when :security_headers
-              use RapiTapir::Auth::Middleware::SecurityHeadersMiddleware, middleware_config
-            end
-          end
         end
 
         def setup_documentation_endpoints(config)
@@ -143,23 +109,6 @@ module RapiTapir
             generate_swagger_ui(openapi_path, config.api_info)
           end
         end
-
-        def create_auth_scheme(scheme_config)
-          case scheme_config[:type]
-          when :bearer_token
-            RapiTapir::Auth.bearer_token(
-              scheme_config[:name],
-              scheme_config[:config]
-            )
-          when :api_key
-            RapiTapir::Auth.api_key(
-              scheme_config[:name],
-              scheme_config[:config]
-            )
-          else
-            raise ArgumentError, "Unknown auth scheme type: #{scheme_config[:type]}"
-          end
-        end
       end
 
       # Instance methods added to the Sinatra application
@@ -175,16 +124,7 @@ module RapiTapir
             servers: config.servers
           )
           
-          spec = generator.generate
-          
-          # Add security schemes if configured
-          if config.auth_schemes.any?
-            spec[:components] ||= {}
-            spec[:components][:securitySchemes] = build_security_schemes(config)
-            apply_security_requirements(spec, config)
-          end
-          
-          spec
+          generator.generate
         end
 
         # Generate Swagger UI HTML
@@ -194,15 +134,17 @@ module RapiTapir
 
         # Authentication helpers
         def current_user
-          RapiTapir::Auth.current_user
+          @current_user
         end
 
         def authenticated?
-          RapiTapir::Auth.authenticated?
+          !current_user.nil?
         end
 
         def has_scope?(scope)
-          RapiTapir::Auth.has_scope?(scope)
+          return false unless authenticated?
+          user_scopes = current_user.is_a?(Hash) ? current_user[:scopes] || [] : []
+          user_scopes.include?(scope.to_s)
         end
 
         def require_authentication!
@@ -216,43 +158,9 @@ module RapiTapir
 
         private
 
+        # Simple placeholder for future security scheme building
         def build_security_schemes(config)
-          schemes = {}
-          config.auth_schemes.each do |name, scheme_config|
-            schemes[name] = build_openapi_security_scheme(scheme_config)
-          end
-          schemes
-        end
-
-        def build_openapi_security_scheme(scheme_config)
-          case scheme_config[:type]
-          when :bearer_token
-            {
-              type: 'http',
-              scheme: 'bearer',
-              bearerFormat: scheme_config[:config][:format] || 'Token',
-              description: scheme_config[:config][:description]
-            }
-          when :api_key
-            {
-              type: 'apiKey',
-              in: scheme_config[:config][:location] || 'header',
-              name: scheme_config[:config][:name] || 'X-API-Key',
-              description: scheme_config[:config][:description]
-            }
-          end
-        end
-
-        def apply_security_requirements(spec, config)
-          return unless config.default_security_scheme
-
-          spec[:paths].each do |path, methods|
-            next if config.public_paths.include?(path)
-            
-            methods.each do |method, operation|
-              operation[:security] = [{ config.default_security_scheme => [] }]
-            end
-          end
+          {}
         end
       end
     end

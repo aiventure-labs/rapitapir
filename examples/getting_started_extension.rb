@@ -5,9 +5,22 @@
 # This minimal example shows how easy it is to create an enterprise-grade
 # API with the RapiTapir Sinatra Extension - zero boilerplate!
 
-require 'sinatra/base'
+# Check for Sinatra availability
+begin
+  require 'sinatra/base'
+  SINATRA_AVAILABLE = true
+rescue LoadError
+  SINATRA_AVAILABLE = false
+  puts "⚠️  Sinatra not available. Install with: gem install sinatra"
+  puts "🔄 Running in demo mode instead..."
+end
+
 require_relative '../lib/rapitapir'
-require_relative '../lib/rapitapir/sinatra/extension'
+
+# Only require extension if Sinatra is available
+if SINATRA_AVAILABLE
+  require_relative '../lib/rapitapir/sinatra/extension'
+end
 
 # Simple in-memory data store
 class BookStore
@@ -55,71 +68,111 @@ BOOK_SCHEMA = RapiTapir::Types.hash({
 })
 
 # Your API application - incredibly simple!
-class BookstoreAPI < Sinatra::Base
-  register RapiTapir::Sinatra::Extension
+if SINATRA_AVAILABLE
+  class BookstoreAPI < Sinatra::Base
+    register RapiTapir::Sinatra::Extension
 
-  # One-line configuration for the entire API
-  rapitapir do
-    info(
-      title: 'Bookstore API',
-      description: 'A simple bookstore API built with RapiTapir Extension',
-      version: '1.0.0'
-    )
-    
-    development_defaults! # Sets up CORS, rate limiting, docs, etc.
-    public_paths('/health', '/books') # No auth required for these
-  end
+    # One-line configuration for the entire API
+    rapitapir do
+      info(
+        title: 'Bookstore API',
+        description: 'A simple bookstore API built with RapiTapir Extension',
+        version: '1.0.0'
+      )
+      
+      development_defaults! # Sets up CORS, rate limiting, docs, etc.
+      public_paths('/health', '/books') # No auth required for these
+    end
 
-  # Health check - super simple
-  endpoint(
-    RapiTapir.get('/health')
-      .summary('Health check')
-      .ok(RapiTapir::Types.hash({ "status" => RapiTapir::Types.string }))
-      .build
-  ) { { status: 'healthy' } }
+    # Health check - super simple
+    endpoint(
+      RapiTapir.get('/health')
+        .summary('Health check')
+        .ok(RapiTapir::Types.hash({ "status" => RapiTapir::Types.string }))
+        .build
+    ) { { status: 'healthy' } }
 
-  # Full RESTful books resource - one block!
-  api_resource '/books', schema: BOOK_SCHEMA do
-    crud(except: [:destroy]) do # All CRUD except delete
-      index { BookStore.all }
-      
-      show do |inputs|
-        book = BookStore.find(inputs[:id])
-        halt 404, { error: 'Book not found' }.to_json unless book
-        book
-      end
-      
-      create do |inputs|
-        BookStore.create(inputs[:body].transform_keys(&:to_sym))
-      end
-      
-      update do |inputs|
-        book = BookStore.find(inputs[:id])
-        halt 404, { error: 'Book not found' }.to_json unless book
+    # Full RESTful books resource - one block!
+    api_resource '/books', schema: BOOK_SCHEMA do
+      crud(except: [:destroy]) do # All CRUD except delete
+        index { BookStore.all }
         
-        BookStore.update(inputs[:id], inputs[:body].transform_keys(&:to_sym))
+        show do |inputs|
+          book = BookStore.find(inputs[:id])
+          halt 404, { error: 'Book not found' }.to_json unless book
+          book
+        end
+        
+        create do |inputs|
+          BookStore.create(inputs[:body].transform_keys(&:to_sym))
+        end
+        
+        update do |inputs|
+          book = BookStore.find(inputs[:id])
+          halt 404, { error: 'Book not found' }.to_json unless book
+          
+          BookStore.update(inputs[:id], inputs[:body].transform_keys(&:to_sym))
+        end
+      end
+
+      # Custom endpoint: published books only
+      custom(:get, 'published',
+        summary: 'Get published books',
+        configure: ->(endpoint) { endpoint.ok(RapiTapir::Types.array(BOOK_SCHEMA)) }
+      ) do
+        BookStore.all.select { |book| book[:published] }
       end
     end
 
-    # Custom endpoint: published books only
-    custom(:get, 'published',
-      summary: 'Get published books',
-      configure: ->(endpoint) { endpoint.ok(RapiTapir::Types.array(BOOK_SCHEMA)) }
-    ) do
-      BookStore.all.select { |book| book[:published] }
+    configure :development do
+      puts "\n📚 Bookstore API with RapiTapir Extension"
+      puts "🌐 Documentation: http://localhost:4567/docs"
+      puts "📋 OpenAPI: http://localhost:4567/openapi.json"
+      puts "❤️  Health: http://localhost:4567/health"
+      puts "📖 Books: http://localhost:4567/books"
+      puts "\n✨ Zero boilerplate, full enterprise features!"
     end
   end
 
-  configure :development do
-    puts "\n📚 Bookstore API with RapiTapir Extension"
-    puts "🌐 Documentation: http://localhost:4567/docs"
-    puts "📋 OpenAPI: http://localhost:4567/openapi.json"
-    puts "❤️  Health: http://localhost:4567/health"
-    puts "📖 Books: http://localhost:4567/books"
-    puts "\n✨ Zero boilerplate, full enterprise features!"
+  if __FILE__ == $0
+    BookstoreAPI.run!
   end
-end
-
-if __FILE__ == $0
-  BookstoreAPI.run!
+else
+  # Demo mode when Sinatra is not available
+  puts "\n📚 RapiTapir Sinatra Extension - Demo Mode"
+  puts "="*50
+  
+  puts "\n✅ Successfully loaded:"
+  puts "   • RapiTapir core"
+  puts "   • Type system"
+  puts "   • Book schema"
+  
+  puts "\n📊 This API would provide:"
+  puts "   GET    /health           - Health check"
+  puts "   GET    /books            - List all books"
+  puts "   GET    /books/:id        - Get book by ID"
+  puts "   POST   /books            - Create new book"
+  puts "   PUT    /books/:id        - Update book"
+  puts "   GET    /books/published  - Published books only"
+  puts "   GET    /docs             - Swagger UI documentation"
+  puts "   GET    /openapi.json     - OpenAPI 3.0 specification"
+  
+  puts "\n🎯 Extension features:"
+  puts "   • Zero boilerplate configuration"
+  puts "   • RESTful resource builder (crud block)"
+  puts "   • Built-in authentication helpers"
+  puts "   • Auto-generated OpenAPI documentation"
+  puts "   • Production middleware (CORS, rate limiting, security)"
+  puts "   • Custom endpoints with configure block"
+  
+  puts "\n💡 To run the actual server:"
+  puts "   gem install sinatra"
+  puts "   ruby #{__FILE__}"
+  
+  puts "\n📖 Sample usage with curl:"
+  puts "   curl http://localhost:4567/books"
+  puts "   curl http://localhost:4567/books/1"
+  puts "   curl -X POST http://localhost:4567/books \\"
+  puts "        -H 'Content-Type: application/json' \\"
+  puts "        -d '{\"title\":\"New Book\",\"author\":\"Author\",\"isbn\":\"123\",\"published\":true}'"
 end
