@@ -18,6 +18,11 @@ module RapiTapir
       end
 
       def required?
+        # Check if the input is required based on:
+        # 1. Explicit required parameter
+        # 2. Whether the type is optional
+        return !@required if @required == false  # Explicitly set to false
+        return false if @type.respond_to?(:optional?) && @type.optional?
         @required
       end
 

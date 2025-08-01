@@ -94,6 +94,14 @@ if SINATRA_AVAILABLE
 
     # Full RESTful books resource - one block!
     api_resource '/books', schema: BOOK_SCHEMA do
+      # Custom endpoint: published books only (define BEFORE crud to avoid route conflicts)
+      custom(:get, 'published',
+        summary: 'Get published books',
+        configure: ->(endpoint) { endpoint.ok(RapiTapir::Types.array(BOOK_SCHEMA)) }
+      ) do
+        BookStore.all.select { |book| book[:published] }
+      end
+
       crud(except: [:destroy]) do # All CRUD except delete
         index { BookStore.all }
         
@@ -113,14 +121,6 @@ if SINATRA_AVAILABLE
           
           BookStore.update(inputs[:id], inputs[:body].transform_keys(&:to_sym))
         end
-      end
-
-      # Custom endpoint: published books only
-      custom(:get, 'published',
-        summary: 'Get published books',
-        configure: ->(endpoint) { endpoint.ok(RapiTapir::Types.array(BOOK_SCHEMA)) }
-      ) do
-        BookStore.all.select { |book| book[:published] }
       end
     end
 

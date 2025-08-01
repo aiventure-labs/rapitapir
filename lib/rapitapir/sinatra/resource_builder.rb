@@ -14,12 +14,19 @@ module RapiTapir
       end
 
       # Enable standard CRUD operations
-      def crud(except: [], only: nil, **handlers)
+      def crud(except: [], only: nil, **handlers, &block)
         operations = only || [:index, :show, :create, :update, :destroy]
         operations = operations - except if except.any?
 
-        operations.each do |operation|
-          send(operation, &handlers[operation]) if respond_to?(operation, true)
+        # If a block is given, evaluate it in the context of this ResourceBuilder
+        # This allows method calls like: index { BookStore.all }
+        if block_given?
+          instance_eval(&block)
+        else
+          # Legacy style with handlers hash
+          operations.each do |operation|
+            send(operation, &handlers[operation]) if respond_to?(operation, true)
+          end
         end
       end
 
