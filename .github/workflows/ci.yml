@@ -36,21 +36,13 @@ jobs:
         bundler-audit --update
         
     - name: 🧪 Run tests
+      run: bundle exec rspec spec
       env:
         CI: true
         COVERAGE: false
-      run: |
-        echo "Ruby version: $(ruby -v)"
-        echo "Bundler version: $(bundle -v)"
-        echo "RSpec version: $(bundle exec rspec -v)"
-        echo "Creating tmp directory for test results"
-        mkdir -p tmp
-        
-        # Run tests with simplified configuration for CI
-        bundle exec rspec --format progress
       
     - name: 📊 Generate coverage report
-      run: bundle exec rspec
+      run: bundle exec rspec spec
       if: matrix.ruby-version == '3.2' && matrix.os == 'ubuntu-latest'
       env:
         COVERAGE: true
