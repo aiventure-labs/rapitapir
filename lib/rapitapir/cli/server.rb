@@ -22,67 +22,84 @@ module RapiTapir
       end
 
       def start
-        server = WEBrick::HTTPServer.new(
-          Port: @port,
-          DocumentRoot: Dir.pwd,
-          Logger: WEBrick::Log.new(File.open(File::NULL, 'w')),
-          AccessLog: []
-        )
-
-        # Serve HTML documentation
-        server.mount_proc '/' do |req, res|
-          case req.path
-          when '/'
-            serve_documentation(res)
-          when '/api.json'
-            serve_openapi_json(res)
-          when '/reload'
-            serve_reload_endpoint(res)
-          else
-            res.status = 404
-            res.body = 'Not Found'
-          end
-        end
-
-        # Handle Ctrl+C gracefully
-        trap('INT') do
-          puts "\nShutting down server..."
-          server.shutdown
-        end
-
-        puts "Documentation server running at http://localhost:#{port}"
-        puts 'Press Ctrl+C to stop'
-
+        server = create_webrick_server
+        setup_request_handlers(server)
+        setup_shutdown_handling(server)
         server.start
       end
 
       private
 
+      def create_webrick_server
+        WEBrick::HTTPServer.new(
+          Port: @port,
+          DocumentRoot: Dir.pwd,
+          Logger: WEBrick::Log.new(File.open(File::NULL, 'w')),
+          AccessLog: []
+        )
+      end
+
+      def setup_request_handlers(server)
+        server.mount_proc '/' do |req, res|
+          handle_request(req, res)
+        end
+      end
+
+      def handle_request(req, res)
+        case req.path
+        when '/'
+          serve_documentation(res)
+        when '/api.json'
+          serve_openapi_json(res)
+        when '/reload'
+          serve_reload_endpoint(res)
+        else
+          res.status = 404
+          res.body = 'Not Found'
+        end
+      end
+
+      def setup_shutdown_handling(server)
+        trap('INT') { server.shutdown }
+        puts "Starting documentation server on port #{@port}..."
+        puts "Documentation server running at http://localhost:#{@port}"
+        puts 'Press Ctrl+C to stop'
+      end
+
       def serve_documentation(response)
         endpoints = load_endpoints
+        html_content = generate_documentation_html(endpoints)
+        html_content = add_auto_reload_if_enabled(html_content)
 
+        set_successful_response(response, html_content)
+      rescue StandardError => e
+        set_error_response(response, e)
+      end
+
+      def generate_documentation_html(endpoints)
         require_relative '../docs/html_generator'
         generator = RapiTapir::Docs::HtmlGenerator.new(
           endpoints: endpoints,
           config: config.merge(include_reload: true)
         )
+        generator.generate
+      end
 
-        html_content = generator.generate
+      def add_auto_reload_if_enabled(html_content)
+        return html_content unless config[:auto_reload]
 
-        # Add auto-reload script if enabled
-        if config[:auto_reload]
-          html_content = html_content.gsub(
-            '</body>',
-            "#{auto_reload_script}</body>"
-          )
-        end
+        html_content.gsub('</body>', "#{auto_reload_script}</body>")
+      end
 
+      def set_successful_response(response, html_content)
         response['Content-Type'] = 'text/html'
         response.body = html_content
-      rescue StandardError => e
+      end
+
+      def set_error_response(response, error)
         response.status = 500
         response['Content-Type'] = 'text/html'
-        response.body = error_page(e)
+        response.body = error_page(error)
       end
 
       def serve_openapi_json(response)

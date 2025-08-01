@@ -54,22 +54,29 @@ module RapiTapir
       when Symbol
         create_primitive_type(definition)
       when ::Hash
-        if definition.keys == [:type] && definition[:type].is_a?(Symbol)
-          create_primitive_type(definition[:type])
-        else
-          create_object_from_hash(definition)
-        end
+        create_type_from_hash(definition)
       when ::Array
-        raise ArgumentError, 'Array definition must have exactly one element type' unless definition.length == 1
-
-        Types.array(from_definition(definition.first))
-
+        create_array_type_from_definition(definition)
       when Class
         # Assume it's already a type class
         definition
       else
         raise ArgumentError, "Unknown definition type: #{definition.class}"
       end
+    end
+
+    def self.create_type_from_hash(definition)
+      if definition.keys == [:type] && definition[:type].is_a?(Symbol)
+        create_primitive_type(definition[:type])
+      else
+        create_object_from_hash(definition)
+      end
+    end
+
+    def self.create_array_type_from_definition(definition)
+      raise ArgumentError, 'Array definition must have exactly one element type' unless definition.length == 1
+
+      Types.array(from_definition(definition.first))
     end
 
     PRIMITIVE_TYPE_MAP = {

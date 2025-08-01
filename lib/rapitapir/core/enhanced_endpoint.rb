@@ -61,30 +61,51 @@ module RapiTapir
 
       # Process a request with full type validation
       def process_request(extracted_inputs)
-        # Run custom validators
+        run_custom_validators(extracted_inputs)
+        validate_input_values(extracted_inputs)
+        extracted_inputs
+      end
+
+      private
+
+      def run_custom_validators(extracted_inputs)
         custom_validators.each do |validator|
           validator.call(extracted_inputs)
         end
+      end
 
-        # Validate each input
+      def validate_input_values(extracted_inputs)
+        validation_errors = collect_input_validation_errors(extracted_inputs)
+        raise ValidationError, build_validation_error_message(validation_errors) if validation_errors.any?
+      end
+
+      def collect_input_validation_errors(extracted_inputs)
         validation_errors = []
+
         inputs.each do |input|
           next unless extracted_inputs.key?(input.name)
 
           value = extracted_inputs[input.name]
           result = input.validate(value)
-
           next if result[:valid]
 
-          result[:errors].each do |error|
-            validation_errors << "Input '#{input.name}': #{error}"
-          end
+          add_input_errors_to_collection(validation_errors, input, result[:errors])
         end
 
-        raise ValidationError, "Request validation failed:\n#{validation_errors.join("\n")}" if validation_errors.any?
-
-        extracted_inputs
+        validation_errors
       end
+
+      def add_input_errors_to_collection(validation_errors, input, errors)
+        errors.each do |error|
+          validation_errors << "Input '#{input.name}': #{error}"
+        end
+      end
+
+      def build_validation_error_message(validation_errors)
+        "Request validation failed:\n#{validation_errors.join("\n")}"
+      end
+
+      public
 
       # Generate OpenAPI specification for this endpoint
       def to_openapi_spec

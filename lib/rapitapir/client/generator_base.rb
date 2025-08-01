@@ -127,18 +127,26 @@ module RapiTapir
         when :date, :datetime
           'datetime'
         when Array
-          if type.length == 1
-            "List[#{convert_to_python_type(type.first)}]"
-          else
-            'List[Any]'
-          end
+          convert_array_to_python_type(type)
         when Hash
-          return 'Dict[str, Any]' if type.empty?
-
-          'Dict[str, Any]'
+          convert_hash_to_python_type(type)
         else
           'Any'
         end
+      end
+
+      def convert_array_to_python_type(type)
+        if type.length == 1
+          "List[#{convert_to_python_type(type.first)}]"
+        else
+          'List[Any]'
+        end
+      end
+
+      def convert_hash_to_python_type(type)
+        return 'Dict[str, Any]' if type.empty?
+
+        'Dict[str, Any]'
       end
 
       # Generate HTTP method name

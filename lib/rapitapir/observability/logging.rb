@@ -50,7 +50,17 @@ module RapiTapir
           request_id = options[:request_id]
           extra_fields = options.except(:method, :path, :status, :duration, :request_id)
 
-          fields = {
+          fields = build_request_log_fields(method, path, status, duration, request_id, extra_fields)
+          level = determine_log_level_from_status(status)
+          message = build_request_log_message(method, path, status, fields[:duration_ms])
+
+          log(level, message, **fields)
+        end
+
+        private
+
+        def build_request_log_fields(method, path, status, duration, request_id, extra_fields)
+          {
             event_type: 'http_request',
             method: method.to_s.upcase,
             path: path,
@@ -58,14 +68,21 @@ module RapiTapir
             duration_ms: (duration * 1000).round(2),
             request_id: request_id || generate_request_id
           }.merge(extra_fields)
-
-          level = if status >= 500
-                    :error
-                  else
-                    (status >= 400 ? :warn : :info)
-                  end
-          log(level, "#{method.to_s.upcase} #{path} #{status} (#{fields[:duration_ms]}ms)", **fields)
         end
+
+        def determine_log_level_from_status(status)
+          if status >= 500
+            :error
+          else
+            (status >= 400 ? :warn : :info)
+          end
+        end
+
+        def build_request_log_message(method, path, status, duration_ms)
+          "#{method.to_s.upcase} #{path} #{status} (#{duration_ms}ms)"
+        end
+
+        public
 
         def log_error(exception, request_id: nil, **extra_fields)
           fields = {

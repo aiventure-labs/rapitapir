@@ -34,30 +34,32 @@ module RapiTapir
         # Process a RapiTapir endpoint within a Rails action
         def process_rapitapir_endpoint(action_name = nil)
           action_name ||= params[:action]&.to_sym || :index
-          endpoint_config = self.class.rapitapir_endpoints[action_name.to_sym]
+          endpoint_config = find_endpoint_config(action_name)
+          
+          return render_endpoint_not_configured_error unless endpoint_config
 
-          unless endpoint_config
-            render json: { error: 'Endpoint not configured' }, status: 500
-            return
-          end
+          process_configured_endpoint(endpoint_config)
+        end
 
+        def find_endpoint_config(action_name)
+          self.class.rapitapir_endpoints[action_name.to_sym]
+        end
+
+        def render_endpoint_not_configured_error
+          render json: { error: 'Endpoint not configured' }, status: 500
+        end
+
+        def process_configured_endpoint(endpoint_config)
           endpoint = endpoint_config[:endpoint]
           handler = endpoint_config[:handler]
 
-          begin
-            # Extract inputs from Rails request
-            processed_inputs = extract_rails_inputs(request, endpoint)
-
-            # Call the handler in the context of the controller
-            result = instance_exec(processed_inputs, &handler)
-
-            # Render the response
-            render_rapitapir_response(result, endpoint)
-          rescue ArgumentError => e
-            render json: { error: e.message }, status: 400
-          rescue StandardError => e
-            render json: { error: 'Internal Server Error', message: e.message }, status: 500
-          end
+          processed_inputs = extract_rails_inputs(request, endpoint)
+          result = instance_exec(processed_inputs, &handler)
+          render_rapitapir_response(result, endpoint)
+        rescue ArgumentError => e
+          render json: { error: e.message }, status: 400
+        rescue StandardError => e
+          render json: { error: 'Internal Server Error', message: e.message }, status: 500
         end
 
         def extract_rails_inputs(request, endpoint)

@@ -48,16 +48,30 @@ module RapiTapir
 
         # Generate OpenAPI spec for all mounted endpoints
         def to_openapi_spec(info = {})
-          spec = {
+          spec = build_base_openapi_spec(info)
+          add_endpoints_to_spec(spec)
+          spec
+        end
+
+        private
+
+        def build_base_openapi_spec(info)
+          {
             openapi: '3.0.3',
-            info: {
-              title: info[:title] || 'API',
-              version: info[:version] || '1.0.0',
-              description: info[:description]
-            }.compact,
+            info: build_openapi_info(info),
             paths: {}
           }
+        end
 
+        def build_openapi_info(info)
+          {
+            title: info[:title] || 'API',
+            version: info[:version] || '1.0.0',
+            description: info[:description]
+          }.compact
+        end
+
+        def add_endpoints_to_spec(spec)
           rapitapir_adapter.endpoints.each do |endpoint_data|
             endpoint = endpoint_data[:endpoint]
             path = endpoint.path
@@ -66,11 +80,7 @@ module RapiTapir
             spec[:paths][path] ||= {}
             spec[:paths][path][method] = endpoint.to_openapi_spec
           end
-
-          spec
         end
-
-        private
 
         def convert_path_to_sinatra(path)
           # Convert RapiTapir path format to Sinatra path format

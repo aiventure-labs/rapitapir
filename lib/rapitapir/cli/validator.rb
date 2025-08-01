@@ -159,43 +159,61 @@ module RapiTapir
           return
         end
 
-        # Validate kind
-        valid_kinds = %i[json xml status header]
-        @errors << "#{context}: Invalid output kind '#{output.kind}'" unless valid_kinds.include?(output.kind)
+        validate_output_kind(output, context)
+        validate_output_type_for_kind(output, context)
+      end
 
-        # Validate type based on kind
+      def validate_output_kind(output, context)
+        valid_kinds = %i[json xml status header]
+        return if valid_kinds.include?(output.kind)
+
+        @errors << "#{context}: Invalid output kind '#{output.kind}'"
+      end
+
+      def validate_output_type_for_kind(output, context)
         case output.kind
         when :status
-          unless output.type.is_a?(Integer) && output.type >= 100 && output.type <= 599
-            @errors << "#{context}: Status code must be an integer between 100-599"
-          end
+          validate_status_code_type(output.type, context)
         when :json, :xml
           validate_type(output.type, "#{context} schema")
         end
       end
 
-      def validate_type(type, context)
-        valid_simple_types = %i[string integer float boolean date datetime]
+      def validate_status_code_type(status_code, context)
+        return if status_code.is_a?(Integer) && status_code >= 100 && status_code <= 599
 
+        @errors << "#{context}: Status code must be an integer between 100-599"
+      end
+
+      def validate_type(type, context)
         case type
         when Symbol
-          @errors << "#{context}: Unknown type '#{type}'" unless valid_simple_types.include?(type)
+          validate_symbol_type(type, context)
         when Hash
           validate_hash_schema(type, context)
         when Array
-          if type.empty?
-            @errors << "#{context}: Array type cannot be empty"
-          else
-            type.each_with_index do |element_type, index|
-              validate_type(element_type, "#{context}[#{index}]")
-            end
-          end
-        when Class
-          # Allow custom classes
-        when RapiTapir::Types::Base
-          # Enhanced types - these are valid
+          validate_array_type(type, context)
+        when Class, RapiTapir::Types::Base
+          # Allow custom classes and enhanced types - these are valid
         else
           @errors << "#{context}: Invalid type '#{type}'"
+        end
+      end
+
+      def validate_symbol_type(type, context)
+        valid_simple_types = %i[string integer float boolean date datetime]
+        return if valid_simple_types.include?(type)
+
+        @errors << "#{context}: Unknown type '#{type}'"
+      end
+
+      def validate_array_type(type, context)
+        if type.empty?
+          @errors << "#{context}: Array type cannot be empty"
+        else
+          type.each_with_index do |element_type, index|
+            validate_type(element_type, "#{context}[#{index}]")
+          end
         end
       end
 
@@ -299,15 +317,23 @@ module RapiTapir
       def validate_parameters(endpoint)
         return unless endpoint.input_specs
 
-        body_params = endpoint.input_specs.select { |spec| spec.type == :body }
-        @errors << "#{endpoint.path}: multiple body parameters not allowed" if body_params.length > 1
+        validate_body_parameter_count(endpoint)
+        validate_parameter_types(endpoint)
+      end
 
+      def validate_body_parameter_count(endpoint)
+        body_params = endpoint.input_specs.select { |spec| spec.type == :body }
+        return unless body_params.length > 1
+
+        @errors << "#{endpoint.path}: multiple body parameters not allowed"
+      end
+
+      def validate_parameter_types(endpoint)
         endpoint.input_specs.each do |input_spec|
           next unless input_spec.respond_to?(:param_type)
+          next if valid_param_type?(input_spec.param_type)
 
-          unless valid_param_type?(input_spec.param_type)
-            @errors << "#{endpoint.path}: invalid parameter type '#{input_spec.param_type}'"
-          end
+          @errors << "#{endpoint.path}: invalid parameter type '#{input_spec.param_type}'"
         end
       end
 
@@ -317,13 +343,24 @@ module RapiTapir
       end
 
       def validate_basic_properties(endpoint)
-        if !endpoint.metadata || !endpoint.metadata[:summary] || endpoint.metadata[:summary].empty?
-          @errors << "#{endpoint.path}: missing summary"
-        end
+        validate_summary_property(endpoint)
+        validate_output_property(endpoint)
+      end
 
-        return unless !endpoint.respond_to?(:outputs) || endpoint.outputs.nil? || endpoint.outputs.empty?
+      def validate_summary_property(endpoint)
+        return if endpoint.metadata&.dig(:summary) && !endpoint.metadata[:summary].empty?
+
+        @errors << "#{endpoint.path}: missing summary"
+      end
+
+      def validate_output_property(endpoint)
+        return if has_valid_outputs?(endpoint)
 
         @errors << "#{endpoint.path}: missing output definition"
+      end
+
+      def has_valid_outputs?(endpoint)
+        endpoint.respond_to?(:outputs) && endpoint.outputs&.any?
       end
 
       def valid_output_definition?(endpoint)

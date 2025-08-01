@@ -22,18 +22,7 @@ module RapiTapir
           begin
             result = @check_block.call
             duration = Time.now - start_time
-
-            case result
-            when TrueClass, FalseClass
-              status = result ? :healthy : :unhealthy
-              create_result(status, nil, duration)
-            when Hash
-              status = result.fetch(:status, :healthy)
-              message = result[:message]
-              create_result(status, message, duration)
-            else
-              create_result(:healthy, result.to_s, duration)
-            end
+            process_check_result(result, duration)
           rescue StandardError => e
             duration = Time.now - start_time
             create_result(:unhealthy, "#{e.class}: #{e.message}", duration)
@@ -41,6 +30,28 @@ module RapiTapir
         end
 
         private
+
+        def process_check_result(result, duration)
+          case result
+          when TrueClass, FalseClass
+            handle_boolean_result(result, duration)
+          when Hash
+            handle_hash_result(result, duration)
+          else
+            create_result(:healthy, result.to_s, duration)
+          end
+        end
+
+        def handle_boolean_result(result, duration)
+          status = result ? :healthy : :unhealthy
+          create_result(status, nil, duration)
+        end
+
+        def handle_hash_result(result, duration)
+          status = result.fetch(:status, :healthy)
+          message = result[:message]
+          create_result(status, message, duration)
+        end
 
         def create_result(status, message, duration)
           {

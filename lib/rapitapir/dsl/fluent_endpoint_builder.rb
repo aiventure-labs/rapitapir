@@ -238,37 +238,37 @@ module RapiTapir
         when Types::Base
           type_def
         when Symbol
-          case type_def
-          when :string
-            Types.string
-          when :integer
-            Types.integer
-          when :float
-            Types.float
-          when :boolean
-            Types.boolean
-          when :date
-            Types.date
-          when :datetime
-            Types.datetime
-          when :uuid
-            Types.uuid
-          when :email
-            Types.email
-          else
-            raise ArgumentError, "Unknown type symbol: #{type_def}"
-          end
+          resolve_symbol_type(type_def)
         when Class
-          raise ArgumentError, 'Type class must inherit from Types::Base' unless type_def < Types::Base
-
-          type_def.new
-
+          resolve_class_type(type_def)
         when Schema, ->(obj) { obj.respond_to?(:validate) }
           # Handle Schema objects and any object that can validate
           type_def
         else
           raise ArgumentError, "Invalid type definition: #{type_def}"
         end
+      end
+
+      def resolve_symbol_type(type_symbol)
+        symbol_type_mapping = {
+          string: Types.string,
+          integer: Types.integer,
+          float: Types.float,
+          boolean: Types.boolean,
+          date: Types.date,
+          datetime: Types.datetime,
+          uuid: Types.uuid,
+          email: Types.email
+        }
+
+        symbol_type_mapping[type_symbol] ||
+          raise(ArgumentError, "Unknown type symbol: #{type_symbol}")
+      end
+
+      def resolve_class_type(type_class)
+        raise ArgumentError, 'Type class must inherit from Types::Base' unless type_class < Types::Base
+
+        type_class.new
       end
 
       def create_input(kind, name, type, **options)
