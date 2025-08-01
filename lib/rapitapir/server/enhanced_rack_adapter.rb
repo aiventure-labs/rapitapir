@@ -132,33 +132,45 @@ module RapiTapir
         inputs = {}
 
         endpoint.inputs.each do |input|
-          value = extract_input_value(request, input, path_params)
-
-          # Handle required inputs
-          if value.nil? && input.required?
-            raise Core::EnhancedEndpoint::ValidationError, "Required input '#{input.name}' is missing"
-          end
-
-          # Skip optional nil values
-          next if value.nil? && input.optional?
-
-          # Coerce and validate the value
-          begin
-            coerced_value = input.coerce(value)
-            validation_result = input.validate(coerced_value)
-
-            unless validation_result[:valid]
-              errors = validation_result[:errors].join(', ')
-              raise Core::EnhancedEndpoint::ValidationError, "Input '#{input.name}' validation failed: #{errors}"
-            end
-
-            inputs[input.name] = coerced_value
-          rescue Types::CoercionError => e
-            raise Core::EnhancedEndpoint::ValidationError, "Input '#{input.name}' coercion failed: #{e.message}"
-          end
+          processed_input = process_single_input(request, input, path_params)
+          inputs.merge!(processed_input) if processed_input
         end
 
         inputs
+      end
+
+      def process_single_input(request, input, path_params)
+        value = extract_input_value(request, input, path_params)
+
+        # Handle required inputs
+        validate_required_input(input, value)
+
+        # Skip optional nil values
+        return nil if value.nil? && input.optional?
+
+        # Coerce and validate the value
+        coerced_value = coerce_and_validate_input(input, value)
+        { input.name => coerced_value }
+      end
+
+      def validate_required_input(input, value)
+        return unless value.nil? && input.required?
+
+        raise Core::EnhancedEndpoint::ValidationError, "Required input '#{input.name}' is missing"
+      end
+
+      def coerce_and_validate_input(input, value)
+        coerced_value = input.coerce(value)
+        validation_result = input.validate(coerced_value)
+
+        unless validation_result[:valid]
+          errors = validation_result[:errors].join(', ')
+          raise Core::EnhancedEndpoint::ValidationError, "Input '#{input.name}' validation failed: #{errors}"
+        end
+
+        coerced_value
+      rescue Types::CoercionError => e
+        raise Core::EnhancedEndpoint::ValidationError, "Input '#{input.name}' coercion failed: #{e.message}"
       end
 
       def extract_input_value(request, input, path_params)
@@ -217,30 +229,52 @@ module RapiTapir
       end
 
       def serialize_validated_response(result, endpoint)
-        # Find the appropriate output definition
-        json_output = endpoint.outputs.find { |o| o.kind == :json }
-        text_output = endpoint.outputs.find { |o| o.kind == :text }
-        status_output = endpoint.outputs.find { |o| o.kind == :status }
-
-        output = json_output || text_output || endpoint.outputs.first
-        status_code = status_output&.type || determine_default_status(endpoint.method)
+        output, status_code = find_response_configuration(endpoint)
 
         if output
-          # Validate the response
-          validation_result = output.validate(result)
-          unless validation_result[:valid]
-            errors = validation_result[:errors].join(', ')
-            raise StandardError, "Response validation failed: #{errors}"
-          end
-
-          serialized = output.serialize(result)
-          content_type = determine_content_type(output)
-
-          [status_code, { 'Content-Type' => content_type }, [serialized]]
+          build_validated_response(result, output, status_code)
         else
-          # Default response
-          [status_code, { 'Content-Type' => 'application/json' }, [JSON.generate(result)]]
+          build_default_response(result, status_code)
         end
+      end
+
+      def find_response_configuration(endpoint)
+        output = find_response_output(endpoint)
+        status_code = find_status_code(endpoint)
+
+        [output, status_code]
+      end
+
+      def find_response_output(endpoint)
+        endpoint.outputs.find { |o| o.kind == :json } ||
+          endpoint.outputs.find { |o| o.kind == :text } ||
+          endpoint.outputs.first
+      end
+
+      def find_status_code(endpoint)
+        status_output = endpoint.outputs.find { |o| o.kind == :status }
+        status_output&.type || determine_default_status(endpoint.method)
+      end
+
+      def build_validated_response(result, output, status_code)
+        validate_response_result(result, output)
+
+        serialized = output.serialize(result)
+        content_type = determine_content_type(output)
+
+        [status_code, { 'Content-Type' => content_type }, [serialized]]
+      end
+
+      def validate_response_result(result, output)
+        validation_result = output.validate(result)
+        return if validation_result[:valid]
+
+        errors = validation_result[:errors].join(', ')
+        raise StandardError, "Response validation failed: #{errors}"
+      end
+
+      def build_default_response(result, status_code)
+        [status_code, { 'Content-Type' => 'application/json' }, [JSON.generate(result)]]
       end
 
       def determine_content_type(output)

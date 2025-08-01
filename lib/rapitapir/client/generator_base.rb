@@ -58,30 +58,59 @@ module RapiTapir
         when :date, :datetime, RapiTapir::Types::Date, RapiTapir::Types::DateTime
           'Date'
         when RapiTapir::Types::Array
-          "#{convert_to_typescript_type(type.item_type)}[]"
+          convert_array_type_to_typescript(type)
         when RapiTapir::Types::Hash, Hash
-          if (type.respond_to?(:field_types) && type.field_types.empty?) || (type.respond_to?(:empty?) && type.empty?)
-            'Record<string, any>'
-          else
-            properties = if type.respond_to?(:field_types)
-                           type.field_types.map do |key, value|
-                             "#{key}: #{convert_to_typescript_type(value)}"
-                           end
-                         else
-                           type.map do |key, value|
-                             "#{key}: #{convert_to_typescript_type(value)}"
-                           end
-                         end
-            "{ #{properties.join('; ')} }"
-          end
+          convert_hash_type_to_typescript(type)
         when Array
-          if type.length == 1
-            "#{convert_to_typescript_type(type.first)}[]"
-          else
-            'any[]'
-          end
+          convert_ruby_array_to_typescript(type)
         else
           'any'
+        end
+      end
+
+      def convert_array_type_to_typescript(type)
+        "#{convert_to_typescript_type(type.item_type)}[]"
+      end
+
+      def convert_hash_type_to_typescript(type)
+        if hash_type_empty?(type)
+          'Record<string, any>'
+        else
+          convert_hash_properties_to_typescript(type)
+        end
+      end
+
+      def hash_type_empty?(type)
+        (type.respond_to?(:field_types) && type.field_types.empty?) ||
+          (type.respond_to?(:empty?) && type.empty?)
+      end
+
+      def convert_hash_properties_to_typescript(type)
+        properties = if type.respond_to?(:field_types)
+                       convert_field_types_to_typescript(type.field_types)
+                     else
+                       convert_hash_entries_to_typescript(type)
+                     end
+        "{ #{properties.join('; ')} }"
+      end
+
+      def convert_field_types_to_typescript(field_types)
+        field_types.map do |key, value|
+          "#{key}: #{convert_to_typescript_type(value)}"
+        end
+      end
+
+      def convert_hash_entries_to_typescript(hash)
+        hash.map do |key, value|
+          "#{key}: #{convert_to_typescript_type(value)}"
+        end
+      end
+
+      def convert_ruby_array_to_typescript(type)
+        if type.length == 1
+          "#{convert_to_typescript_type(type.first)}[]"
+        else
+          'any[]'
         end
       end
 
@@ -115,35 +144,70 @@ module RapiTapir
       # Generate HTTP method name
       def method_name_for_endpoint(endpoint)
         method = endpoint.method.to_s.downcase
-        path_parts = endpoint.path.split('/').reject(&:empty?).map do |part|
+        path_parts = extract_static_path_parts(endpoint.path)
+
+        generate_method_name_by_http_method(method, endpoint.path, path_parts)
+      end
+
+      def extract_static_path_parts(path)
+        path.split('/').reject(&:empty?).map do |part|
           part.start_with?(':') ? nil : part
         end.compact
+      end
 
+      def generate_method_name_by_http_method(method, path, path_parts)
         case method
         when 'get'
-          if endpoint.path.include?(':')
-            # GET /users/:id -> getUserById
-            base_name = path_parts.map(&:capitalize).join
-            "get#{base_name}ById"
-          else
-            # GET /users -> getUsers
-            "get#{path_parts.map(&:capitalize).join}"
-          end
+          generate_get_method_name(path, path_parts)
         when 'post'
-          # POST /users -> createUser
-          singular_name = singularize(path_parts.last) if path_parts.any?
-          "create#{singular_name&.capitalize || path_parts.map(&:capitalize).join}"
+          generate_post_method_name(path_parts)
         when 'put'
-          # PUT /users/:id -> updateUser
-          singular_name = singularize(path_parts.last) if path_parts.any?
-          "update#{singular_name&.capitalize || path_parts.map(&:capitalize).join}"
+          generate_put_method_name(path_parts)
         when 'delete'
-          # DELETE /users/:id -> deleteUser
-          singular_name = singularize(path_parts.last) if path_parts.any?
-          "delete#{singular_name&.capitalize || path_parts.map(&:capitalize).join}"
+          generate_delete_method_name(path_parts)
         else
-          "#{method}#{path_parts.map(&:capitalize).join}"
+          generate_default_method_name(method, path_parts)
         end
+      end
+
+      def generate_get_method_name(path, path_parts)
+        if path.include?(':')
+          # GET /users/:id -> getUserById
+          base_name = path_parts.map(&:capitalize).join
+          "get#{base_name}ById"
+        else
+          # GET /users -> getUsers
+          "get#{path_parts.map(&:capitalize).join}"
+        end
+      end
+
+      def generate_post_method_name(path_parts)
+        # POST /users -> createUser
+        singular_name = get_singular_name(path_parts)
+        "create#{singular_name}"
+      end
+
+      def generate_put_method_name(path_parts)
+        # PUT /users/:id -> updateUser
+        singular_name = get_singular_name(path_parts)
+        "update#{singular_name}"
+      end
+
+      def generate_delete_method_name(path_parts)
+        # DELETE /users/:id -> deleteUser
+        singular_name = get_singular_name(path_parts)
+        "delete#{singular_name}"
+      end
+
+      def generate_default_method_name(method, path_parts)
+        "#{method}#{path_parts.map(&:capitalize).join}"
+      end
+
+      def get_singular_name(path_parts)
+        return path_parts.map(&:capitalize).join unless path_parts.any?
+
+        singular_name = singularize(path_parts.last)
+        singular_name&.capitalize || path_parts.map(&:capitalize).join
       end
 
       # Simple singularize method (basic implementation)
