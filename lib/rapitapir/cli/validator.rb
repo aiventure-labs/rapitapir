@@ -124,19 +124,30 @@ module RapiTapir
           return
         end
 
-        # Validate kind
+        validate_input_kind(input, context)
+        validate_input_name(input, context)
+        validate_input_type(input, context)
+        validate_input_options_if_present(input, context)
+      end
+
+      def validate_input_kind(input, context)
         valid_kinds = %i[query path header body]
-        @errors << "#{context}: Invalid input kind '#{input.kind}'" unless valid_kinds.include?(input.kind)
+        return if valid_kinds.include?(input.kind)
 
-        # Validate name
-        unless input.name.is_a?(Symbol) || input.name.is_a?(String)
-          @errors << "#{context}: Input name must be a symbol or string"
-        end
+        @errors << "#{context}: Invalid input kind '#{input.kind}'"
+      end
 
-        # Validate type
+      def validate_input_name(input, context)
+        return if input.name.is_a?(Symbol) || input.name.is_a?(String)
+
+        @errors << "#{context}: Input name must be a symbol or string"
+      end
+
+      def validate_input_type(input, context)
         validate_type(input.type, "#{context} type")
+      end
 
-        # Validate options if present
+      def validate_input_options_if_present(input, context)
         return unless input.respond_to?(:options) && input.options
 
         validate_input_options(input.options, context)
@@ -214,24 +225,34 @@ module RapiTapir
       end
 
       def validate_path_parameters_consistency(endpoint, context)
-        # Extract path parameters from the path
-        path_param_names = endpoint.path.scan(/:(\w+)/).flatten.map(&:to_sym)
+        path_param_names = extract_path_parameter_names(endpoint)
+        input_path_params = extract_input_path_parameters(endpoint)
 
-        # Find path input parameters
-        return unless endpoint.respond_to?(:inputs)
+        validate_missing_path_inputs(path_param_names, input_path_params, context)
+        validate_extra_path_inputs(path_param_names, input_path_params, context)
+      end
 
-        input_path_params = endpoint.inputs
-                                    .select { |input| input.kind == :path }
-                                    .map(&:name)
-                                    .map(&:to_sym)
+      def extract_path_parameter_names(endpoint)
+        endpoint.path.scan(/:(\w+)/).flatten.map(&:to_sym)
+      end
 
-        # Check if all path parameters have corresponding inputs
+      def extract_input_path_parameters(endpoint)
+        return [] unless endpoint.respond_to?(:inputs)
+
+        endpoint.inputs
+                .select { |input| input.kind == :path }
+                .map(&:name)
+                .map(&:to_sym)
+      end
+
+      def validate_missing_path_inputs(path_param_names, input_path_params, context)
         missing_inputs = path_param_names - input_path_params
-        unless missing_inputs.empty?
-          @errors << "#{context}: Missing input definitions for path parameters: #{missing_inputs.join(', ')}"
-        end
+        return if missing_inputs.empty?
 
-        # Check if there are extra path inputs
+        @errors << "#{context}: Missing input definitions for path parameters: #{missing_inputs.join(', ')}"
+      end
+
+      def validate_extra_path_inputs(path_param_names, input_path_params, context)
         extra_inputs = input_path_params - path_param_names
         return if extra_inputs.empty?
 
@@ -244,20 +265,32 @@ module RapiTapir
         metadata = endpoint.metadata
         return unless metadata.is_a?(Hash)
 
-        # Validate summary
-        @errors << "#{context}: Summary must be a string" if metadata[:summary] && !metadata[:summary].is_a?(String)
+        validate_metadata_summary(metadata, context)
+        validate_metadata_description(metadata, context)
+        validate_metadata_tags(metadata, context)
+        validate_metadata_deprecated_flag(metadata, context)
+      end
 
-        # Validate description
-        if metadata[:description] && !metadata[:description].is_a?(String)
-          @errors << "#{context}: Description must be a string"
-        end
+      def validate_metadata_summary(metadata, context)
+        return unless metadata[:summary] && !metadata[:summary].is_a?(String)
 
-        # Validate tags
-        if metadata[:tags] && !(metadata[:tags].is_a?(Array) && metadata[:tags].all? { |tag| tag.is_a?(String) })
-          @errors << "#{context}: Tags must be an array of strings"
-        end
+        @errors << "#{context}: Summary must be a string"
+      end
 
-        # Validate deprecated flag
+      def validate_metadata_description(metadata, context)
+        return unless metadata[:description] && !metadata[:description].is_a?(String)
+
+        @errors << "#{context}: Description must be a string"
+      end
+
+      def validate_metadata_tags(metadata, context)
+        return unless metadata[:tags]
+        return if metadata[:tags].is_a?(Array) && metadata[:tags].all? { |tag| tag.is_a?(String) }
+
+        @errors << "#{context}: Tags must be an array of strings"
+      end
+
+      def validate_metadata_deprecated_flag(metadata, context)
         return unless metadata[:deprecated] && ![true, false].include?(metadata[:deprecated])
 
         @errors << "#{context}: Deprecated must be a boolean"

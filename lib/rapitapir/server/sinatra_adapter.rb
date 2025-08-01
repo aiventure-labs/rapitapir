@@ -102,23 +102,32 @@ module RapiTapir
         inputs = {}
 
         endpoint.inputs.each do |input|
-          value = case input.kind
-                  when :query, :path
-                    # Both query and path parameters are available in params
-                    params[input.name.to_s] || params[input.name.to_sym]
-                  when :header
-                    request.env["HTTP_#{input.name.to_s.upcase}"]
-                  when :body
-                    parse_sinatra_body(request, input)
-                  end
-
-          # Validate and coerce the value
-          raise ArgumentError, "Required input '#{input.name}' is missing" if value.nil? && input.required?
-
-          inputs[input.name] = input.coerce(value) if value || !input.required?
+          value = extract_input_value(request, params, input)
+          validate_and_add_input(inputs, input, value)
         end
 
         inputs
+      end
+
+      private
+
+      def extract_input_value(request, params, input)
+        case input.kind
+        when :query, :path
+          # Both query and path parameters are available in params
+          params[input.name.to_s] || params[input.name.to_sym]
+        when :header
+          request.env["HTTP_#{input.name.to_s.upcase}"]
+        when :body
+          parse_sinatra_body(request, input)
+        end
+      end
+
+      def validate_and_add_input(inputs, input, value)
+        # Validate and coerce the value
+        raise ArgumentError, "Required input '#{input.name}' is missing" if value.nil? && input.required?
+
+        inputs[input.name] = input.coerce(value) if value || !input.required?
       end
 
       def parse_sinatra_body(request, input)

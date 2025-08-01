@@ -64,24 +64,45 @@ module RapiTapir
           inputs = {}
 
           endpoint.inputs.each do |input|
-            value = case input.kind
-                    when :query
-                      request.query_parameters[input.name.to_s] || params[input.name.to_s]
-                    when :header
-                      request.headers[input.name.to_s] || request.headers["HTTP_#{input.name.to_s.upcase}"]
-                    when :path
-                      params[input.name.to_s]
-                    when :body
-                      parse_rails_body(request, input)
-                    end
-
-            # Validate and coerce the value
-            raise ArgumentError, "Required input '#{input.name}' is missing" if value.nil? && input.required?
-
-            inputs[input.name] = input.coerce(value) if value || !input.required?
+            value = extract_input_value(request, input)
+            validate_required_input(input, value)
+            add_input_to_collection(inputs, input, value)
           end
 
           inputs
+        end
+
+        def extract_input_value(request, input)
+          case input.kind
+          when :query
+            extract_query_value(request, input)
+          when :header
+            extract_header_value(request, input)
+          when :path
+            params[input.name.to_s]
+          when :body
+            parse_rails_body(request, input)
+          end
+        end
+
+        def extract_query_value(request, input)
+          request.query_parameters[input.name.to_s] || params[input.name.to_s]
+        end
+
+        def extract_header_value(request, input)
+          request.headers[input.name.to_s] || request.headers["HTTP_#{input.name.to_s.upcase}"]
+        end
+
+        def validate_required_input(input, value)
+          return unless value.nil? && input.required?
+
+          raise ArgumentError, "Required input '#{input.name}' is missing"
+        end
+
+        def add_input_to_collection(inputs, input, value)
+          return unless value || !input.required?
+
+          inputs[input.name] = input.coerce(value)
         end
 
         def parse_rails_body(request, input)

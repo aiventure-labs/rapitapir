@@ -12,83 +12,125 @@ module RapiTapir
       end
 
       def call(env)
+        request_data = build_request_data(env)
+
+        # Increment active requests metric
+        if Metrics.enabled?
+          Metrics.increment_active_requests(method: request_data[:method],
+                                            endpoint: request_data[:path])
+        end
+
+        # Start tracing span
+        span_attributes = build_span_attributes(request_data)
+
+        Tracing.start_span("HTTP #{request_data[:method]}", attributes: span_attributes, kind: :server) do |span|
+          process_request_with_observability(request_data, span)
+        rescue StandardError => e
+          handle_request_error(request_data, span, e)
+        ensure
+          # Decrement active requests metric
+          if Metrics.enabled?
+            Metrics.decrement_active_requests(method: request_data[:method],
+                                              endpoint: request_data[:path])
+          end
+        end
+      end
+
+      private
+
+      def build_request_data(env)
         request = Rack::Request.new(env)
         request_id = extract_or_generate_request_id(env)
 
         # Add request ID to environment for downstream use
         env['HTTP_X_REQUEST_ID'] = request_id
 
-        start_time = Time.now
-        method = request.request_method
-        path = extract_path(request)
-
-        # Increment active requests metric
-        Metrics.increment_active_requests(method: method, endpoint: path) if Metrics.enabled?
-
-        # Start tracing span
-        span_attributes = {
-          'http.method' => method,
-          'http.url' => request.url,
-          'http.route' => path,
-          'http.user_agent' => request.user_agent,
-          'request.id' => request_id
+        {
+          request: request,
+          request_id: request_id,
+          method: request.request_method,
+          path: extract_path(request),
+          start_time: Time.now
         }
-
-        Tracing.start_span("HTTP #{method}", attributes: span_attributes, kind: :server) do |span|
-          # Process request
-          status, headers, response = @app.call(env)
-          duration = Time.now - start_time
-
-          # Add response attributes to span
-          span.set_attribute('http.status_code', status)
-          span.set_attribute('http.response.size', calculate_response_size(response))
-
-          # Record metrics
-          record_metrics(method: method, endpoint: path, status: status, duration: duration)
-
-          # Log request
-          log_request(
-            method: method,
-            path: path,
-            status: status,
-            duration: duration,
-            request_id: request_id,
-            user_agent: request.user_agent,
-            remote_ip: request.ip
-          )
-
-          # Add request ID to response headers
-          headers['X-Request-ID'] = request_id
-
-          [status, headers, response]
-        rescue StandardError => e
-          duration = Time.now - start_time
-          error_type = e.class.name
-
-          # Record error in span
-          span.record_exception(e)
-          span.set_attribute('error', true)
-
-          # Record error metrics
-          record_metrics(
-            method: method,
-            endpoint: path,
-            status: 500,
-            duration: duration,
-            error_type: error_type
-          )
-
-          # Log error
-          Logging.log_error(e, request_id: request_id, method: method, path: path)
-
-          raise
-        ensure
-          # Decrement active requests metric
-          Metrics.decrement_active_requests(method: method, endpoint: path) if Metrics.enabled?
-        end
       end
 
-      private
+      def build_span_attributes(request_data)
+        request = request_data[:request]
+        {
+          'http.method' => request_data[:method],
+          'http.url' => request.url,
+          'http.route' => request_data[:path],
+          'http.user_agent' => request.user_agent,
+          'request.id' => request_data[:request_id]
+        }
+      end
+
+      def process_request_with_observability(request_data, span)
+        # Process request
+        status, headers, response = @app.call(request_data[:request].env)
+        duration = Time.now - request_data[:start_time]
+
+        # Add response attributes to span
+        span.set_attribute('http.status_code', status)
+        span.set_attribute('http.response.size', calculate_response_size(response))
+
+        # Record metrics and logs
+        record_request_observability(request_data, status, duration)
+
+        # Add request ID to response headers
+        headers['X-Request-ID'] = request_data[:request_id]
+
+        [status, headers, response]
+      end
+
+      def record_request_observability(request_data, status, duration)
+        # Record metrics
+        record_metrics(
+          method: request_data[:method],
+          endpoint: request_data[:path],
+          status: status,
+          duration: duration
+        )
+
+        # Log request
+        log_request(
+          method: request_data[:method],
+          path: request_data[:path],
+          status: status,
+          duration: duration,
+          request_id: request_data[:request_id],
+          user_agent: request_data[:request].user_agent,
+          remote_ip: request_data[:request].ip
+        )
+      end
+
+      def handle_request_error(request_data, span, error)
+        duration = Time.now - request_data[:start_time]
+        error_type = error.class.name
+
+        # Record error in span
+        span.record_exception(error)
+        span.set_attribute('error', true)
+
+        # Record error metrics
+        record_metrics(
+          method: request_data[:method],
+          endpoint: request_data[:path],
+          status: 500,
+          duration: duration,
+          error_type: error_type
+        )
+
+        # Log error
+        Logging.log_error(
+          error,
+          request_id: request_data[:request_id],
+          method: request_data[:method],
+          path: request_data[:path]
+        )
+
+        raise
+      end
 
       def extract_or_generate_request_id(env)
         # Try to extract from headers (X-Request-ID, X-Correlation-ID, etc.)
