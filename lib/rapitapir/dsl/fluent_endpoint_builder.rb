@@ -25,14 +25,34 @@ module RapiTapir
       # Create a copy of this builder with new data
       def copy_with(**changes)
         new_builder = self.class.new(@method, @path)
+        copy_instance_variables_to_builder(new_builder, changes)
+        new_builder
+      end
+
+      private
+
+      def copy_instance_variables_to_builder(new_builder, changes)
+        copy_inputs_to_builder(new_builder, changes)
+        copy_outputs_and_errors_to_builder(new_builder, changes)
+        copy_metadata_and_security_to_builder(new_builder, changes)
+      end
+
+      def copy_inputs_to_builder(new_builder, changes)
         new_builder.instance_variable_set(:@inputs, changes[:inputs] || @inputs.dup)
+      end
+
+      def copy_outputs_and_errors_to_builder(new_builder, changes)
         new_builder.instance_variable_set(:@outputs, changes[:outputs] || @outputs.dup)
         new_builder.instance_variable_set(:@errors, changes[:errors] || @errors.dup)
+      end
+
+      def copy_metadata_and_security_to_builder(new_builder, changes)
         new_builder.instance_variable_set(:@metadata, changes[:metadata] || @metadata.dup)
         new_builder.instance_variable_set(:@security_schemes, changes[:security_schemes] || @security_schemes.dup)
         new_builder.instance_variable_set(:@scopes, changes[:scopes] || @scopes.dup)
-        new_builder
       end
+
+      public
 
       # Documentation methods
       def summary(text)

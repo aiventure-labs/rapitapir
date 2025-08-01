@@ -79,25 +79,30 @@ module RapiTapir
       end
 
       def generate_endpoint_doc(endpoint)
-        method = endpoint.method.to_s.upcase
-        path = endpoint.path
-        anchor = generate_anchor(method, path)
-
         doc = []
 
-        # Header
-        doc << "## #{method} #{path} {##{anchor}}"
-
-        doc.concat(generate_metadata_section(endpoint))
-        doc.concat(generate_path_parameters_section(endpoint))
-        doc.concat(generate_query_parameters_section(endpoint))
-        doc.concat(generate_request_body_section(endpoint))
-        doc.concat(generate_response_section(endpoint))
-
-        # Examples
+        doc << generate_endpoint_header(endpoint)
+        doc.concat(generate_all_endpoint_sections(endpoint))
         doc << generate_endpoint_examples(endpoint) if config[:include_examples]
 
         doc.join("\n\n")
+      end
+
+      def generate_endpoint_header(endpoint)
+        method = endpoint.method.to_s.upcase
+        path = endpoint.path
+        anchor = generate_anchor(method, path)
+        "## #{method} #{path} {##{anchor}}"
+      end
+
+      def generate_all_endpoint_sections(endpoint)
+        sections = []
+        sections.concat(generate_metadata_section(endpoint))
+        sections.concat(generate_path_parameters_section(endpoint))
+        sections.concat(generate_query_parameters_section(endpoint))
+        sections.concat(generate_request_body_section(endpoint))
+        sections.concat(generate_response_section(endpoint))
+        sections
       end
 
       def generate_metadata_section(endpoint)
@@ -117,14 +122,24 @@ module RapiTapir
         doc = []
         doc << '### Path Parameters'
         doc << ''
-        doc << '| Parameter | Type | Description |'
-        doc << '|-----------|------|-------------|'
-        path_params.each do |param|
-          description = (param.options && param.options[:description]) || 'No description'
-          doc << "| `#{param.name}` | #{format_type(param.type)} | #{description} |"
-        end
+        doc.concat(generate_path_parameters_table_header)
+        doc.concat(generate_path_parameters_rows(path_params))
 
         doc
+      end
+
+      def generate_path_parameters_table_header
+        [
+          '| Parameter | Type | Description |',
+          '|-----------|------|-------------|'
+        ]
+      end
+
+      def generate_path_parameters_rows(path_params)
+        path_params.map do |param|
+          description = extract_parameter_description(param)
+          "| `#{param.name}` | #{format_type(param.type)} | #{description} |"
+        end
       end
 
       def generate_query_parameters_section(endpoint)
@@ -134,15 +149,29 @@ module RapiTapir
         doc = []
         doc << '### Query Parameters'
         doc << ''
-        doc << '| Parameter | Type | Required | Description |'
-        doc << '|-----------|------|----------|-------------|'
-        query_params.each do |param|
-          required = param.required? ? 'Yes' : 'No'
-          description = (param.options && param.options[:description]) || 'No description'
-          doc << "| `#{param.name}` | #{format_type(param.type)} | #{required} | #{description} |"
-        end
+        doc.concat(generate_parameters_table_header)
+        doc.concat(generate_query_parameters_rows(query_params))
 
         doc
+      end
+
+      def generate_parameters_table_header
+        [
+          '| Parameter | Type | Required | Description |',
+          '|-----------|------|----------|-------------|'
+        ]
+      end
+
+      def generate_query_parameters_rows(query_params)
+        query_params.map do |param|
+          required = param.required? ? 'Yes' : 'No'
+          description = extract_parameter_description(param)
+          "| `#{param.name}` | #{format_type(param.type)} | #{required} | #{description} |"
+        end
+      end
+
+      def extract_parameter_description(param)
+        (param.options && param.options[:description]) || 'No description'
       end
 
       def generate_request_body_section(endpoint)
@@ -168,49 +197,69 @@ module RapiTapir
         doc = []
         doc << '### Response'
         doc << ''
-        endpoint.outputs.each do |output|
-          if output.kind == :json
-            doc << '**Content-Type:** `application/json`'
-            doc << ''
-            doc << '**Schema:**'
-            doc << '```json'
-            doc << format_schema_example(output.type)
-            doc << '```'
-          elsif output.kind == :status
-            doc << "**Status Code:** #{output.type}"
-          end
-        end
+        doc.concat(generate_response_outputs(endpoint.outputs))
 
         doc
       end
 
+      def generate_response_outputs(outputs)
+        outputs.flat_map do |output|
+          generate_single_response_output(output)
+        end
+      end
+
+      def generate_single_response_output(output)
+        case output.kind
+        when :json
+          generate_json_response_output(output)
+        when :status
+          ["**Status Code:** #{output.type}"]
+        else
+          []
+        end
+      end
+
+      def generate_json_response_output(output)
+        [
+          '**Content-Type:** `application/json`',
+          '',
+          '**Schema:**',
+          '```json',
+          format_schema_example(output.type),
+          '```'
+        ]
+      end
+
       def generate_endpoint_examples(endpoint)
-        endpoint.method.to_s.upcase
-        endpoint.path
-
-        # Generate curl example
         curl_example = generate_curl_example(endpoint)
-
-        # Generate response example
         response_example = generate_response_example(endpoint)
 
         examples = []
         examples << '### Example'
         examples << ''
-        examples << '**Request:**'
-        examples << '```bash'
-        examples << curl_example
-        examples << '```'
-
-        if response_example
-          examples << ''
-          examples << '**Response:**'
-          examples << '```json'
-          examples << response_example
-          examples << '```'
-        end
+        examples.concat(build_request_example_section(curl_example))
+        examples.concat(build_response_example_section(response_example)) if response_example
 
         examples.join("\n")
+      end
+
+      def build_request_example_section(curl_example)
+        [
+          '**Request:**',
+          '```bash',
+          curl_example,
+          '```'
+        ]
+      end
+
+      def build_response_example_section(response_example)
+        [
+          '',
+          '**Response:**',
+          '```json',
+          response_example,
+          '```'
+        ]
       end
 
       def generate_curl_example(endpoint)
@@ -294,31 +343,49 @@ module RapiTapir
       end
 
       def format_schema_example(schema, indent_level = 0)
-        indent = '  ' * indent_level
-
         case schema
         when Hash
-          lines = ['{']
-          schema.each_with_index do |(key, value), index|
-            comma = index < schema.size - 1 ? ',' : ''
-            if value.is_a?(Hash) || value.is_a?(Array)
-              lines << "#{indent}  \"#{key}\": #{format_schema_example(value, indent_level + 1)}#{comma}"
-            else
-              example_value = generate_example_value(value)
-              lines << "#{indent}  \"#{key}\": #{example_value}#{comma}"
-            end
-          end
-          lines << "#{indent}}"
-          lines.join("\n")
+          format_hash_schema_example(schema, indent_level)
         when Array
-          if schema.length == 1
-            element_example = format_schema_example(schema.first, indent_level)
-            "[\n#{indent}  #{element_example}\n#{indent}]"
-          else
-            '[]'
-          end
+          format_array_schema_example(schema, indent_level)
         else
           generate_example_value(schema)
+        end
+      end
+
+      def format_hash_schema_example(schema, indent_level)
+        indent = '  ' * indent_level
+        lines = ['{']
+
+        schema.each_with_index do |(key, value), index|
+          comma = index < schema.size - 1 ? ',' : ''
+          formatted_line = format_hash_property_line(key, value, indent_level, comma)
+          lines << formatted_line
+        end
+
+        lines << "#{indent}}"
+        lines.join("\n")
+      end
+
+      def format_hash_property_line(key, value, indent_level, comma)
+        indent = '  ' * indent_level
+
+        if value.is_a?(Hash) || value.is_a?(Array)
+          nested_example = format_schema_example(value, indent_level + 1)
+          "#{indent}  \"#{key}\": #{nested_example}#{comma}"
+        else
+          example_value = generate_example_value(value)
+          "#{indent}  \"#{key}\": #{example_value}#{comma}"
+        end
+      end
+
+      def format_array_schema_example(schema, indent_level)
+        if schema.length == 1
+          indent = '  ' * indent_level
+          element_example = format_schema_example(schema.first, indent_level)
+          "[\n#{indent}  #{element_example}\n#{indent}]"
+        else
+          '[]'
         end
       end
 

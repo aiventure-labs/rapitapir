@@ -65,21 +65,21 @@ module RapiTapir
 
       def validate_http_method(endpoint, context)
         valid_methods = %w[GET POST PUT PATCH DELETE HEAD OPTIONS]
-        unless valid_methods.include?(endpoint.method.to_s.upcase)
-          @errors << "#{context}: Invalid HTTP method '#{endpoint.method}'"
-        end
+        return if valid_methods.include?(endpoint.method.to_s.upcase)
+
+        @errors << "#{context}: Invalid HTTP method '#{endpoint.method}'"
       end
 
       def validate_summary(endpoint, context)
-        if !endpoint.metadata || !endpoint.metadata[:summary] || endpoint.metadata[:summary].empty?
-          @errors << "#{context}: missing summary"
-        end
+        return unless !endpoint.metadata || !endpoint.metadata[:summary] || endpoint.metadata[:summary].empty?
+
+        @errors << "#{context}: missing summary"
       end
 
       def validate_output_definition(endpoint, context)
-        if !endpoint.respond_to?(:outputs) || endpoint.outputs.nil? || endpoint.outputs.empty?
-          @errors << "#{context}: missing output definition"
-        end
+        return unless !endpoint.respond_to?(:outputs) || endpoint.outputs.nil? || endpoint.outputs.empty?
+
+        @errors << "#{context}: missing output definition"
       end
 
       def validate_endpoint_inputs(endpoint, context)

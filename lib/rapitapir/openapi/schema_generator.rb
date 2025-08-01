@@ -78,61 +78,89 @@ module RapiTapir
       end
 
       def generate_operation(endpoint)
-        operation = {
+        operation = build_base_operation(endpoint)
+
+        add_parameters_to_operation(operation, endpoint)
+        add_request_body_to_operation(operation, endpoint)
+        add_responses_to_operation(operation, endpoint)
+
+        # Remove nil values
+        operation.compact
+      end
+
+      def build_base_operation(endpoint)
+        {
           summary: endpoint.metadata[:summary] || generate_default_summary(endpoint),
           description: endpoint.metadata[:description],
           operationId: generate_operation_id(endpoint),
           tags: endpoint.metadata[:tags]&.any? ? endpoint.metadata[:tags] : [generate_default_tag(endpoint)]
         }
+      end
 
-        # Add parameters (path, query, header)
+      def add_parameters_to_operation(operation, endpoint)
         parameters = generate_parameters(endpoint)
         operation[:parameters] = parameters if parameters.any?
+      end
 
-        # Add request body
+      def add_request_body_to_operation(operation, endpoint)
         request_body = generate_request_body(endpoint)
         operation[:requestBody] = request_body if request_body
+      end
 
-        # Add responses
+      def add_responses_to_operation(operation, endpoint)
         operation[:responses] = generate_responses(endpoint)
-
-        # Remove nil values
-        operation.compact
       end
 
       def generate_parameters(endpoint)
         parameters = []
 
         endpoint.inputs.each do |input|
-          case input.kind
-          when :path
-            parameters << {
-              name: input.name.to_s,
-              in: 'path',
-              required: true,
-              description: "Path parameter: #{input.name}",
-              schema: type_to_schema(input.type)
-            }
-          when :query
-            parameters << {
-              name: input.name.to_s,
-              in: 'query',
-              required: input.required?,
-              description: "Query parameter: #{input.name}",
-              schema: type_to_schema(input.type)
-            }
-          when :header
-            parameters << {
-              name: input.name.to_s,
-              in: 'header',
-              required: input.required?,
-              description: "Header parameter: #{input.name}",
-              schema: type_to_schema(input.type)
-            }
-          end
+          parameter = build_parameter_for_input(input)
+          parameters << parameter if parameter
         end
 
         parameters
+      end
+
+      def build_parameter_for_input(input)
+        case input.kind
+        when :path
+          build_path_parameter(input)
+        when :query
+          build_query_parameter(input)
+        when :header
+          build_header_parameter(input)
+        end
+      end
+
+      def build_path_parameter(input)
+        {
+          name: input.name.to_s,
+          in: 'path',
+          required: true,
+          description: "Path parameter: #{input.name}",
+          schema: type_to_schema(input.type)
+        }
+      end
+
+      def build_query_parameter(input)
+        {
+          name: input.name.to_s,
+          in: 'query',
+          required: input.required?,
+          description: "Query parameter: #{input.name}",
+          schema: type_to_schema(input.type)
+        }
+      end
+
+      def build_header_parameter(input)
+        {
+          name: input.name.to_s,
+          in: 'header',
+          required: input.required?,
+          description: "Header parameter: #{input.name}",
+          schema: type_to_schema(input.type)
+        }
       end
 
       def generate_request_body(endpoint)

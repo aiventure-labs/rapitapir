@@ -546,11 +546,11 @@ module RapiTapir
 
       def build_try_it_form_fields(endpoint, endpoint_id)
         form_fields = []
-        
+
         form_fields.concat(build_path_parameter_fields(endpoint, endpoint_id))
         form_fields.concat(build_query_parameter_fields(endpoint, endpoint_id))
         form_fields.concat(build_body_parameter_field(endpoint, endpoint_id))
-        
+
         form_fields
       end
 

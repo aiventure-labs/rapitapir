@@ -342,7 +342,7 @@ module RapiTapir
           return nil unless parts
 
           begin
-            header, payload, signature = parse_jwt_parts(parts)
+            _, payload, signature = parse_jwt_parts(parts)
             return nil unless verify_jwt_signature(parts, signature)
             return nil unless verify_jwt_claims(payload)
 

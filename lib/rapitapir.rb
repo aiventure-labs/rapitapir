@@ -99,30 +99,43 @@ module RapiTapir
     yield(Observability.configuration) if block_given?
 
     # Initialize observability components after configuration
-    if Observability.config.metrics.enabled
-      Observability::Metrics.configure(
-        provider: Observability.config.metrics.provider,
-        namespace: Observability.config.metrics.namespace,
-        custom_labels: Observability.config.metrics.custom_labels
-      )
-    end
+    configure_metrics
+    configure_tracing
+    configure_logging
+    configure_health_check
+  end
 
-    if Observability.config.tracing.enabled
-      Observability::Tracing.configure(
-        service_name: Observability.config.tracing.service_name,
-        service_version: Observability.config.tracing.service_version,
-        provider: Observability.config.tracing.provider
-      )
-    end
+  private_class_method def self.configure_metrics
+    return unless Observability.config.metrics.enabled
 
-    if Observability.config.logging.enabled
-      Observability::Logging.configure(
-        level: Observability.config.logging.level,
-        format: Observability.config.logging.format,
-        structured: Observability.config.logging.structured
-      )
-    end
+    Observability::Metrics.configure(
+      provider: Observability.config.metrics.provider,
+      namespace: Observability.config.metrics.namespace,
+      custom_labels: Observability.config.metrics.custom_labels
+    )
+  end
 
+  private_class_method def self.configure_tracing
+    return unless Observability.config.tracing.enabled
+
+    Observability::Tracing.configure(
+      service_name: Observability.config.tracing.service_name,
+      service_version: Observability.config.tracing.service_version,
+      provider: Observability.config.tracing.provider
+    )
+  end
+
+  private_class_method def self.configure_logging
+    return unless Observability.config.logging.enabled
+
+    Observability::Logging.configure(
+      level: Observability.config.logging.level,
+      format: Observability.config.logging.format,
+      structured: Observability.config.logging.structured
+    )
+  end
+
+  private_class_method def self.configure_health_check
     return unless Observability.config.health_check.enabled
 
     Observability::HealthCheck.configure(

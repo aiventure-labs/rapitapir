@@ -109,27 +109,33 @@ module RapiTapir
       end
 
       def setup_config_options(opts)
+        setup_generic_config_option(opts)
+        setup_specific_config_options(opts)
+      end
+
+      def setup_generic_config_option(opts)
         opts.on('-c', '--config KEY=VALUE', 'Configuration option (can be used multiple times)') do |config|
           key, value = config.split('=', 2)
           @options[:config][key.to_sym] = value
         end
+      end
 
-        opts.on('--base-url URL', 'Base URL for the API') do |url|
-          @options[:config][:base_url] = url
-        end
+      def setup_specific_config_options(opts)
+        config_mappings = {
+          '--base-url URL' => [:base_url, 'Base URL for the API'],
+          '--client-name NAME' => [:client_name, 'Name for generated client class'],
+          '--package-name NAME' => [:package_name, 'Package name for generated client'],
+          '--client-version VERSION' => [:version, 'Version for generated client']
+        }
 
-        opts.on('--client-name NAME', 'Name for generated client class') do |name|
-          @options[:config][:client_name] = name
-        end
-
-        opts.on('--package-name NAME', 'Package name for generated client') do |name|
-          @options[:config][:package_name] = name
-        end
-
-        opts.on('--client-version VERSION', 'Version for generated client') do |version|
-          @options[:config][:version] = version
+        config_mappings.each do |option_spec, (config_key, description)|
+          opts.on(option_spec, description) do |value|
+            @options[:config][config_key] = value
+          end
         end
       end
+
+      public
 
       def setup_help_and_version_options(opts)
         opts.on('-v', '--version', 'Show RapiTapir version') do
@@ -202,7 +208,7 @@ module RapiTapir
 
       def generate_openapi
         validate_openapi_options
-        
+
         begin
           endpoints = load_endpoints(@options[:input])
           generator = create_openapi_generator(endpoints)
@@ -219,10 +225,10 @@ module RapiTapir
           exit 1
         end
 
-        unless @options[:output]
-          puts 'Error: --output is required'
-          exit 1
-        end
+        return if @options[:output]
+
+        puts 'Error: --output is required'
+        exit 1
       end
 
       def create_openapi_generator(endpoints)
@@ -278,7 +284,7 @@ module RapiTapir
 
       def generate_client(client_type)
         validate_client_options
-        
+
         endpoints = load_endpoints(@options[:input])
         generator, extension = create_client_generator(client_type, endpoints)
         content = generator.generate
@@ -291,10 +297,10 @@ module RapiTapir
           exit 1
         end
 
-        unless @options[:output]
-          puts 'Error: --output is required'
-          exit 1
-        end
+        return if @options[:output]
+
+        puts 'Error: --output is required'
+        exit 1
       end
 
       def create_client_generator(client_type, endpoints)
@@ -341,7 +347,7 @@ module RapiTapir
 
       def generate_docs(docs_type)
         validate_docs_options
-        
+
         endpoints = load_endpoints(@options[:input])
         generator, extension = create_docs_generator(docs_type, endpoints)
         content = generator.generate
@@ -354,10 +360,10 @@ module RapiTapir
           exit 1
         end
 
-        unless @options[:output]
-          puts 'Error: --output is required'
-          exit 1
-        end
+        return if @options[:output]
+
+        puts 'Error: --output is required'
+        exit 1
       end
 
       def create_docs_generator(docs_type, endpoints)

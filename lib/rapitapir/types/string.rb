@@ -40,15 +40,22 @@ module RapiTapir
       def validate_length_constraints(value)
         errors = []
 
-        if constraints[:min_length] && value.length < constraints[:min_length]
-          errors << "String length #{value.length} is below minimum #{constraints[:min_length]}"
-        end
-
-        if constraints[:max_length] && value.length > constraints[:max_length]
-          errors << "String length #{value.length} exceeds maximum #{constraints[:max_length]}"
-        end
+        errors.concat(validate_min_length_constraint(value))
+        errors.concat(validate_max_length_constraint(value))
 
         errors
+      end
+
+      def validate_min_length_constraint(value)
+        return [] unless constraints[:min_length] && value.length < constraints[:min_length]
+
+        ["String length #{value.length} is below minimum #{constraints[:min_length]}"]
+      end
+
+      def validate_max_length_constraint(value)
+        return [] unless constraints[:max_length] && value.length > constraints[:max_length]
+
+        ["String length #{value.length} exceeds maximum #{constraints[:max_length]}"]
       end
 
       def validate_pattern_constraint(value)
@@ -81,8 +88,16 @@ module RapiTapir
 
       def apply_constraints_to_schema(schema)
         super
+        apply_length_constraints_to_schema(schema)
+        apply_pattern_and_format_constraints_to_schema(schema)
+      end
+
+      def apply_length_constraints_to_schema(schema)
         schema[:minLength] = constraints[:min_length] if constraints[:min_length]
         schema[:maxLength] = constraints[:max_length] if constraints[:max_length]
+      end
+
+      def apply_pattern_and_format_constraints_to_schema(schema)
         schema[:pattern] = constraints[:pattern].source if constraints[:pattern]
         schema[:format] = constraints[:format].to_s if constraints[:format]
       end

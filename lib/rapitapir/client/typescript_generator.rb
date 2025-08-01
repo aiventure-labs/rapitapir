@@ -231,7 +231,7 @@ module RapiTapir
 
         params = build_method_parameters(endpoint, method_name)
         has_params = has_method_parameters?(endpoint)
-        
+
         method_signature = build_method_signature(method_name, params, has_params, endpoint)
         method_body = build_method_body(method_signature, endpoint, has_params, http_method, path)
 
@@ -284,13 +284,13 @@ module RapiTapir
         method_name = method_name_for_endpoint(endpoint)
         response_type_name = determine_response_type_name(endpoint, method_name)
         actual_path = build_actual_path(endpoint, path)
-        
+
         body = ["    return this.request<#{response_type_name}>('#{http_method}', #{actual_path}, {"]
-        
+
         request_options = build_request_options(endpoint)
         body << "      #{request_options.join(',')}" if request_options.any?
         body << '    });'
-        
+
         body
       end
 
@@ -302,7 +302,7 @@ module RapiTapir
 
       def build_actual_path(endpoint, path)
         path_params = path_parameters(endpoint)
-        
+
         if path_params.any?
           "`#{path.gsub(/:(\w+)/, '${request.\1}')}`"
         else
@@ -312,19 +312,19 @@ module RapiTapir
 
       def build_request_options(endpoint)
         options = []
-        
+
         query_params_obj = build_query_params_object(endpoint)
         options << "params: #{query_params_obj}" if query_parameters(endpoint).any?
-        
+
         request_body_obj = build_request_body_object(endpoint)
         options << "body: #{request_body_obj}" if request_body(endpoint)
-        
+
         options
       end
 
       def build_query_params_object(endpoint)
         query_params = query_parameters(endpoint)
-        
+
         if query_params.any?
           param_assignments = query_params.map do |param|
             "#{param.name}: request.#{param.name}"

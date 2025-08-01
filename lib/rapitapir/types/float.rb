@@ -96,9 +96,7 @@ module RapiTapir
       end
 
       def coerce_other_to_float(value)
-        unless value.respond_to?(:to_f)
-          raise CoercionError.new(value, 'Float', 'Value cannot be converted to float')
-        end
+        raise CoercionError.new(value, 'Float', 'Value cannot be converted to float') unless value.respond_to?(:to_f)
 
         value.to_f
       end
@@ -109,10 +107,18 @@ module RapiTapir
 
       def apply_constraints_to_schema(schema)
         super
+        apply_range_constraints_to_schema(schema)
+        apply_multiple_constraint_to_schema(schema)
+      end
+
+      def apply_range_constraints_to_schema(schema)
         schema[:minimum] = constraints[:minimum] if constraints[:minimum]
         schema[:maximum] = constraints[:maximum] if constraints[:maximum]
         schema[:exclusiveMinimum] = constraints[:exclusive_minimum] if constraints[:exclusive_minimum]
         schema[:exclusiveMaximum] = constraints[:exclusive_maximum] if constraints[:exclusive_maximum]
+      end
+
+      def apply_multiple_constraint_to_schema(schema)
         schema[:multipleOf] = constraints[:multiple_of] if constraints[:multiple_of]
       end
     end

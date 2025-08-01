@@ -176,8 +176,6 @@ module RapiTapir
         end
       end
 
-      private
-
       def copy_with_validators(new_validators)
         new_endpoint = copy_with({})
         new_endpoint.instance_variable_set(:@custom_validators, new_validators)
