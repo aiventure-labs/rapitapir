@@ -18,7 +18,7 @@ module RapiTapir
       end
 
       def field(name, type, required: true, **options)
-        field_type = required ? type : Optional.new(type)
+        field_type = required ? type : ::RapiTapir::Types::Optional.new(type)
         field_type = field_type.with_metadata(**options) if options.any?
         @fields[name.to_sym] = field_type
         self
