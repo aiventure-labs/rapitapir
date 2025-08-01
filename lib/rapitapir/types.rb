@@ -29,7 +29,12 @@ module RapiTapir
       private
 
       def build_message
-        base = "Validation failed for value #{value.inspect} against type #{type}"
+        begin
+          type_name = type.to_s
+        rescue => e
+          type_name = type.class.name
+        end
+        base = "Validation failed for value #{value.inspect} against type #{type_name}"
         return base if errors.empty?
         
         "#{base}:\n#{errors.map { |error| "  - #{error}" }.join("\n")}"
