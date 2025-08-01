@@ -35,7 +35,7 @@ module RapiTapir
         def process_rapitapir_endpoint(action_name = nil)
           action_name ||= params[:action]&.to_sym || :index
           endpoint_config = find_endpoint_config(action_name)
-          
+
           return render_endpoint_not_configured_error unless endpoint_config
 
           process_configured_endpoint(endpoint_config)

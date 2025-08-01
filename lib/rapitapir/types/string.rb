@@ -112,6 +112,13 @@ module RapiTapir
           validate_uri_format(value)
         when :uuid
           validate_uuid_format(value)
+        else
+          validate_datetime_and_ip_formats(value, format)
+        end
+      end
+
+      def validate_datetime_and_ip_formats(value, format)
+        case format
         when :date
           validate_date_format(value)
         when :datetime, :'date-time'

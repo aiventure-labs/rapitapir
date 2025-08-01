@@ -57,6 +57,13 @@ module RapiTapir
           'boolean'
         when :date, :datetime, RapiTapir::Types::Date, RapiTapir::Types::DateTime
           'Date'
+        else
+          convert_complex_typescript_type(type)
+        end
+      end
+
+      def convert_complex_typescript_type(type)
+        case type
         when RapiTapir::Types::Array
           convert_array_type_to_typescript(type)
         when RapiTapir::Types::Hash, Hash

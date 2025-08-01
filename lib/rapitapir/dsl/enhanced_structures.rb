@@ -150,28 +150,33 @@ module RapiTapir
 
       def http_status_description
         case @status_code
-        when 200
-          'OK'
-        when 201
-          'Created'
-        when 202
-          'Accepted'
-        when 204
-          'No Content'
-        when 400
-          'Bad Request'
-        when 401
-          'Unauthorized'
-        when 403
-          'Forbidden'
-        when 404
-          'Not Found'
-        when 422
-          'Unprocessable Entity'
+        when 200, 201, 202, 204
+          success_status_description
+        when 400, 401, 403, 404, 422
+          client_error_status_description
         when 500
           'Internal Server Error'
         else
           "HTTP #{@status_code}"
+        end
+      end
+
+      def success_status_description
+        case @status_code
+        when 200 then 'OK'
+        when 201 then 'Created'
+        when 202 then 'Accepted'
+        when 204 then 'No Content'
+        end
+      end
+
+      def client_error_status_description
+        case @status_code
+        when 400 then 'Bad Request'
+        when 401 then 'Unauthorized'
+        when 403 then 'Forbidden'
+        when 404 then 'Not Found'
+        when 422 then 'Unprocessable Entity'
         end
       end
     end

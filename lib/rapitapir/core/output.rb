@@ -30,13 +30,21 @@ module RapiTapir
       def valid_type?(value)
         case type
         when :string then value.is_a?(String)
-        when :integer then value.is_a?(Integer) || value.is_a?(Float)
-        when :float then value.is_a?(Float) || value.is_a?(Integer)
-        when :boolean then [true, false].include?(value)
+        when :integer then validate_integer_type(value)
+        when :float then validate_float_type(value)
+        when :boolean then validate_boolean_type(value)
         when Hash then validate_hash_schema(value)
         when Class then value.is_a?(type)
         else true # Accept any for custom types and status codes
         end
+      end
+
+      def validate_integer_type(value)
+        value.is_a?(Integer) || value.is_a?(Float)
+      end
+
+      def validate_float_type(value)
+        value.is_a?(Float) || value.is_a?(Integer)
       end
 
       def serialize(value)
@@ -68,16 +76,24 @@ module RapiTapir
       def validate_type!(type)
         case kind
         when :status
-          unless type.is_a?(Integer) && type >= 100 && type <= 599
-            raise ArgumentError, "Status type must be an integer between 100-599, got: #{type}"
-          end
+          validate_status_type!(type)
         when :json, :xml
           # Allow any type for JSON/XML bodies
         when :header
-          unless [:string, String].include?(type) || type.is_a?(Class)
-            raise ArgumentError, "Header type must be :string or a Class, got: #{type}"
-          end
+          validate_header_type!(type)
         end
+      end
+
+      def validate_status_type!(type)
+        return if type.is_a?(Integer) && type >= 100 && type <= 599
+
+        raise ArgumentError, "Status type must be an integer between 100-599, got: #{type}"
+      end
+
+      def validate_header_type!(type)
+        return if [:string, String].include?(type) || type.is_a?(Class)
+
+        raise ArgumentError, "Header type must be :string or a Class, got: #{type}"
       end
 
       def validate_hash_schema(value)
@@ -93,12 +109,28 @@ module RapiTapir
         case expected_type
         when :string then field_value.is_a?(String)
         when :integer then field_value.is_a?(Integer)
-        when :float then field_value.is_a?(Float) || field_value.is_a?(Integer)
-        when :boolean then [true, false].include?(field_value)
-        when :date then field_value.is_a?(Date) || field_value.is_a?(String)
-        when :datetime then field_value.is_a?(DateTime) || field_value.is_a?(String)
+        when :float then validate_numeric_type(field_value)
+        when :boolean then validate_boolean_type(field_value)
+        when :date then validate_date_type(field_value)
+        when :datetime then validate_datetime_type(field_value)
         else true
         end
+      end
+
+      def validate_numeric_type(field_value)
+        field_value.is_a?(Float) || field_value.is_a?(Integer)
+      end
+
+      def validate_boolean_type(field_value)
+        [true, false].include?(field_value)
+      end
+
+      def validate_date_type(field_value)
+        field_value.is_a?(Date) || field_value.is_a?(String)
+      end
+
+      def validate_datetime_type(field_value)
+        field_value.is_a?(DateTime) || field_value.is_a?(String)
       end
 
       def serialize_json(value)

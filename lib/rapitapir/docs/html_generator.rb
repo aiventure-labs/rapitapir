@@ -712,10 +712,21 @@ module RapiTapir
         when :boolean then true
         when :date then '2025-01-15'
         when :datetime then '2025-01-15T10:30:00Z'
+        else
+          generate_complex_example_value(type)
+        end
+      end
+
+      def generate_complex_example_value(type)
+        case type
         when Hash then type.transform_values { |v| generate_example_value(v) }
-        when Array then type.length == 1 ? [generate_example_value(type.first)] : []
+        when Array then generate_array_example_value(type)
         else 'example'
         end
+      end
+
+      def generate_array_example_value(type)
+        type.length == 1 ? [generate_example_value(type.first)] : []
       end
 
       def format_type(type)
@@ -727,14 +738,15 @@ module RapiTapir
         when :date then 'date'
         when :datetime then 'datetime'
         else
-          if type == Hash
-            'object'
-          elsif type == Array
-            'array'
-          else
-            type.to_s
-          end
+          format_complex_type(type)
         end
+      end
+
+      def format_complex_type(type)
+        return 'object' if type == Hash
+        return 'array' if type == Array
+
+        type.to_s
       end
 
       def generate_anchor(method, path)

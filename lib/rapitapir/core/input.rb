@@ -47,14 +47,29 @@ module RapiTapir
         case target_type
         when :string then value.is_a?(String)
         when :integer then value.is_a?(Integer)
-        when :float then value.is_a?(Float) || value.is_a?(Integer)
-        when :boolean then [true, false].include?(value)
+        when :float then validate_numeric_value(value)
+        when :boolean then validate_boolean_value(value)
+        else
+          validate_complex_type_match(value, target_type)
+        end
+      end
+
+      def validate_complex_type_match(value, target_type)
+        case target_type
         when :date then validate_date_type(value)
         when :datetime then validate_datetime_type(value)
         when Hash then validate_hash_type(value)
         when Class then value.is_a?(target_type)
         else true # Accept any for custom types
         end
+      end
+
+      def validate_numeric_value(value)
+        value.is_a?(Float) || value.is_a?(Integer)
+      end
+
+      def validate_boolean_value(value)
+        [true, false].include?(value)
       end
 
       def validate_date_type(value)
@@ -127,14 +142,26 @@ module RapiTapir
         return false unless value.is_a?(Hash)
 
         type.all? do |key, expected_type|
-          case expected_type
-          when :string then value[key].is_a?(String)
-          when :integer then value[key].is_a?(Integer)
-          when :float then value[key].is_a?(Float) || value[key].is_a?(Integer)
-          when :boolean then [true, false].include?(value[key])
-          else true
-          end
+          validate_hash_field_type(value[key], expected_type)
         end
+      end
+
+      def validate_hash_field_type(field_value, expected_type)
+        case expected_type
+        when :string then field_value.is_a?(String)
+        when :integer then field_value.is_a?(Integer)
+        when :float then validate_numeric_field_value(field_value)
+        when :boolean then validate_boolean_field_value(field_value)
+        else true
+        end
+      end
+
+      def validate_numeric_field_value(field_value)
+        field_value.is_a?(Float) || field_value.is_a?(Integer)
+      end
+
+      def validate_boolean_field_value(field_value)
+        [true, false].include?(field_value)
       end
 
       def date_string?(value)

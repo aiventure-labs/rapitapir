@@ -420,25 +420,25 @@ module RapiTapir
         when RapiTapir::Types::Hash
           'object'
         else
-          # Handle Ruby built-in classes
-          case type
-          when String
-            'string'
-          when Integer
-            'integer'
-          when Float
-            'number'
-          else
-            # Check class identity for built-in classes
-            if type == Hash
-              'object'
-            elsif type == Array
-              'array'
-            else
-              type.to_s
-            end
-          end
+          format_builtin_type(type)
         end
+      end
+
+      def format_builtin_type(type)
+        case type
+        when String then 'string'
+        when Integer then 'integer'
+        when Float then 'number'
+        else
+          format_class_type(type)
+        end
+      end
+
+      def format_class_type(type)
+        return 'object' if type == Hash
+        return 'array' if type == Array
+
+        type.to_s
       end
 
       def generate_anchor(method, path)
