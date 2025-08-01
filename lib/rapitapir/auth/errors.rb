@@ -29,19 +29,19 @@ module RapiTapir
 
     class InvalidTokenError < AuthenticationError
       def initialize(message = 'Invalid or expired token', error_code: 'invalid_token')
-        super(message, error_code: error_code)
+        super
       end
     end
 
     class MissingTokenError < AuthenticationError
       def initialize(message = 'Authentication token required', error_code: 'missing_token')
-        super(message, error_code: error_code)
+        super
       end
     end
 
     class InvalidCredentialsError < AuthenticationError
       def initialize(message = 'Invalid credentials', error_code: 'invalid_credentials')
-        super(message, error_code: error_code)
+        super
       end
     end
 
@@ -72,18 +72,18 @@ module RapiTapir
       def initialize(required_scopes, provided_scopes = [])
         @required_scopes = Array(required_scopes)
         @provided_scopes = Array(provided_scopes)
-        
+
         message = "Insufficient scope. Required: #{@required_scopes.join(', ')}"
         message += ". Provided: #{@provided_scopes.join(', ')}" unless @provided_scopes.empty?
-        
+
         super(message, error_code: 'insufficient_scope')
       end
 
       def to_hash
         super.merge({
-          required_scopes: @required_scopes,
-          provided_scopes: @provided_scopes
-        })
+                      required_scopes: @required_scopes,
+                      provided_scopes: @provided_scopes
+                    })
       end
     end
   end

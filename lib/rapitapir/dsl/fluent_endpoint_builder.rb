@@ -26,7 +26,7 @@ module RapiTapir
       def copy_with(**changes)
         new_builder = self.class.new(@method, @path)
         new_builder.instance_variable_set(:@inputs, changes[:inputs] || @inputs.dup)
-        new_builder.instance_variable_set(:@outputs, changes[:outputs] || @outputs.dup) 
+        new_builder.instance_variable_set(:@outputs, changes[:outputs] || @outputs.dup)
         new_builder.instance_variable_set(:@errors, changes[:errors] || @errors.dup)
         new_builder.instance_variable_set(:@metadata, changes[:metadata] || @metadata.dup)
         new_builder.instance_variable_set(:@security_schemes, changes[:security_schemes] || @security_schemes.dup)
@@ -59,7 +59,7 @@ module RapiTapir
         input = create_input(:path, name, type, **options)
         copy_with(inputs: @inputs + [input])
       end
-      alias_method :path, :path_param
+      alias path path_param
 
       def header(name, type_def, **options)
         type = resolve_type(type_def)
@@ -165,22 +165,22 @@ module RapiTapir
       end
 
       # Authentication methods
-      def bearer_auth(description = "Bearer token authentication", **options)
+      def bearer_auth(description = 'Bearer token authentication', **options)
         security = create_security(:bearer, description, **options)
         copy_with(security_schemes: @security_schemes + [security])
       end
 
-      def api_key_auth(name, location = :header, description = "API key authentication", **options)
+      def api_key_auth(name, location = :header, description = 'API key authentication', **options)
         security = create_security(:api_key, description, name: name, location: location, **options)
         copy_with(security_schemes: @security_schemes + [security])
       end
 
-      def basic_auth(description = "Basic authentication", **options)
+      def basic_auth(description = 'Basic authentication', **options)
         security = create_security(:basic, description, **options)
         copy_with(security_schemes: @security_schemes + [security])
       end
 
-      def oauth2_auth(scopes = [], description = "OAuth2 authentication", **options)
+      def oauth2_auth(scopes = [], description = 'OAuth2 authentication', **options)
         security = create_security(:oauth2, description, scopes: scopes, **options)
         copy_with(security_schemes: @security_schemes + [security])
       end
@@ -206,7 +206,7 @@ module RapiTapir
             scopes: @scopes
           )
         )
-        
+
         # Register the endpoint with RapiTapir
         RapiTapir.register_endpoint(endpoint)
         endpoint
@@ -240,11 +240,10 @@ module RapiTapir
             raise ArgumentError, "Unknown type symbol: #{type_def}"
           end
         when Class
-          if type_def < Types::Base
-            type_def.new
-          else
-            raise ArgumentError, "Type class must inherit from Types::Base"
-          end
+          raise ArgumentError, 'Type class must inherit from Types::Base' unless type_def < Types::Base
+
+          type_def.new
+
         when Schema
           type_def
         else

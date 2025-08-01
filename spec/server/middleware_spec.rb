@@ -10,13 +10,13 @@ RSpec.describe RapiTapir::Server::Middleware do
   describe RapiTapir::Server::Middleware::CORS do
     let(:app) do
       RapiTapir::Server::Middleware::CORS.new(
-        ->(env) { [200, {}, ['Hello World']] }
+        ->(_env) { [200, {}, ['Hello World']] }
       )
     end
 
     it 'adds CORS headers to responses' do
       get '/'
-      
+
       expect(last_response.headers['Access-Control-Allow-Origin']).to eq('*')
       expect(last_response.headers['Access-Control-Allow-Methods']).to include('GET')
       expect(last_response.headers['Access-Control-Allow-Headers']).to include('Content-Type')
@@ -24,7 +24,7 @@ RSpec.describe RapiTapir::Server::Middleware do
 
     it 'handles preflight OPTIONS requests' do
       options '/'
-      
+
       expect(last_response.status).to eq(200)
       expect(last_response.headers['Access-Control-Allow-Origin']).to eq('*')
     end
@@ -34,7 +34,7 @@ RSpec.describe RapiTapir::Server::Middleware do
     let(:logger) { instance_double('Logger') }
     let(:app) do
       RapiTapir::Server::Middleware::Logger.new(
-        ->(env) { [200, {}, ['Hello World']] },
+        ->(_env) { [200, {}, ['Hello World']] },
         logger
       )
     end
@@ -42,7 +42,7 @@ RSpec.describe RapiTapir::Server::Middleware do
     it 'logs request start and completion' do
       expect(logger).to receive(:info).with(/Started GET/)
       expect(logger).to receive(:info).with(/Completed 200/)
-      
+
       get '/'
     end
   end
@@ -51,7 +51,7 @@ RSpec.describe RapiTapir::Server::Middleware do
     let(:logger) { instance_double('Logger') }
     let(:app) do
       RapiTapir::Server::Middleware::ExceptionHandler.new(
-        ->(env) { raise StandardError, 'Test error' },
+        ->(_env) { raise StandardError, 'Test error' },
         logger: logger, show_exceptions: true
       )
     end
@@ -59,9 +59,9 @@ RSpec.describe RapiTapir::Server::Middleware do
     it 'catches exceptions and returns error response' do
       expect(logger).to receive(:error).with(/Unhandled exception/)
       expect(logger).to receive(:error) # For backtrace
-      
+
       get '/'
-      
+
       expect(last_response.status).to eq(500)
       response_data = JSON.parse(last_response.body)
       expect(response_data['exception']).to eq('StandardError')

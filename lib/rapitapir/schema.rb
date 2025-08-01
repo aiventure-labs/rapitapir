@@ -30,8 +30,8 @@ module RapiTapir
     def self.validate!(value, type)
       result = type.validate(value)
       return value if result[:valid]
-      
-      raise ValidationError.new(result[:errors])
+
+      raise ValidationError, result[:errors]
     end
 
     # Validate a value against a type, returning result
@@ -56,11 +56,10 @@ module RapiTapir
           create_object_from_hash(definition)
         end
       when ::Array
-        if definition.length == 1
-          Types.array(from_definition(definition.first))
-        else
-          raise ArgumentError, "Array definition must have exactly one element type"
-        end
+        raise ArgumentError, 'Array definition must have exactly one element type' unless definition.length == 1
+
+        Types.array(from_definition(definition.first))
+
       when Class
         # Assume it's already a type class
         definition
@@ -68,8 +67,6 @@ module RapiTapir
         raise ArgumentError, "Unknown definition type: #{definition.class}"
       end
     end
-
-    private
 
     def self.create_primitive_type(type_symbol)
       case type_symbol
@@ -88,12 +85,12 @@ module RapiTapir
 
     def self.create_object_from_hash(hash_definition)
       object_type = Types.object
-      
+
       hash_definition.each do |field_name, field_definition|
         field_type = from_definition(field_definition)
         object_type.field(field_name, field_type)
       end
-      
+
       object_type
     end
 

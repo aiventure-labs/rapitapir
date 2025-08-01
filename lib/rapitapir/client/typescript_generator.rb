@@ -22,21 +22,21 @@ module RapiTapir
           // Package: #{config[:package_name]}
           // Version: #{config[:version]}
           // Base URL: #{config[:base_url]}
-          
+
           // Response type for all API calls
           export interface ApiResponse<T> {
             data: T;
             status: number;
             headers: Record<string, string>;
           }
-          
+
           // Error type for API errors
           export interface ApiError {
             message: string;
             status: number;
             details?: any;
           }
-          
+
           // HTTP client configuration
           export interface ClientConfig {
             baseUrl?: string;
@@ -47,48 +47,46 @@ module RapiTapir
       end
 
       def generate_types
-        types = []
-        
         # Generate request/response types for each endpoint
-        endpoints.each do |endpoint|
-          types << generate_endpoint_types(endpoint)
+        types = endpoints.map do |endpoint|
+          generate_endpoint_types(endpoint)
         end
-        
-        return "" if types.empty?
-        
-        "// Generated types\n" + types.compact.join("\n\n")
+
+        return '' if types.empty?
+
+        "// Generated types\n#{types.compact.join("\n\n")}"
       end
 
       def generate_endpoint_types(endpoint)
         types = []
         method_name = method_name_for_endpoint(endpoint)
-        
+
         # Generate request type if there are parameters
         params = path_parameters(endpoint) + query_parameters(endpoint)
         body = request_body(endpoint)
-        
+
         if params.any? || body
           request_props = []
-          
+
           # Path parameters
           path_parameters(endpoint).each do |param|
             ts_type = convert_type(param.type, language: :typescript)
             request_props << "  #{param.name}: #{ts_type};"
           end
-          
+
           # Query parameters
           query_parameters(endpoint).each do |param|
             ts_type = convert_type(param.type, language: :typescript)
             optional = param.required? ? '' : '?'
             request_props << "  #{param.name}#{optional}: #{ts_type};"
           end
-          
+
           # Request body
           if body
             ts_type = convert_type(body.type, language: :typescript)
             request_props << "  body: #{ts_type};"
           end
-          
+
           if request_props.any?
             types << <<~TYPESCRIPT
               export interface #{method_name.capitalize}Request {
@@ -97,32 +95,32 @@ module RapiTapir
             TYPESCRIPT
           end
         end
-        
+
         # Generate response type
         response = response_type(endpoint)
         if response
           ts_type = convert_type(response, language: :typescript)
           types << "export type #{method_name.capitalize}Response = #{ts_type};"
         end
-        
+
         types.join("\n\n")
       end
 
       def generate_client_class
         methods = endpoints.map { |endpoint| generate_client_method(endpoint) }.compact
-        
+
         <<~TYPESCRIPT
           export class #{config[:client_name]} {
             private baseUrl: string;
             private headers: Record<string, string>;
             private timeout: number;
-            
+          #{'  '}
             constructor(config: ClientConfig = {}) {
               this.baseUrl = config.baseUrl || '#{config[:base_url]}';
               this.headers = config.headers || {};
               this.timeout = config.timeout || 10000;
             }
-            
+          #{'  '}
             private async request<T>(
               method: string,
               path: string,
@@ -133,7 +131,7 @@ module RapiTapir
               } = {}
             ): Promise<ApiResponse<T>> {
               const url = new URL(path, this.baseUrl);
-              
+          #{'    '}
               // Add query parameters
               if (options.params) {
                 Object.entries(options.params).forEach(([key, value]) => {
@@ -142,30 +140,30 @@ module RapiTapir
                   }
                 });
               }
-              
+          #{'    '}
               const requestHeaders = {
                 'Content-Type': 'application/json',
                 ...this.headers,
                 ...options.headers,
               };
-              
+          #{'    '}
               const requestInit: RequestInit = {
                 method,
                 headers: requestHeaders,
               };
-              
+          #{'    '}
               if (options.body) {
                 requestInit.body = JSON.stringify(options.body);
               }
-              
+          #{'    '}
               try {
                 const response = await fetch(url.toString(), requestInit);
-                
+          #{'      '}
                 const responseHeaders: Record<string, string> = {};
                 response.headers.forEach((value, key) => {
                   responseHeaders[key] = value;
                 });
-                
+          #{'      '}
                 let data: T;
                 const contentType = response.headers.get('content-type');
                 if (contentType && contentType.includes('application/json')) {
@@ -173,7 +171,7 @@ module RapiTapir
                 } else {
                   data = (await response.text()) as unknown as T;
                 }
-                
+          #{'      '}
                 if (!response.ok) {
                   const error: ApiError = {
                     message: `HTTP ${response.status}: ${response.statusText}`,
@@ -182,7 +180,7 @@ module RapiTapir
                   };
                   throw error;
                 }
-                
+          #{'      '}
                 return {
                   data,
                   status: response.status,
@@ -192,7 +190,7 @@ module RapiTapir
                 if (error && typeof error === 'object' && 'status' in error) {
                   throw error; // Re-throw ApiError
                 }
-                
+          #{'      '}
                 const apiError: ApiError = {
                   message: error instanceof Error ? error.message : 'Unknown error',
                   status: 0,
@@ -201,7 +199,7 @@ module RapiTapir
                 throw apiError;
               }
             }
-            
+          #{'  '}
           #{methods.join("\n\n")}
           }
         TYPESCRIPT
@@ -211,79 +209,75 @@ module RapiTapir
         method_name = method_name_for_endpoint(endpoint)
         http_method = endpoint.method.to_s.upcase
         path = endpoint.path
-        
+
         # Build method parameters
         params = []
         path_params = path_parameters(endpoint)
         query_params = query_parameters(endpoint)
         body_param = request_body(endpoint)
-        
+
         # Check if we need a request object
         has_params = path_params.any? || query_params.any? || body_param
-        
-        if has_params
-          params << "request: #{method_name.capitalize}Request"
-        end
-        
+
+        params << "request: #{method_name.capitalize}Request" if has_params
+
         # Build path with parameter substitution
-        path_with_params = path.gsub(/:(\w+)/) { "{request.#{$1}}" }
-        
+        path.gsub(/:(\w+)/) { "{request.#{::Regexp.last_match(1)}}" }
+
         # Build query parameters object
         query_params_obj = if query_params.any?
-          param_assignments = query_params.map do |param|
-            "#{param.name}: request.#{param.name}"
-          end
-          "{ #{param_assignments.join(', ')} }"
-        else
-          'undefined'
-        end
-        
+                             param_assignments = query_params.map do |param|
+                               "#{param.name}: request.#{param.name}"
+                             end
+                             "{ #{param_assignments.join(', ')} }"
+                           else
+                             'undefined'
+                           end
+
         # Build request body
         request_body_obj = body_param ? 'request.body' : 'undefined'
-        
+
         # Determine response type
         response_type_name = if response_type(endpoint)
-          "#{method_name.capitalize}Response"
-        else
-          'void'
-        end
-        
+                               "#{method_name.capitalize}Response"
+                             else
+                               'void'
+                             end
+
         # Build method signature and body
         method_signature = if has_params
-          "async #{method_name}(#{params.join(', ')}): Promise<ApiResponse<#{response_type_name}>>"
-        else
-          "async #{method_name}(): Promise<ApiResponse<#{response_type_name}>>"
-        end
-        
+                             "async #{method_name}(#{params.join(', ')}): Promise<ApiResponse<#{response_type_name}>>"
+                           else
+                             "async #{method_name}(): Promise<ApiResponse<#{response_type_name}>>"
+                           end
+
         # Build the actual path for the request
         actual_path = if path_params.any?
-          path.gsub(/:(\w+)/) { "${request.#{$1}}" }
-          "`#{path.gsub(/:(\w+)/, '${request.\1}')}`"
-        else
-          "'#{path}'"
-        end
-        
+                        path.gsub(/:(\w+)/) { "${request.#{::Regexp.last_match(1)}}" }
+                        "`#{path.gsub(/:(\w+)/, '${request.\1}')}`"
+                      else
+                        "'#{path}'"
+                      end
+
         method_body = []
         method_body << "  #{method_signature} {"
-        
+
         if has_params
           method_body << "    return this.request<#{response_type_name}>('#{http_method}', #{actual_path}, {"
-          
+
           request_options = []
           request_options << "params: #{query_params_obj}" if query_params.any?
           request_options << "body: #{request_body_obj}" if body_param
-          
-          if request_options.any?
-            method_body << "      #{request_options.join(',')}"
-          end
-          
-          method_body << "    });"
+
+          method_body << "      #{request_options.join(',')}" if request_options.any?
+
+          method_body << '    });'
         else
           method_body << "    return this.request<#{response_type_name}>('#{http_method}', '#{path}');"
         end
-        
-        method_body << "  }"
-        
+
+        method_body << '  }'
+
         method_body.join("\n")
       end
 

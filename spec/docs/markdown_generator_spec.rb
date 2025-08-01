@@ -9,32 +9,37 @@ RSpec.describe RapiTapir::Docs::MarkdownGenerator do
   let(:endpoints) do
     [
       RapiTapir.get('/users')
-        .ok(RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string})))
-        .summary('Get all users')
-        .description('Retrieve a list of all users')
-        .build,
+               .ok(RapiTapir::Types.array(RapiTapir::Types.hash({ 'id' => RapiTapir::Types.integer,
+                                                                  'name' => RapiTapir::Types.string })))
+               .summary('Get all users')
+               .description('Retrieve a list of all users')
+               .build,
 
       RapiTapir.get('/users/:id')
-        .path_param(:id, :integer)
-        .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
-        .summary('Get user by ID')
-        .description('Retrieve a specific user by their ID')
-        .build,
+               .path_param(:id, :integer)
+               .ok(RapiTapir::Types.hash({ 'id' => RapiTapir::Types.integer, 'name' => RapiTapir::Types.string,
+                                           'email' => RapiTapir::Types.string }))
+               .summary('Get user by ID')
+               .description('Retrieve a specific user by their ID')
+               .build,
 
       RapiTapir.post('/users')
-        .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
-        .created(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
-        .summary('Create user')
-        .description('Create a new user')
-        .build,
+               .json_body(RapiTapir::Types.hash({ 'name' => RapiTapir::Types.string,
+                                                  'email' => RapiTapir::Types.string }))
+               .created(RapiTapir::Types.hash({ 'id' => RapiTapir::Types.integer, 'name' => RapiTapir::Types.string,
+                                                'email' => RapiTapir::Types.string }))
+               .summary('Create user')
+               .description('Create a new user')
+               .build,
 
       RapiTapir.get('/users/search')
-        .query(:q, :string)
-        .query(:limit, :integer, required: false)
-        .ok(RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string})))
-        .summary('Search users')
-        .description('Search for users')
-        .build
+               .query(:q, :string)
+               .query(:limit, :integer, required: false)
+               .ok(RapiTapir::Types.array(RapiTapir::Types.hash({ 'id' => RapiTapir::Types.integer,
+                                                                  'name' => RapiTapir::Types.string })))
+               .summary('Search users')
+               .description('Search for users')
+               .build
     ]
   end
 
@@ -130,7 +135,7 @@ RSpec.describe RapiTapir::Docs::MarkdownGenerator do
 
     it 'saves generated markdown to file' do
       generator.save_to_file(temp_file.path)
-      
+
       content = File.read(temp_file.path)
       expect(content).to include('# Test API')
       expect(content).to include('## GET /users')

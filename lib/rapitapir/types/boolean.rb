@@ -5,18 +5,15 @@ require_relative 'base'
 module RapiTapir
   module Types
     class Boolean < Base
-      def initialize(**options)
-        super(**options)
-      end
-
       protected
 
       def validate_type(value)
-        return [] if value == true || value == false
+        return [] if [true, false].include?(value)
+
         ["Expected boolean (true or false), got #{value.class}"]
       end
 
-      def validate_constraints(value)
+      def validate_constraints(_value)
         # Boolean types don't have additional constraints beyond true/false
         []
       end

@@ -97,27 +97,27 @@ module RapiTapir
           counter(
             :http_requests_total,
             help: 'Total number of HTTP requests',
-            labels: [:method, :endpoint, :status]
+            labels: %i[method endpoint status]
           )
 
           histogram(
             :http_request_duration_seconds,
             help: 'HTTP request duration in seconds',
-            labels: [:method, :endpoint, :status]
+            labels: %i[method endpoint status]
           )
 
           # Error metrics
           counter(
             :http_errors_total,
             help: 'Total number of HTTP errors',
-            labels: [:method, :endpoint, :error_type]
+            labels: %i[method endpoint error_type]
           )
 
           # Active requests
           gauge(
             :http_active_requests,
             help: 'Number of active HTTP requests',
-            labels: [:method, :endpoint]
+            labels: %i[method endpoint]
           )
         end
       end
@@ -137,10 +137,10 @@ module RapiTapir
           @registry.histogram(:http_request_duration_seconds).observe(duration, labels: labels)
 
           # Record errors if present
-          if error_type
-            error_labels = merge_custom_labels(method: method, endpoint: endpoint, error_type: error_type)
-            @registry.counter(:http_errors_total).increment(labels: error_labels)
-          end
+          return unless error_type
+
+          error_labels = merge_custom_labels(method: method, endpoint: endpoint, error_type: error_type)
+          @registry.counter(:http_errors_total).increment(labels: error_labels)
         end
 
         def increment_active_requests(method:, endpoint:)
@@ -176,16 +176,19 @@ module RapiTapir
 
         def record_request(**args)
           return unless enabled?
+
           @collector&.record_request(**args)
         end
 
         def increment_active_requests(**args)
           return unless enabled?
+
           @collector&.increment_active_requests(**args)
         end
 
         def decrement_active_requests(**args)
           return unless enabled?
+
           @collector&.decrement_active_requests(**args)
         end
       end

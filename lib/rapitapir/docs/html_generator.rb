@@ -332,7 +332,7 @@ module RapiTapir
           summary = endpoint.metadata[:summary] || path
           anchor = generate_anchor(method, path)
           method_class = "method-#{method.downcase}"
-          
+
           <<~HTML
             <li>
               <a href="##{anchor}">
@@ -373,31 +373,21 @@ module RapiTapir
 
         # Path parameters
         path_params = endpoint.inputs.select { |input| input.kind == :path }
-        if path_params.any?
-          sections << generate_params_section("Path Parameters", path_params)
-        end
+        sections << generate_params_section('Path Parameters', path_params) if path_params.any?
 
         # Query parameters
         query_params = endpoint.inputs.select { |input| input.kind == :query }
-        if query_params.any?
-          sections << generate_params_section("Query Parameters", query_params)
-        end
+        sections << generate_params_section('Query Parameters', query_params) if query_params.any?
 
         # Request body
         body_param = endpoint.inputs.find { |input| input.kind == :body }
-        if body_param
-          sections << generate_body_section(body_param)
-        end
+        sections << generate_body_section(body_param) if body_param
 
         # Response
-        if endpoint.outputs.any?
-          sections << generate_response_section(endpoint.outputs)
-        end
+        sections << generate_response_section(endpoint.outputs) if endpoint.outputs.any?
 
         # Try it section
-        if config[:include_try_it]
-          sections << generate_try_it_section(endpoint)
-        end
+        sections << generate_try_it_section(endpoint) if config[:include_try_it]
 
         <<~HTML
           <div class="endpoint" id="#{anchor}">
@@ -406,8 +396,12 @@ module RapiTapir
                 <span class="method-badge #{method_class}">#{method}</span>
                 <span class="endpoint-path">#{path}</span>
               </div>
-              #{endpoint.metadata[:summary] ? "<div class=\"endpoint-summary\"><strong>#{endpoint.metadata[:summary]}</strong></div>" : ""}
-              #{endpoint.metadata[:description] ? "<div class=\"endpoint-description\">#{endpoint.metadata[:description]}</div>" : ""}
+              #{if endpoint.metadata[:summary]
+                  "<div class=\"endpoint-summary\"><strong>#{endpoint.metadata[:summary]}</strong></div>"
+                end}
+              #{if endpoint.metadata[:description]
+                  "<div class=\"endpoint-description\">#{endpoint.metadata[:description]}</div>"
+                end}
             </div>
             <div class="endpoint-content">
               #{sections.join}
@@ -418,10 +412,12 @@ module RapiTapir
 
       def generate_params_section(title, params)
         rows = params.map do |param|
-          required_badge = param.required? ? 
-            '<span class="required-badge">Required</span>' : 
-            '<span class="optional-badge">Optional</span>'
-          
+          required_badge = if param.required?
+                             '<span class="required-badge">Required</span>'
+                           else
+                             '<span class="optional-badge">Optional</span>'
+                           end
+
           <<~HTML
             <tr>
               <td><code class="param-name">#{param.name}</code></td>
@@ -454,7 +450,7 @@ module RapiTapir
 
       def generate_body_section(body_param)
         example = format_schema_example(body_param.type)
-        
+
         <<~HTML
           <div class="section">
             <h4>Request Body</h4>
@@ -491,12 +487,10 @@ module RapiTapir
         endpoint_id = generate_anchor(method, path).gsub('-', '_')
 
         # Generate form fields for parameters
-        form_fields = []
-
         # Path parameters
         path_params = endpoint.inputs.select { |input| input.kind == :path }
-        path_params.each do |param|
-          form_fields << <<~HTML
+        form_fields = path_params.map do |param|
+          <<~HTML
             <div class="form-group">
               <label for="#{endpoint_id}_#{param.name}">#{param.name} (path parameter)</label>
               <input type="text" id="#{endpoint_id}_#{param.name}" name="#{param.name}" placeholder="Enter #{param.name}" required>
@@ -548,16 +542,16 @@ module RapiTapir
           <script>
             async function tryRequest(endpointId, method, path) {
               event.preventDefault();
-              
+          #{'    '}
               const form = event.target;
               const formData = new FormData(form);
-              
+          #{'    '}
               // Build URL with path parameters
               let url = '#{config[:base_url]}' + path;
               const pathParams = {};
               const queryParams = {};
               let body = null;
-              
+          #{'    '}
               // Process form data
               for (const [key, value] of formData.entries()) {
                 if (key === 'body') {
@@ -575,18 +569,18 @@ module RapiTapir
                   queryParams[key] = value;
                 }
               }
-              
+          #{'    '}
               // Replace path parameters
               for (const [key, value] of Object.entries(pathParams)) {
                 url = url.replace(':' + key, encodeURIComponent(value));
               }
-              
+          #{'    '}
               // Add query parameters
               const queryString = new URLSearchParams(queryParams).toString();
               if (queryString) {
                 url += '?' + queryString;
               }
-              
+          #{'    '}
               // Prepare request options
               const options = {
                 method: method,
@@ -595,21 +589,21 @@ module RapiTapir
                   'Accept': 'application/json'
                 }
               };
-              
+          #{'    '}
               if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
                 options.body = JSON.stringify(body);
               }
-              
+          #{'    '}
               // Show loading state
               const responseDiv = document.getElementById(endpointId + '_response');
               const responseContent = document.getElementById(endpointId + '_response_content');
               responseDiv.style.display = 'block';
               responseContent.textContent = 'Loading...';
-              
+          #{'    '}
               try {
                 const response = await fetch(url, options);
                 const responseText = await response.text();
-                
+          #{'      '}
                 let responseData;
                 try {
                   responseData = JSON.parse(responseText);
@@ -631,7 +625,7 @@ module RapiTapir
                   ${error.message}
                 `;
               }
-              
+          #{'    '}
               return false;
             }
           </script>
@@ -648,7 +642,7 @@ module RapiTapir
           if schema.length == 1
             JSON.pretty_generate([generate_example_value(schema.first)])
           else
-            "[]"
+            '[]'
           end
         else
           generate_example_value(schema).to_s
@@ -657,15 +651,15 @@ module RapiTapir
 
       def generate_example_value(type)
         case type
-        when :string, String then "example string"
+        when :string, String then 'example string'
         when :integer, Integer then 123
         when :float, Float then 123.45
         when :boolean then true
-        when :date then "2025-01-15"
-        when :datetime then "2025-01-15T10:30:00Z"
+        when :date then '2025-01-15'
+        when :datetime then '2025-01-15T10:30:00Z'
         when Hash then type.transform_values { |v| generate_example_value(v) }
         when Array then type.length == 1 ? [generate_example_value(type.first)] : []
-        else "example"
+        else 'example'
         end
       end
 
@@ -694,11 +688,11 @@ module RapiTapir
 
       def html_escape(text)
         text.to_s
-          .gsub('&', '&amp;')
-          .gsub('<', '&lt;')
-          .gsub('>', '&gt;')
-          .gsub('"', '&quot;')
-          .gsub("'", '&#39;')
+            .gsub('&', '&amp;')
+            .gsub('<', '&lt;')
+            .gsub('>', '&gt;')
+            .gsub('"', '&quot;')
+            .gsub("'", '&#39;')
       end
     end
   end

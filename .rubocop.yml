@@ -1,0 +1,57 @@
+# RuboCop configuration for RapiTapir
+AllCops:
+  TargetRubyVersion: 3.0
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - 'vendor/**/*'
+    - 'tmp/**/*'
+    - 'bin/*'
+    - '.bundle/**/*'
+
+# Allow large blocks in specs and examples
+Metrics/BlockLength:
+  Enabled: false
+
+# Allow large classes in examples
+Metrics/ClassLength:
+  Enabled: false
+
+# Allow larger methods in examples
+Metrics/MethodLength:
+  Enabled: false
+
+# Allow top-level include/extend in examples
+Style/MixinUsage:
+  Exclude:
+    - 'examples/**/*'
+    - 'spec/**/*'
+
+# Documentation is not required for examples/demo files
+Style/Documentation:
+  Exclude:
+    - 'examples/**/*'
+    - 'spec/**/*'
+
+# Allow class variables in examples/demos
+Style/ClassVars:
+  Exclude:
+    - 'examples/**/*'
+
+# Line length is reasonable for API definitions
+Layout/LineLength:
+  Max: 120
+  Exclude:
+    - 'spec/**/*'
+
+# Disable some newer cops that may cause issues
+Gemspec/AddRuntimeDependency:
+  Enabled: false
+Gemspec/AttributeAssignment:
+  Enabled: false
+Gemspec/DeprecatedAttributeAssignment:
+  Enabled: false
+Gemspec/DevelopmentDependencies:
+  Enabled: false
+Gemspec/RequireMFA:
+  Enabled: false

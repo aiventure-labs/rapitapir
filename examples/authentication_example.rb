@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Example: Authentication and Security in RapiTapir
-# 
+#
 # This example demonstrates how to use RapiTapir's Phase 2.2 Authentication & Security features,
 # including various authentication schemes, authorization middleware, and security features.
 
@@ -13,16 +13,16 @@ def create_simple_jwt(payload, secret)
   require 'base64'
   require 'json'
   require 'openssl'
-  
+
   header = { 'alg' => 'HS256', 'typ' => 'JWT' }
-  
+
   encoded_header = Base64.urlsafe_encode64(JSON.generate(header)).tr('=', '')
   encoded_payload = Base64.urlsafe_encode64(JSON.generate(payload)).tr('=', '')
-  
+
   signature = Base64.urlsafe_encode64(
     OpenSSL::HMAC.digest('SHA256', secret, "#{encoded_header}.#{encoded_payload}")
   ).tr('=', '')
-  
+
   "#{encoded_header}.#{encoded_payload}.#{signature}"
 end
 
@@ -37,50 +37,46 @@ end
 
 # Create authentication schemes
 bearer_auth = RapiTapir::Auth.bearer_token(:bearer, {
-  token_validator: proc do |token|
-    # Validate token against your database or service
-    case token
-    when 'valid-token-123'
-      { 
-        user: { id: 123, name: 'John Doe', email: 'john@example.com' },
-        scopes: ['read', 'write']
-      }
-    when 'admin-token-456'
-      {
-        user: { id: 456, name: 'Admin User', email: 'admin@example.com' },
-        scopes: ['read', 'write', 'admin']
-      }
-    else
-      nil
-    end
-  end
-})
+                                             token_validator: proc do |token|
+                                               # Validate token against your database or service
+                                               case token
+                                               when 'valid-token-123'
+                                                 {
+                                                   user: { id: 123, name: 'John Doe', email: 'john@example.com' },
+                                                   scopes: %w[read write]
+                                                 }
+                                               when 'admin-token-456'
+                                                 {
+                                                   user: { id: 456, name: 'Admin User', email: 'admin@example.com' },
+                                                   scopes: %w[read write admin]
+                                                 }
+                                               end
+                                             end
+                                           })
 
 api_key_auth = RapiTapir::Auth.api_key(:api_key, {
-  header_name: 'X-API-Key',
-  key_validator: proc do |key|
-    # Validate API key
-    case key
-    when 'api-key-789'
-      {
-        user: { id: 'api-user', name: 'API Client' },
-        scopes: ['read']
-      }
-    else
-      nil
-    end
-  end
-})
+                                         header_name: 'X-API-Key',
+                                         key_validator: proc do |key|
+                                           # Validate API key
+                                           case key
+                                           when 'api-key-789'
+                                             {
+                                               user: { id: 'api-user', name: 'API Client' },
+                                               scopes: ['read']
+                                             }
+                                           end
+                                         end
+                                       })
 
 jwt_auth = RapiTapir::Auth.jwt(:jwt, {
-  secret: 'your-jwt-secret',
-  algorithm: 'HS256'
-})
+                                 secret: 'your-jwt-secret',
+                                 algorithm: 'HS256'
+                               })
 
 # Usage examples:
 
 # 1. Test authentication manually
-puts "=== Authentication Examples ==="
+puts '=== Authentication Examples ==='
 
 # Create a mock request for Bearer token
 bearer_request = OpenStruct.new(
@@ -109,7 +105,7 @@ puts "\n=== JWT Authentication Example ==="
 jwt_payload = {
   'sub' => 'user123',
   'name' => 'JWT User',
-  'scopes' => ['read', 'write'],
+  'scopes' => %w[read write],
   'exp' => Time.now.to_i + 3600
 }
 
@@ -130,7 +126,7 @@ puts "\n=== Context Store Example ==="
 
 test_context = RapiTapir::Auth::Context.new(
   user: { id: 999, name: 'Test User' },
-  scopes: ['read', 'write'],
+  scopes: %w[read write],
   token: 'test-token'
 )
 
@@ -154,10 +150,10 @@ puts "Rate limit count: #{storage.get('test_key')}"
 
 # Test CORS functionality
 cors_middleware = RapiTapir::Auth.cors_middleware({
-  allowed_origins: ['https://example.com'],
-  allowed_methods: ['GET', 'POST'],
-  allow_credentials: true
-})
+                                                    allowed_origins: ['https://example.com'],
+                                                    allowed_methods: %w[GET POST],
+                                                    allow_credentials: true
+                                                  })
 
 puts "CORS middleware created: #{cors_middleware.class}"
 
@@ -166,7 +162,7 @@ puts "\n=== Authorization Examples ==="
 
 admin_context = RapiTapir::Auth::Context.new(
   user: { id: 123, name: 'Admin' },
-  scopes: ['read', 'write', 'admin']
+  scopes: %w[read write admin]
 )
 
 regular_context = RapiTapir::Auth::Context.new(
@@ -183,14 +179,14 @@ RapiTapir::Auth::ContextStore.with_context(regular_context) do
 end
 
 puts "\n=== Phase 2.2 Authentication & Security System Complete ==="
-puts "✅ Bearer Token Authentication"
-puts "✅ API Key Authentication"  
-puts "✅ Basic Authentication"
-puts "✅ OAuth2 Authentication"
-puts "✅ JWT Authentication"
-puts "✅ Authorization Middleware"
-puts "✅ Rate Limiting"
-puts "✅ CORS Support"
-puts "✅ Security Headers"
-puts "✅ Context Management"
-puts "✅ Comprehensive Test Suite (91 tests)"
+puts '✅ Bearer Token Authentication'
+puts '✅ API Key Authentication'
+puts '✅ Basic Authentication'
+puts '✅ OAuth2 Authentication'
+puts '✅ JWT Authentication'
+puts '✅ Authorization Middleware'
+puts '✅ Rate Limiting'
+puts '✅ CORS Support'
+puts '✅ Security Headers'
+puts '✅ Context Management'
+puts '✅ Comprehensive Test Suite (91 tests)'

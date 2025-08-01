@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Enterprise-grade Sinatra API with RapiTapir - Using SinatraAdapter
-# 
+#
 # This example demonstrates a production-ready Sinatra application with:
 # - Bearer Token Authentication
 # - Auto-generated OpenAPI 3.0 documentation from RapiTapir endpoint definitions
@@ -24,14 +24,14 @@ class UserDatabase
       name: 'John Doe',
       email: 'john.doe@example.com',
       role: 'user',
-      scopes: ['read', 'write']
+      scopes: %w[read write]
     },
     'admin-token-456' => {
       id: 2,
       name: 'Jane Admin',
       email: 'jane.admin@example.com',
       role: 'admin',
-      scopes: ['read', 'write', 'admin', 'delete']
+      scopes: %w[read write admin delete]
     },
     'readonly-token-789' => {
       id: 3,
@@ -58,9 +58,12 @@ end
 # Task Database (In production, use a real database)
 class TaskDatabase
   @@tasks = [
-    { id: 1, title: 'Setup CI/CD Pipeline', description: 'Configure automated testing and deployment', status: 'in_progress', assignee_id: 1, created_at: Time.now - 86400 },
-    { id: 2, title: 'Review Security Audit', description: 'Complete quarterly security review', status: 'pending', assignee_id: 2, created_at: Time.now - 3600 },
-    { id: 3, title: 'Update Documentation', description: 'Refresh API documentation', status: 'completed', assignee_id: 1, created_at: Time.now - 172800 }
+    { id: 1, title: 'Setup CI/CD Pipeline', description: 'Configure automated testing and deployment',
+      status: 'in_progress', assignee_id: 1, created_at: Time.now - 86_400 },
+    { id: 2, title: 'Review Security Audit', description: 'Complete quarterly security review', status: 'pending',
+      assignee_id: 2, created_at: Time.now - 3600 },
+    { id: 3, title: 'Update Documentation', description: 'Refresh API documentation', status: 'completed',
+      assignee_id: 1, created_at: Time.now - 172_800 }
   ]
   @@next_id = 4
 
@@ -82,7 +85,7 @@ class TaskDatabase
   def self.update(id, attrs)
     task = find(id)
     return nil unless task
-    
+
     attrs.each { |key, value| task[key] = value }
     task[:updated_at] = Time.now
     task
@@ -103,145 +106,145 @@ module TaskAPI
 
   # Define schemas using RapiTapir types
   TASK_SCHEMA = RapiTapir::Types.hash({
-    "id" => RapiTapir::Types.integer,
-    "title" => RapiTapir::Types.string,
-    "description" => RapiTapir::Types.string,
-    "status" => RapiTapir::Types.string,
-    "assignee_id" => RapiTapir::Types.integer,
-    "created_at" => RapiTapir::Types.string,
-    "updated_at" => RapiTapir::Types.optional(RapiTapir::Types.string)
-  })
+                                        'id' => RapiTapir::Types.integer,
+                                        'title' => RapiTapir::Types.string,
+                                        'description' => RapiTapir::Types.string,
+                                        'status' => RapiTapir::Types.string,
+                                        'assignee_id' => RapiTapir::Types.integer,
+                                        'created_at' => RapiTapir::Types.string,
+                                        'updated_at' => RapiTapir::Types.optional(RapiTapir::Types.string)
+                                      })
 
   TASK_CREATE_SCHEMA = RapiTapir::Types.hash({
-    "title" => RapiTapir::Types.string,
-    "description" => RapiTapir::Types.string,
-    "status" => RapiTapir::Types.optional(RapiTapir::Types.string),
-    "assignee_id" => RapiTapir::Types.integer
-  })
+                                               'title' => RapiTapir::Types.string,
+                                               'description' => RapiTapir::Types.string,
+                                               'status' => RapiTapir::Types.optional(RapiTapir::Types.string),
+                                               'assignee_id' => RapiTapir::Types.integer
+                                             })
 
   TASK_UPDATE_SCHEMA = RapiTapir::Types.hash({
-    "title" => RapiTapir::Types.optional(RapiTapir::Types.string),
-    "description" => RapiTapir::Types.optional(RapiTapir::Types.string),
-    "status" => RapiTapir::Types.optional(RapiTapir::Types.string),
-    "assignee_id" => RapiTapir::Types.optional(RapiTapir::Types.integer)
-  })
+                                               'title' => RapiTapir::Types.optional(RapiTapir::Types.string),
+                                               'description' => RapiTapir::Types.optional(RapiTapir::Types.string),
+                                               'status' => RapiTapir::Types.optional(RapiTapir::Types.string),
+                                               'assignee_id' => RapiTapir::Types.optional(RapiTapir::Types.integer)
+                                             })
 
   USER_SCHEMA = RapiTapir::Types.hash({
-    "id" => RapiTapir::Types.integer,
-    "name" => RapiTapir::Types.string,
-    "email" => RapiTapir::Types.string,
-    "role" => RapiTapir::Types.string,
-    "scopes" => RapiTapir::Types.array(RapiTapir::Types.string)
-  })
+                                        'id' => RapiTapir::Types.integer,
+                                        'name' => RapiTapir::Types.string,
+                                        'email' => RapiTapir::Types.string,
+                                        'role' => RapiTapir::Types.string,
+                                        'scopes' => RapiTapir::Types.array(RapiTapir::Types.string)
+                                      })
 
   ERROR_SCHEMA = RapiTapir::Types.hash({
-    "error" => RapiTapir::Types.string
-  })
+                                         'error' => RapiTapir::Types.string
+                                       })
 
   HEALTH_SCHEMA = RapiTapir::Types.hash({
-    "status" => RapiTapir::Types.string,
-    "timestamp" => RapiTapir::Types.string,
-    "version" => RapiTapir::Types.string,
-    "uptime" => RapiTapir::Types.integer,
-    "authentication" => RapiTapir::Types.string,
-    "features" => RapiTapir::Types.array(RapiTapir::Types.string)
-  })
+                                          'status' => RapiTapir::Types.string,
+                                          'timestamp' => RapiTapir::Types.string,
+                                          'version' => RapiTapir::Types.string,
+                                          'uptime' => RapiTapir::Types.integer,
+                                          'authentication' => RapiTapir::Types.string,
+                                          'features' => RapiTapir::Types.array(RapiTapir::Types.string)
+                                        })
 
   # Define all API endpoints using RapiTapir DSL
   def self.endpoints
     @endpoints ||= [
       # Health check endpoint (public)
       RapiTapir.get('/health')
-        .summary('Health check')
-        .description('Returns the health status of the API')
-        .ok(HEALTH_SCHEMA)
-        .build,
+               .summary('Health check')
+               .description('Returns the health status of the API')
+               .ok(HEALTH_SCHEMA)
+               .build,
 
       # List tasks endpoint
       RapiTapir.get('/api/v1/tasks')
-        .summary('List all tasks')
-        .description('Retrieve a list of all tasks in the system. Requires read permission.')
-        .query(:status, RapiTapir::Types.optional(RapiTapir::Types.string), description: 'Filter by task status')
-        .query(:assignee_id, RapiTapir::Types.optional(RapiTapir::Types.integer), description: 'Filter by assignee ID')
-        .query(:limit, RapiTapir::Types.optional(RapiTapir::Types.integer), description: 'Maximum number of results')
-        .query(:offset, RapiTapir::Types.optional(RapiTapir::Types.integer), description: 'Number of results to skip')
-        .ok(RapiTapir::Types.array(TASK_SCHEMA))
-        .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
-        .error_response(403, ERROR_SCHEMA, description: 'Insufficient permissions')
-        .build,
+               .summary('List all tasks')
+               .description('Retrieve a list of all tasks in the system. Requires read permission.')
+               .query(:status, RapiTapir::Types.optional(RapiTapir::Types.string), description: 'Filter by task status')
+               .query(:assignee_id, RapiTapir::Types.optional(RapiTapir::Types.integer), description: 'Filter by assignee ID')
+               .query(:limit, RapiTapir::Types.optional(RapiTapir::Types.integer), description: 'Maximum number of results')
+               .query(:offset, RapiTapir::Types.optional(RapiTapir::Types.integer), description: 'Number of results to skip')
+               .ok(RapiTapir::Types.array(TASK_SCHEMA))
+               .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
+               .error_response(403, ERROR_SCHEMA, description: 'Insufficient permissions')
+               .build,
 
       # Get specific task endpoint
       RapiTapir.get('/api/v1/tasks/:id')
-        .summary('Get a specific task')
-        .description('Retrieve details of a specific task by ID. Requires read permission.')
-        .path_param(:id, RapiTapir::Types.integer, description: 'Task ID')
-        .ok(TASK_SCHEMA)
-        .error_response(404, ERROR_SCHEMA, description: 'Task not found')
-        .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
-        .build,
+               .summary('Get a specific task')
+               .description('Retrieve details of a specific task by ID. Requires read permission.')
+               .path_param(:id, RapiTapir::Types.integer, description: 'Task ID')
+               .ok(TASK_SCHEMA)
+               .error_response(404, ERROR_SCHEMA, description: 'Task not found')
+               .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
+               .build,
 
       # Create task endpoint
       RapiTapir.post('/api/v1/tasks')
-        .summary('Create a new task')
-        .description('Create a new task in the system. Requires write permission.')
-        .json_body(TASK_CREATE_SCHEMA)
-        .created(TASK_SCHEMA)
-        .error_response(400, ERROR_SCHEMA, description: 'Validation error')
-        .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
-        .error_response(403, ERROR_SCHEMA, description: 'Insufficient permissions')
-        .build,
+               .summary('Create a new task')
+               .description('Create a new task in the system. Requires write permission.')
+               .json_body(TASK_CREATE_SCHEMA)
+               .created(TASK_SCHEMA)
+               .error_response(400, ERROR_SCHEMA, description: 'Validation error')
+               .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
+               .error_response(403, ERROR_SCHEMA, description: 'Insufficient permissions')
+               .build,
 
       # Update task endpoint
       RapiTapir.put('/api/v1/tasks/:id')
-        .summary('Update a task')
-        .description('Update an existing task. Requires write permission.')
-        .path_param(:id, RapiTapir::Types.integer, description: 'Task ID')
-        .json_body(TASK_UPDATE_SCHEMA)
-        .ok(TASK_SCHEMA)
-        .error_response(404, ERROR_SCHEMA, description: 'Task not found')
-        .error_response(400, ERROR_SCHEMA, description: 'Validation error')
-        .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
-        .error_response(403, ERROR_SCHEMA, description: 'Insufficient permissions')
-        .build,
+               .summary('Update a task')
+               .description('Update an existing task. Requires write permission.')
+               .path_param(:id, RapiTapir::Types.integer, description: 'Task ID')
+               .json_body(TASK_UPDATE_SCHEMA)
+               .ok(TASK_SCHEMA)
+               .error_response(404, ERROR_SCHEMA, description: 'Task not found')
+               .error_response(400, ERROR_SCHEMA, description: 'Validation error')
+               .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
+               .error_response(403, ERROR_SCHEMA, description: 'Insufficient permissions')
+               .build,
 
       # Delete task endpoint
       RapiTapir.delete('/api/v1/tasks/:id')
-        .summary('Delete a task')
-        .description('Delete a task from the system. Requires admin permission.')
-        .path_param(:id, RapiTapir::Types.integer, description: 'Task ID')
-        .no_content(description: 'Task deleted successfully')
-        .error_response(404, ERROR_SCHEMA, description: 'Task not found')
-        .error_response(403, ERROR_SCHEMA, description: 'Admin permission required')
-        .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
-        .build,
+               .summary('Delete a task')
+               .description('Delete a task from the system. Requires admin permission.')
+               .path_param(:id, RapiTapir::Types.integer, description: 'Task ID')
+               .no_content(description: 'Task deleted successfully')
+               .error_response(404, ERROR_SCHEMA, description: 'Task not found')
+               .error_response(403, ERROR_SCHEMA, description: 'Admin permission required')
+               .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
+               .build,
 
       # User profile endpoint
       RapiTapir.get('/api/v1/profile')
-        .summary('Get current user profile')
-        .description('Retrieve the profile of the authenticated user')
-        .ok(RapiTapir::Types.hash({
-          "id" => RapiTapir::Types.integer,
-          "name" => RapiTapir::Types.string,
-          "email" => RapiTapir::Types.string,
-          "role" => RapiTapir::Types.string,
-          "scopes" => RapiTapir::Types.array(RapiTapir::Types.string),
-          "tasks" => RapiTapir::Types.array(RapiTapir::Types.hash({
-            "id" => RapiTapir::Types.integer,
-            "title" => RapiTapir::Types.string,
-            "status" => RapiTapir::Types.string
-          }))
-        }))
-        .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
-        .build,
+               .summary('Get current user profile')
+               .description('Retrieve the profile of the authenticated user')
+               .ok(RapiTapir::Types.hash({
+                                           'id' => RapiTapir::Types.integer,
+                                           'name' => RapiTapir::Types.string,
+                                           'email' => RapiTapir::Types.string,
+                                           'role' => RapiTapir::Types.string,
+                                           'scopes' => RapiTapir::Types.array(RapiTapir::Types.string),
+                                           'tasks' => RapiTapir::Types.array(RapiTapir::Types.hash({
+                                                                                                     'id' => RapiTapir::Types.integer,
+                                                                                                     'title' => RapiTapir::Types.string,
+                                                                                                     'status' => RapiTapir::Types.string
+                                                                                                   }))
+                                         }))
+               .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
+               .build,
 
       # Admin users endpoint
       RapiTapir.get('/api/v1/admin/users')
-        .summary('List all users (admin only)')
-        .description('Retrieve a list of all users in the system. Requires admin permission.')
-        .ok(RapiTapir::Types.array(USER_SCHEMA))
-        .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
-        .error_response(403, ERROR_SCHEMA, description: 'Admin permission required')
-        .build
+               .summary('List all users (admin only)')
+               .description('Retrieve a list of all users in the system. Requires admin permission.')
+               .ok(RapiTapir::Types.array(USER_SCHEMA))
+               .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
+               .error_response(403, ERROR_SCHEMA, description: 'Admin permission required')
+               .build
     ]
   end
 
@@ -249,7 +252,7 @@ module TaskAPI
   def self.openapi_spec
     @openapi_spec ||= begin
       require_relative '../lib/rapitapir/openapi/schema_generator'
-      
+
       generator = RapiTapir::OpenAPI::SchemaGenerator.new(
         endpoints: endpoints,
         info: {
@@ -277,7 +280,7 @@ module TaskAPI
           }
         ]
       )
-      
+
       # Add security schemes to the spec
       spec = generator.generate
       spec[:components] ||= {}
@@ -289,16 +292,16 @@ module TaskAPI
           description: 'Enter your bearer token (e.g., user-token-123)'
         }
       }
-      
+
       # Add security requirement to all endpoints except health
       spec[:paths].each do |path, methods|
         next if path == '/health'
-        
-        methods.each do |method, operation|
+
+        methods.each_value do |operation|
           operation[:security] = [{ bearerAuth: [] }]
         end
       end
-      
+
       spec
     end
   end
@@ -308,7 +311,7 @@ end
 class EnterpriseTaskAPI < Sinatra::Base
   def initialize
     super
-    
+
     configure do
       set :show_exceptions, false
       set :raise_errors, false
@@ -317,17 +320,17 @@ class EnterpriseTaskAPI < Sinatra::Base
 
     # Setup authentication scheme
     bearer_auth = RapiTapir::Auth.bearer_token(:bearer, {
-      realm: 'Enterprise Task Management API',
-      token_validator: proc do |token|
-        user = UserDatabase.find_by_token(token)
-        next nil unless user
+                                                 realm: 'Enterprise Task Management API',
+                                                 token_validator: proc do |token|
+                                                   user = UserDatabase.find_by_token(token)
+                                                   next nil unless user
 
-        {
-          user: user,
-          scopes: user[:scopes]
-        }
-      end
-    })
+                                                   {
+                                                     user: user,
+                                                     scopes: user[:scopes]
+                                                   }
+                                                 end
+                                               })
 
     auth_schemes = { bearer: bearer_auth }
 
@@ -335,8 +338,8 @@ class EnterpriseTaskAPI < Sinatra::Base
     use RapiTapir::Auth::Middleware::SecurityHeadersMiddleware
     use RapiTapir::Auth::Middleware::CorsMiddleware, {
       allowed_origins: ['http://localhost:3000', 'https://app.example.com'],
-      allowed_methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowed_headers: ['Authorization', 'Content-Type', 'Accept'],
+      allowed_methods: %w[GET POST PUT DELETE PATCH OPTIONS],
+      allowed_headers: %w[Authorization Content-Type Accept],
       allow_credentials: true
     }
     use RapiTapir::Auth::Middleware::RateLimitingMiddleware, {
@@ -356,19 +359,19 @@ class EnterpriseTaskAPI < Sinatra::Base
   end
 
   def require_scope(scope)
-    unless RapiTapir::Auth.has_scope?(scope)
-      json_response(403, { error: "#{scope.capitalize} permission required" })
-    end
+    return if RapiTapir::Auth.has_scope?(scope)
+
+    json_response(403, { error: "#{scope.capitalize} permission required" })
   end
 
   def require_authenticated
-    unless RapiTapir::Auth.authenticated?
-      json_response(401, { error: 'Authentication required' })
-    end
+    return if RapiTapir::Auth.authenticated?
+
+    json_response(401, { error: 'Authentication required' })
   end
 
   def parse_json_body
-    if request.content_type&.include?('application/json') && request.body.read.length > 0
+    if request.content_type&.include?('application/json') && request.body.read.length.positive?
       request.body.rewind
       JSON.parse(request.body.read, symbolize_names: true)
     else
@@ -399,7 +402,7 @@ class EnterpriseTaskAPI < Sinatra::Base
   def get_endpoint_handler(endpoint)
     case endpoint.path
     when '/health'
-      proc do |inputs|
+      proc do |_inputs|
         {
           status: 'healthy',
           timestamp: Time.now.iso8601,
@@ -417,21 +420,17 @@ class EnterpriseTaskAPI < Sinatra::Base
           require_scope('read')
 
           tasks = TaskDatabase.all
-          
+
           # Apply filters
-          if inputs[:status]
-            tasks = tasks.select { |task| task[:status] == inputs[:status] }
-          end
-          
-          if inputs[:assignee_id]
-            tasks = tasks.select { |task| task[:assignee_id] == inputs[:assignee_id] }
-          end
-          
+          tasks = tasks.select { |task| task[:status] == inputs[:status] } if inputs[:status]
+
+          tasks = tasks.select { |task| task[:assignee_id] == inputs[:assignee_id] } if inputs[:assignee_id]
+
           # Apply pagination
           limit = inputs[:limit] || 50
           offset = inputs[:offset] || 0
           tasks = tasks.drop(offset).take(limit)
-          
+
           # Format timestamps
           tasks.map { |task| format_task(task) }
         end
@@ -441,7 +440,7 @@ class EnterpriseTaskAPI < Sinatra::Base
           require_scope('write')
 
           body = inputs[:body] || {}
-          
+
           # Validate required fields - now handled by RapiTapir type validation
           # Create task
           task_data = {
@@ -450,7 +449,7 @@ class EnterpriseTaskAPI < Sinatra::Base
             status: body['status'] || 'pending',
             assignee_id: body['assignee_id']
           }
-          
+
           task = TaskDatabase.create(task_data)
           format_task(task)
         end
@@ -469,12 +468,14 @@ class EnterpriseTaskAPI < Sinatra::Base
           # Enrich with assignee details
           assignee = UserDatabase.find_by_id(task[:assignee_id])
           task_with_assignee = format_task(task)
-          task_with_assignee[:assignee] = assignee ? {
-            id: assignee[:id],
-            name: assignee[:name],
-            email: assignee[:email]
-          } : nil
-          
+          task_with_assignee[:assignee] = if assignee
+                                            {
+                                              id: assignee[:id],
+                                              name: assignee[:name],
+                                              email: assignee[:email]
+                                            }
+                                          end
+
           task_with_assignee
         end
       when :put
@@ -487,13 +488,13 @@ class EnterpriseTaskAPI < Sinatra::Base
 
           body = inputs[:body] || {}
           update_data = {}
-          
+
           # Prepare update data - validation handled by RapiTapir
           update_data[:title] = body['title'] if body['title']
           update_data[:description] = body['description'] if body['description']
           update_data[:status] = body['status'] if body['status']
           update_data[:assignee_id] = body['assignee_id'] if body['assignee_id']
-          
+
           # Update task
           updated_task = TaskDatabase.update(inputs[:id], update_data)
           format_task(updated_task)
@@ -513,11 +514,11 @@ class EnterpriseTaskAPI < Sinatra::Base
       end
 
     when '/api/v1/profile'
-      proc do |inputs|
+      proc do |_inputs|
         require_authenticated
 
         current_user = RapiTapir::Auth.current_user
-        
+
         # Get user's assigned tasks
         user_tasks = TaskDatabase.by_assignee(current_user[:id]).map do |task|
           {
@@ -526,14 +527,14 @@ class EnterpriseTaskAPI < Sinatra::Base
             status: task[:status]
           }
         end
-        
+
         profile = current_user.dup
         profile[:tasks] = user_tasks
         profile
       end
 
     when '/api/v1/admin/users'
-      proc do |inputs|
+      proc do |_inputs|
         require_authenticated
         require_scope('admin')
 
@@ -541,7 +542,7 @@ class EnterpriseTaskAPI < Sinatra::Base
       end
 
     else
-      proc do |inputs|
+      proc do |_inputs|
         halt 404, { error: 'Endpoint not implemented' }.to_json
       end
     end
@@ -618,10 +619,10 @@ class EnterpriseTaskAPI < Sinatra::Base
   error do |e|
     content_type :json
     status 500
-    JSON.generate({ 
-      error: 'Internal server error',
-      message: development? ? e.message : 'Something went wrong'
-    })
+    JSON.generate({
+                    error: 'Internal server error',
+                    message: development? ? e.message : 'Something went wrong'
+                  })
   end
 
   # 404 handler
@@ -633,27 +634,25 @@ class EnterpriseTaskAPI < Sinatra::Base
   # Start server info
   configure :development do
     puts "\n🚀 Enterprise Task Management API Starting..."
-    puts "📚 API Documentation: http://localhost:4567/docs"
-    puts "📋 OpenAPI Spec (Auto-generated): http://localhost:4567/openapi.json"
-    puts "❤️  Health Check: http://localhost:4567/health"
+    puts '📚 API Documentation: http://localhost:4567/docs'
+    puts '📋 OpenAPI Spec (Auto-generated): http://localhost:4567/openapi.json'
+    puts '❤️  Health Check: http://localhost:4567/health'
     puts "\n🔑 Available Bearer Tokens:"
-    puts "   User Token: user-token-123 (scopes: read, write)"
-    puts "   Admin Token: admin-token-456 (scopes: read, write, admin, delete)"
-    puts "   Read-only Token: readonly-token-789 (scopes: read)"
+    puts '   User Token: user-token-123 (scopes: read, write)'
+    puts '   Admin Token: admin-token-456 (scopes: read, write, admin, delete)'
+    puts '   Read-only Token: readonly-token-789 (scopes: read)'
     puts "\n📖 Example API Calls:"
     puts "   curl -H 'Authorization: Bearer user-token-123' http://localhost:4567/api/v1/tasks"
     puts "   curl -H 'Authorization: Bearer admin-token-456' http://localhost:4567/api/v1/admin/users"
     puts "   curl -X POST -H 'Authorization: Bearer user-token-123' -H 'Content-Type: application/json' \\"
     puts "        -d '{\"title\":\"New Task\",\"description\":\"Test task\",\"assignee_id\":1}' \\"
-    puts "        http://localhost:4567/api/v1/tasks"
+    puts '        http://localhost:4567/api/v1/tasks'
     puts "\n✨ Features: SinatraAdapter, Bearer Auth, Rate Limiting, CORS, Security Headers"
     puts "🎯 RapiTapir: #{TaskAPI.endpoints.size} endpoints auto-registered with full type safety"
-    puts "🔧 Architecture: Routes handled by SinatraAdapter with automatic input/output validation"
-    puts ""
+    puts '🔧 Architecture: Routes handled by SinatraAdapter with automatic input/output validation'
+    puts ''
   end
 end
 
 # Start the server if this file is run directly
-if __FILE__ == $0
-  EnterpriseTaskAPI.run!
-end
+EnterpriseTaskAPI.run! if __FILE__ == $PROGRAM_NAME

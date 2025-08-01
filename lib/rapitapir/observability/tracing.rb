@@ -27,11 +27,9 @@ module RapiTapir
             tracer = OpenTelemetry.tracer_provider.tracer(@service_name, @service_version)
             span = tracer.start_span(name, kind: kind, attributes: attributes)
             OpenTelemetry::Context.with_current_span(span) do
-              begin
-                yield(span)
-              ensure
-                span.finish
-              end
+              yield(span)
+            ensure
+              span.finish
             end
           end
         end
@@ -48,16 +46,19 @@ module RapiTapir
 
         def add_event(name, attributes: {})
           return unless enabled?
+
           current_span.add_event(name, attributes: attributes)
         end
 
         def set_attribute(key, value)
           return unless enabled?
+
           current_span.set_attribute(key, value)
         end
 
         def record_exception(exception)
           return unless enabled?
+
           current_span.record_exception(exception)
         end
 
@@ -68,18 +69,16 @@ module RapiTapir
         end
 
         def configure_opentelemetry
-          begin
-            require 'opentelemetry/sdk'
-            require 'opentelemetry/instrumentation/all'
+          require 'opentelemetry/sdk'
+          require 'opentelemetry/instrumentation/all'
 
-            OpenTelemetry::SDK.configure do |c|
-              c.service_name = @service_name
-              c.service_version = @service_version
-              c.use_all() # Use all available instrumentation
-            end
-          rescue LoadError
-            warn "OpenTelemetry SDK not available. Install 'opentelemetry-sdk' and 'opentelemetry-instrumentation-all' gems."
+          OpenTelemetry::SDK.configure do |c|
+            c.service_name = @service_name
+            c.service_version = @service_version
+            c.use_all # Use all available instrumentation
           end
+        rescue LoadError
+          warn "OpenTelemetry SDK not available. Install 'opentelemetry-sdk' and 'opentelemetry-instrumentation-all' gems."
         end
       end
 
@@ -102,28 +101,33 @@ module RapiTapir
           RapiTapir::Observability.config.tracing.enabled
         end
 
-        def start_span(name, **options, &block)
+        def start_span(name, ...)
           return yield(NoOpSpan.new) unless enabled?
-          @tracer&.start_span(name, **options, &block)
+
+          @tracer&.start_span(name, ...)
         end
 
         def current_span
           return NoOpSpan.new unless enabled?
+
           @tracer&.current_span || NoOpSpan.new
         end
 
         def add_event(name, attributes: {})
           return unless enabled?
+
           @tracer&.add_event(name, attributes: attributes)
         end
 
         def set_attribute(key, value)
           return unless enabled?
+
           @tracer&.set_attribute(key, value)
         end
 
         def record_exception(exception)
           return unless enabled?
+
           @tracer&.record_exception(exception)
         end
       end

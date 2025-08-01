@@ -8,24 +8,28 @@ RSpec.describe 'Phase 3 Integration Tests' do
   let(:test_endpoints) do
     [
       RapiTapir.get('/users')
-        .ok(RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string})))
-        .summary('Get all users')
-        .description('Retrieve a list of all users')
-        .build,
+               .ok(RapiTapir::Types.array(RapiTapir::Types.hash({ 'id' => RapiTapir::Types.integer,
+                                                                  'name' => RapiTapir::Types.string, 'email' => RapiTapir::Types.string })))
+               .summary('Get all users')
+               .description('Retrieve a list of all users')
+               .build,
 
       RapiTapir.post('/users')
-        .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
-        .created(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string, "created_at" => RapiTapir::Types.string}))
-        .summary('Create user')
-        .description('Create a new user')
-        .build,
+               .json_body(RapiTapir::Types.hash({ 'name' => RapiTapir::Types.string,
+                                                  'email' => RapiTapir::Types.string }))
+               .created(RapiTapir::Types.hash({ 'id' => RapiTapir::Types.integer, 'name' => RapiTapir::Types.string,
+                                                'email' => RapiTapir::Types.string, 'created_at' => RapiTapir::Types.string }))
+               .summary('Create user')
+               .description('Create a new user')
+               .build,
 
       RapiTapir.get('/users/:id')
-        .path_param(:id, :integer)
-        .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
-        .summary('Get user by ID')
-        .description('Get a specific user by their ID')
-        .build
+               .path_param(:id, :integer)
+               .ok(RapiTapir::Types.hash({ 'id' => RapiTapir::Types.integer, 'name' => RapiTapir::Types.string,
+                                           'email' => RapiTapir::Types.string }))
+               .summary('Get user by ID')
+               .description('Get a specific user by their ID')
+               .build
     ]
   end
 
@@ -33,7 +37,7 @@ RSpec.describe 'Phase 3 Integration Tests' do
     it 'generates valid OpenAPI 3.0.3 schema' do
       generator = RapiTapir::OpenAPI::SchemaGenerator.new(endpoints: test_endpoints)
       schema = generator.generate
-      
+
       expect(schema).to be_a(Hash)
       expect(schema[:openapi]).to eq('3.0.3')
       expect(schema[:info]).to be_a(Hash)
@@ -44,7 +48,7 @@ RSpec.describe 'Phase 3 Integration Tests' do
     it 'includes parameter definitions' do
       generator = RapiTapir::OpenAPI::SchemaGenerator.new(endpoints: test_endpoints)
       schema = generator.generate
-      
+
       # Check for user by ID endpoint path parameter
       user_get = schema[:paths]['/users/{id}']['get']
       expect(user_get).not_to be_nil
@@ -58,7 +62,7 @@ RSpec.describe 'Phase 3 Integration Tests' do
     it 'generates TypeScript client code' do
       generator = RapiTapir::Client::TypescriptGenerator.new(endpoints: test_endpoints)
       client_code = generator.generate
-      
+
       expect(client_code).to include('class ApiClient')
       expect(client_code).to include('createUser')
       expect(client_code).to include('getUsers')
@@ -68,7 +72,7 @@ RSpec.describe 'Phase 3 Integration Tests' do
     it 'includes type definitions' do
       generator = RapiTapir::Client::TypescriptGenerator.new(endpoints: test_endpoints)
       client_code = generator.generate
-      
+
       expect(client_code).to include('export type GetusersResponse')
       expect(client_code).to include('export type CreateuserResponse')
       expect(client_code).to include('interface CreateuserRequest')
@@ -144,7 +148,7 @@ RSpec.describe 'Phase 3 Integration Tests' do
       it 'detects invalid endpoints' do
         invalid_endpoint = RapiTapir.get('/invalid').summary('Test').build # Missing output
         validator = RapiTapir::CLI::Validator.new([invalid_endpoint])
-        
+
         expect(validator.validate).to be(false)
         expect(validator.errors).not_to be_empty
         expect(validator.errors.first).to include('missing output definition')
@@ -154,60 +158,60 @@ RSpec.describe 'Phase 3 Integration Tests' do
     describe 'Command Interface' do
       it 'processes generate openapi command' do
         output_file = File.join(temp_output_dir, 'openapi.json')
-        
+
         command = RapiTapir::CLI::Command.new([
-          'generate', 'openapi',
-          '--endpoints', temp_endpoints_file,
-          '--output', output_file
-        ])
-        
+                                                'generate', 'openapi',
+                                                '--endpoints', temp_endpoints_file,
+                                                '--output', output_file
+                                              ])
+
         expect { command.run }.not_to raise_error
         expect(File.exist?(output_file)).to be(true)
-        
+
         content = JSON.parse(File.read(output_file))
         expect(content['openapi']).to eq('3.0.3')
       end
 
       it 'processes generate client command' do
         output_file = File.join(temp_output_dir, 'client.ts')
-        
+
         command = RapiTapir::CLI::Command.new([
-          'generate', 'client',
-          '--endpoints', temp_endpoints_file,
-          '--output', output_file
-        ])
-        
+                                                'generate', 'client',
+                                                '--endpoints', temp_endpoints_file,
+                                                '--output', output_file
+                                              ])
+
         expect { command.run }.not_to raise_error
         expect(File.exist?(output_file)).to be(true)
-        
+
         content = File.read(output_file)
         expect(content).to include('export class ApiClient')
       end
 
       it 'processes generate docs command' do
         output_file = File.join(temp_output_dir, 'docs.html')
-        
+
         command = RapiTapir::CLI::Command.new([
-          'generate', 'docs',
-          '--endpoints', temp_endpoints_file,
-          '--output', output_file
-        ])
-        
+                                                'generate', 'docs',
+                                                '--endpoints', temp_endpoints_file,
+                                                '--output', output_file
+                                              ])
+
         expect { command.run }.not_to raise_error
         expect(File.exist?(output_file)).to be(true)
-        
+
         content = File.read(output_file)
         expect(content).to include('<!DOCTYPE html>')
       end
 
       it 'validates endpoints command' do
         ENV['RSPEC_RUNNING'] = 'true'
-        
+
         command = RapiTapir::CLI::Command.new([
-          'validate',
-          '--endpoints', temp_endpoints_file
-        ])
-        
+                                                'validate',
+                                                '--endpoints', temp_endpoints_file
+                                              ])
+
         # Expect the validation to run without crashing
         # It may exit with status 1 due to validation failures, which is okay
         begin
@@ -216,7 +220,7 @@ RSpec.describe 'Phase 3 Integration Tests' do
           # Validation failures result in exit(1), which is expected behavior
           expect(e.status).to eq(1)
         end
-        
+
         ENV.delete('RSPEC_RUNNING')
       end
     end
@@ -266,26 +270,26 @@ RSpec.describe 'Phase 3 Integration Tests' do
       # 2. Generate OpenAPI schema
       openapi_file = File.join(temp_dir, 'openapi.json')
       RapiTapir::CLI::Command.new([
-        'generate', 'openapi',
-        '--endpoints', endpoints_file,
-        '--output', openapi_file
-      ]).run
+                                    'generate', 'openapi',
+                                    '--endpoints', endpoints_file,
+                                    '--output', openapi_file
+                                  ]).run
 
       # 3. Generate TypeScript client
       client_file = File.join(temp_dir, 'api-client.ts')
       RapiTapir::CLI::Command.new([
-        'generate', 'client',
-        '--endpoints', endpoints_file,
-        '--output', client_file
-      ]).run
+                                    'generate', 'client',
+                                    '--endpoints', endpoints_file,
+                                    '--output', client_file
+                                  ]).run
 
       # 4. Generate HTML documentation
       docs_file = File.join(temp_dir, 'api-docs.html')
       RapiTapir::CLI::Command.new([
-        'generate', 'docs',
-        '--endpoints', endpoints_file,
-        '--output', docs_file
-      ]).run
+                                    'generate', 'docs',
+                                    '--endpoints', endpoints_file,
+                                    '--output', docs_file
+                                  ]).run
 
       # 5. Validate all files exist and have expected content
       expect(File.exist?(openapi_file)).to be(true)

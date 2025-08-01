@@ -40,7 +40,7 @@ RSpec.describe RapiTapir::Auth::Schemes do
         it 'returns nil for invalid token' do
           env_with_empty_token = { 'HTTP_AUTHORIZATION' => 'Bearer ' }
           request_with_empty_token = double('Request', env: env_with_empty_token)
-          
+
           expect(scheme.authenticate(request_with_empty_token)).to be_nil
         end
       end
@@ -175,7 +175,7 @@ RSpec.describe RapiTapir::Auth::Schemes do
 
           expect(context).not_to be_nil
           expect(context.user).to eq({ id: 'oauth_user', name: 'OAuth User' })
-          expect(context.scopes).to eq(['read', 'write'])
+          expect(context.scopes).to eq(%w[read write])
           expect(context.metadata[:client_id]).to eq('default_client')
         end
       end
@@ -196,7 +196,7 @@ RSpec.describe RapiTapir::Auth::Schemes do
       let(:request) { double('Request', env: env) }
 
       context 'when Authorization header has valid JWT' do
-        let(:payload) { { 'sub' => 'user123', 'scopes' => ['read', 'write'], 'exp' => Time.now.to_i + 3600 } }
+        let(:payload) { { 'sub' => 'user123', 'scopes' => %w[read write], 'exp' => Time.now.to_i + 3600 } }
         let(:token) { create_jwt_token(payload, secret) }
         let(:env) { { 'HTTP_AUTHORIZATION' => "Bearer #{token}" } }
 
@@ -205,7 +205,7 @@ RSpec.describe RapiTapir::Auth::Schemes do
 
           expect(context).not_to be_nil
           expect(context.user[:id]).to eq('user123')
-          expect(context.scopes).to eq(['read', 'write'])
+          expect(context.scopes).to eq(%w[read write])
           expect(context.metadata[:token_type]).to eq('jwt')
         end
       end
@@ -241,14 +241,14 @@ RSpec.describe RapiTapir::Auth::Schemes do
 
     def create_jwt_token(payload, secret)
       header = { 'alg' => 'HS256', 'typ' => 'JWT' }
-      
+
       encoded_header = Base64.urlsafe_encode64(JSON.generate(header)).tr('=', '')
       encoded_payload = Base64.urlsafe_encode64(JSON.generate(payload)).tr('=', '')
-      
+
       signature = Base64.urlsafe_encode64(
         OpenSSL::HMAC.digest('SHA256', secret, "#{encoded_header}.#{encoded_payload}")
       ).tr('=', '')
-      
+
       "#{encoded_header}.#{encoded_payload}.#{signature}"
     end
   end

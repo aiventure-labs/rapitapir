@@ -19,11 +19,11 @@ module RapiTapir
         end
 
         def authenticate(request)
-          raise NotImplementedError, "Subclasses must implement #authenticate"
+          raise NotImplementedError, 'Subclasses must implement #authenticate'
         end
 
         def challenge
-          raise NotImplementedError, "Subclasses must implement #challenge"
+          raise NotImplementedError, 'Subclasses must implement #challenge'
         end
 
         protected
@@ -40,7 +40,7 @@ module RapiTapir
 
       class BearerToken < Base
         def initialize(name, config = {})
-          super(name, config)
+          super
           @token_validator = config[:token_validator] || method(:default_token_validator)
           @realm = config[:realm] || 'API'
         end
@@ -79,8 +79,8 @@ module RapiTapir
         def default_token_validator(token)
           # Default implementation - should be overridden
           return nil if token.nil? || token.empty?
-          
-          { 
+
+          {
             user: { id: 'default_user', name: 'Default User' },
             scopes: ['read']
           }
@@ -89,7 +89,7 @@ module RapiTapir
 
       class ApiKey < Base
         def initialize(name, config = {})
-          super(name, config)
+          super
           @key_validator = config[:key_validator] || method(:default_key_validator)
           @header_name = config[:header_name] || 'X-API-Key'
           @query_param = config[:query_param] || 'api_key'
@@ -107,7 +107,7 @@ module RapiTapir
             user: user_data[:user],
             scopes: user_data[:scopes] || [],
             token: api_key,
-            metadata: { 
+            metadata: {
               token_type: 'api_key',
               location: @location
             }
@@ -117,7 +117,7 @@ module RapiTapir
         end
 
         def challenge
-          "ApiKey"
+          'ApiKey'
         end
 
         private
@@ -129,7 +129,7 @@ module RapiTapir
           when :query
             request.params[@query_param]
           when :both
-            request.env["HTTP_#{@header_name.upcase.tr('-', '_')}"] || 
+            request.env["HTTP_#{@header_name.upcase.tr('-', '_')}"] ||
               request.params[@query_param]
           end
         end
@@ -137,8 +137,8 @@ module RapiTapir
         def default_key_validator(key)
           # Default implementation - should be overridden
           return nil if key.nil? || key.empty?
-          
-          { 
+
+          {
             user: { id: 'api_user', name: 'API User' },
             scopes: ['api']
           }
@@ -147,7 +147,7 @@ module RapiTapir
 
       class BasicAuth < Base
         def initialize(name, config = {})
-          super(name, config)
+          super
           @credential_validator = config[:credential_validator] || method(:default_credential_validator)
           @realm = config[:realm] || 'API'
         end
@@ -165,7 +165,7 @@ module RapiTapir
           create_context(
             user: user_data[:user],
             scopes: user_data[:scopes] || [],
-            metadata: { 
+            metadata: {
               token_type: 'basic',
               username: credentials[:username]
             }
@@ -186,7 +186,7 @@ module RapiTapir
 
           decoded = Base64.decode64(match[1])
           username, password = decoded.split(':', 2)
-          
+
           return nil if username.nil? || password.nil?
 
           { username: username, password: password }
@@ -197,8 +197,8 @@ module RapiTapir
         def default_credential_validator(username, password)
           # Default implementation - should be overridden
           return nil if username.nil? || password.nil? || username.empty? || password.empty?
-          
-          { 
+
+          {
             user: { id: username, name: username.capitalize },
             scopes: ['basic']
           }
@@ -207,7 +207,7 @@ module RapiTapir
 
       class OAuth2 < Base
         def initialize(name, config = {})
-          super(name, config)
+          super
           @token_validator = config[:token_validator] || method(:default_oauth2_validator)
           @introspection_endpoint = config[:introspection_endpoint]
           @client_id = config[:client_id]
@@ -229,7 +229,7 @@ module RapiTapir
             user: user_data[:user],
             scopes: user_data[:scopes] || [],
             token: token,
-            metadata: { 
+            metadata: {
               token_type: 'oauth2',
               client_id: user_data[:client_id],
               expires_at: user_data[:expires_at]
@@ -268,10 +268,10 @@ module RapiTapir
         def default_oauth2_validator(token)
           # Default implementation - should be overridden
           return nil if token.nil? || token.empty?
-          
-          { 
+
+          {
             user: { id: 'oauth_user', name: 'OAuth User' },
-            scopes: ['read', 'write'],
+            scopes: %w[read write],
             client_id: 'default_client',
             expires_at: Time.now + 3600
           }
@@ -280,8 +280,8 @@ module RapiTapir
 
       class JWT < Base
         def initialize(name, config = {})
-          super(name, config)
-          @secret = config[:secret] || raise(ArgumentError, "JWT secret is required")
+          super
+          @secret = config[:secret] || raise(ArgumentError, 'JWT secret is required')
           @algorithm = config[:algorithm] || 'HS256'
           @verify_expiration = config.fetch(:verify_expiration, true)
           @verify_issuer = config[:verify_issuer]
@@ -303,7 +303,7 @@ module RapiTapir
             user: extract_user_from_payload(payload),
             scopes: extract_scopes_from_payload(payload),
             token: token,
-            metadata: { 
+            metadata: {
               token_type: 'jwt',
               payload: payload
             }
@@ -332,12 +332,12 @@ module RapiTapir
           begin
             # Add padding if needed
             header_b64 = parts[0]
-            header_b64 += '=' * (4 - header_b64.length % 4) if header_b64.length % 4 != 0
-            
+            header_b64 += '=' * (4 - (header_b64.length % 4)) if header_b64.length % 4 != 0
+
             payload_b64 = parts[1]
-            payload_b64 += '=' * (4 - payload_b64.length % 4) if payload_b64.length % 4 != 0
-            
-            header = JSON.parse(Base64.urlsafe_decode64(header_b64))
+            payload_b64 += '=' * (4 - (payload_b64.length % 4)) if payload_b64.length % 4 != 0
+
+            JSON.parse(Base64.urlsafe_decode64(header_b64))
             payload = JSON.parse(Base64.urlsafe_decode64(payload_b64))
             signature = parts[2]
 
@@ -349,19 +349,13 @@ module RapiTapir
             return nil unless signature == expected_signature
 
             # Verify expiration
-            if @verify_expiration && payload['exp']
-              return nil if Time.at(payload['exp']) < Time.now
-            end
+            return nil if @verify_expiration && payload['exp'] && (Time.at(payload['exp']) < Time.now)
 
             # Verify issuer
-            if @verify_issuer && payload['iss'] != @verify_issuer
-              return nil
-            end
+            return nil if @verify_issuer && payload['iss'] != @verify_issuer
 
             # Verify audience
-            if @verify_audience && payload['aud'] != @verify_audience
-              return nil
-            end
+            return nil if @verify_audience && payload['aud'] != @verify_audience
 
             payload
           rescue JSON::ParserError, ArgumentError
@@ -372,7 +366,7 @@ module RapiTapir
         def extract_user_from_payload(payload)
           user_data = payload['user'] || payload['sub']
           return { id: user_data, name: user_data } if user_data.is_a?(String)
-          
+
           user_data || { id: payload['sub'], name: payload['name'] || payload['sub'] }
         end
 
@@ -384,7 +378,7 @@ module RapiTapir
           when Array
             scopes
           when String
-            scopes.split(' ')
+            scopes.split
           else
             []
           end

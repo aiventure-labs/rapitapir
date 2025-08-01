@@ -49,20 +49,20 @@ module RapiTapir
       end
 
       class RateLimitingConfig
-        attr_accessor :enabled, :requests_per_minute, :requests_per_hour, 
+        attr_accessor :enabled, :requests_per_minute, :requests_per_hour,
                       :requests_per_day, :burst_limit, :identifier
 
         def initialize
           @enabled = false
           @requests_per_minute = 60
           @requests_per_hour = 1000
-          @requests_per_day = 10000
+          @requests_per_day = 10_000
           @burst_limit = 10
           @identifier = :ip_address
         end
 
-        def enable(requests_per_minute: 60, requests_per_hour: 1000, 
-                   requests_per_day: 10000, burst_limit: 10, identifier: :ip_address)
+        def enable(requests_per_minute: 60, requests_per_hour: 1000,
+                   requests_per_day: 10_000, burst_limit: 10, identifier: :ip_address)
           @enabled = true
           @requests_per_minute = requests_per_minute
           @requests_per_hour = requests_per_hour
@@ -83,12 +83,12 @@ module RapiTapir
           @allowed_headers = %w[Content-Type Authorization Accept X-Requested-With]
           @exposed_headers = []
           @allow_credentials = false
-          @max_age = 86400 # 24 hours
+          @max_age = 86_400 # 24 hours
           @preflight_continue = false
         end
 
         def enable(allowed_origins: ['*'], allowed_methods: nil, allowed_headers: nil,
-                   allow_credentials: false, max_age: 86400)
+                   allow_credentials: false, max_age: 86_400)
           @enabled = true
           @allowed_origins = allowed_origins
           @allowed_methods = allowed_methods if allowed_methods

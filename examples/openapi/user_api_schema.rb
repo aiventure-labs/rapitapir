@@ -28,13 +28,13 @@ class OpenAPIExample
         }
       ]
     )
-    
+
     generator.generate
   end
 
   def save_schema(format: :json, pretty: true)
     schema = generate_schema
-    
+
     case format
     when :json
       content = pretty ? JSON.pretty_generate(schema) : JSON.generate(schema)
@@ -46,10 +46,10 @@ class OpenAPIExample
     else
       raise ArgumentError, "Unsupported format: #{format}"
     end
-    
+
     File.write(filename, content)
     puts "OpenAPI schema saved to #{filename}"
-    puts "Schema preview:"
+    puts 'Schema preview:'
     puts content[0..500] + (content.length > 500 ? '...' : '')
   end
 
@@ -60,42 +60,56 @@ class OpenAPIExample
 
     # List users endpoint
     list_endpoint = RapiTapir.get('/users')
-      .summary('List all users')
-      .description('Returns a list of all users in the system')
-      .out(RapiTapir::Core::Output.new(kind: :json, type: { users: [{ id: :integer, name: :string, email: :string }] }))
+                             .summary('List all users')
+                             .description('Returns a list of all users in the system')
+                             .out(RapiTapir::Core::Output.new(kind: :json,
+                                                              type: { users: [{
+                                                                id: :integer, name: :string, email: :string
+                                                              }] }))
     endpoints << list_endpoint
 
     # Get user by ID endpoint
     get_endpoint = RapiTapir.get('/users/:id')
-      .summary('Get user by ID')
-      .description('Returns a single user by their ID')
-      .in(RapiTapir::Core::Input.new(kind: :path, name: :id, type: :integer))
-      .out(RapiTapir::Core::Output.new(kind: :json, type: { id: :integer, name: :string, email: :string }))
+                            .summary('Get user by ID')
+                            .description('Returns a single user by their ID')
+                            .in(RapiTapir::Core::Input.new(kind: :path, name: :id, type: :integer))
+                            .out(RapiTapir::Core::Output.new(kind: :json,
+                                                             type: {
+                                                               id: :integer, name: :string, email: :string
+                                                             }))
     endpoints << get_endpoint
 
     # Create user endpoint
     create_endpoint = RapiTapir.post('/users')
-      .summary('Create a new user')
-      .description('Creates a new user with the provided data')
-      .in(RapiTapir::Core::Input.new(kind: :body, name: :user_data, type: { name: :string, email: :string }))
-      .out(RapiTapir::Core::Output.new(kind: :json, type: { id: :integer, name: :string, email: :string }))
+                               .summary('Create a new user')
+                               .description('Creates a new user with the provided data')
+                               .in(RapiTapir::Core::Input.new(kind: :body, name: :user_data,
+                                                              type: { name: :string, email: :string }))
+                               .out(RapiTapir::Core::Output.new(kind: :json,
+                                                                type: {
+                                                                  id: :integer, name: :string, email: :string
+                                                                }))
     endpoints << create_endpoint
 
     # Update user endpoint
     update_endpoint = RapiTapir.put('/users/:id')
-      .summary('Update an existing user')
-      .description('Updates an existing user with the provided data')
-      .in(RapiTapir::Core::Input.new(kind: :path, name: :id, type: :integer))
-      .in(RapiTapir::Core::Input.new(kind: :body, name: :user_data, type: { name: :string, email: :string }))
-      .out(RapiTapir::Core::Output.new(kind: :json, type: { id: :integer, name: :string, email: :string }))
+                               .summary('Update an existing user')
+                               .description('Updates an existing user with the provided data')
+                               .in(RapiTapir::Core::Input.new(kind: :path, name: :id, type: :integer))
+                               .in(RapiTapir::Core::Input.new(kind: :body, name: :user_data,
+                                                              type: { name: :string, email: :string }))
+                               .out(RapiTapir::Core::Output.new(kind: :json,
+                                                                type: {
+                                                                  id: :integer, name: :string, email: :string
+                                                                }))
     endpoints << update_endpoint
 
     # Delete user endpoint
     delete_endpoint = RapiTapir.delete('/users/:id')
-      .summary('Delete a user')
-      .description('Deletes a user by their ID')
-      .in(RapiTapir::Core::Input.new(kind: :path, name: :id, type: :integer))
-      .out(RapiTapir::Core::Output.new(kind: :json, type: { message: :string }))
+                               .summary('Delete a user')
+                               .description('Deletes a user by their ID')
+                               .in(RapiTapir::Core::Input.new(kind: :path, name: :id, type: :integer))
+                               .out(RapiTapir::Core::Output.new(kind: :json, type: { message: :string }))
     endpoints << delete_endpoint
 
     endpoints
@@ -103,16 +117,16 @@ class OpenAPIExample
 end
 
 # Run the example if this file is executed directly
-if __FILE__ == $0
+if __FILE__ == $PROGRAM_NAME
   example = OpenAPIExample.new
-  
-  puts "Generating OpenAPI schema for User Management API..."
-  
+
+  puts 'Generating OpenAPI schema for User Management API...'
+
   # Generate and save JSON schema
   example.save_schema(format: :json, pretty: true)
-  
-  puts "\n" + "="*50
-  
-  # Generate and save YAML schema  
+
+  puts "\n#{'=' * 50}"
+
+  # Generate and save YAML schema
   example.save_schema(format: :yaml)
 end

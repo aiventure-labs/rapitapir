@@ -61,17 +61,17 @@ module RapiTapir
 
       def generate_paths
         paths = {}
-        
+
         @endpoints.each do |endpoint_data|
           endpoint = endpoint_data.is_a?(Hash) ? endpoint_data[:endpoint] : endpoint_data
           # Convert :id format to {id} format for OpenAPI
           path = convert_path_to_openapi(endpoint.path)
           method = endpoint.method.to_s.downcase
-          
+
           paths[path] ||= {}
           paths[path][method] = generate_operation(endpoint)
         end
-        
+
         paths
       end
 
@@ -100,7 +100,7 @@ module RapiTapir
 
       def generate_parameters(endpoint)
         parameters = []
-        
+
         endpoint.inputs.each do |input|
           case input.kind
           when :path
@@ -129,7 +129,7 @@ module RapiTapir
             }
           end
         end
-        
+
         parameters
       end
 
@@ -138,7 +138,7 @@ module RapiTapir
         return nil unless body_input
 
         content_type = determine_content_type(body_input)
-        
+
         {
           description: 'Request body',
           required: body_input.required?,
@@ -152,14 +152,14 @@ module RapiTapir
 
       def generate_responses(endpoint)
         responses = {}
-        
+
         # Success responses
         endpoint.outputs.each do |output|
           status_code = determine_status_code(output)
           content_type = determine_output_content_type(output)
-          
+
           responses[status_code.to_s] = {
-            description: "Successful response",
+            description: 'Successful response',
             content: {
               content_type => {
                 schema: type_to_schema(output.type)
@@ -174,15 +174,15 @@ module RapiTapir
           if error_entry.respond_to?(:status_code)
             # New EnhancedError format
             status_code = error_entry.status_code
-            description = error_entry.description || "Error response"
-            schema = error_entry.type ? type_to_schema(error_entry.type) : type_to_schema({ error: :string })
+            description = error_entry.description || 'Error response'
+            schema = type_to_schema(error_entry.type || { error: :string })
           else
             # Old hash format (fallback)
             status_code = error_entry[:code] || 400
-            description = error_entry[:description] || "Error response"
+            description = error_entry[:description] || 'Error response'
             schema = type_to_schema(error_entry[:output]&.type || { error: :string })
           end
-          
+
           responses[status_code.to_s] = {
             description: description,
             content: {
@@ -232,12 +232,12 @@ module RapiTapir
           else
             properties = {}
             required = []
-            
+
             type.field_types.each do |key, value|
               properties[key.to_s] = type_to_schema(value)
               required << key.to_s unless value.nil?
             end
-            
+
             schema = { type: 'object', properties: properties }
             schema[:required] = required if required.any?
             schema
@@ -266,12 +266,12 @@ module RapiTapir
           else
             properties = {}
             required = []
-            
+
             type.each do |key, value|
               properties[key.to_s] = type_to_schema(value)
               required << key.to_s unless value.nil?
             end
-            
+
             schema = { type: 'object', properties: properties }
             schema[:required] = required if required.any?
             schema
@@ -284,10 +284,8 @@ module RapiTapir
       def determine_content_type(input)
         case input.type
         when Hash
-          'application/json'
-        else
-          'application/json'
         end
+        'application/json'
       end
 
       def determine_output_content_type(output)
@@ -310,19 +308,17 @@ module RapiTapir
           # Default status codes based on output type
           case output.kind
           when :json, :xml
-            200
-          else
-            200
           end
+          200
         end
       end
 
       def generate_operation_id(endpoint)
         method = endpoint.method.to_s.downcase
         path_parts = endpoint.path.split('/').reject(&:empty?).map do |part|
-          part.start_with?(':') ? part[1..-1] : part
+          part.start_with?(':') ? part[1..] : part
         end
-        
+
         "#{method}_#{path_parts.join('_')}"
       end
 

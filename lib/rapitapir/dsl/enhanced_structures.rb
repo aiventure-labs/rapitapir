@@ -6,7 +6,8 @@ module RapiTapir
     class EnhancedInput
       attr_reader :kind, :name, :type, :required, :description, :example, :format, :content_type
 
-      def initialize(kind:, name:, type:, required: true, description: nil, example: nil, format: nil, content_type: nil)
+      def initialize(kind:, name:, type:, required: true, description: nil, example: nil, format: nil,
+                     content_type: nil)
         @kind = kind.to_sym
         @name = name.to_sym
         @type = type
@@ -21,9 +22,10 @@ module RapiTapir
         # Check if the input is required based on:
         # 1. Explicit required parameter
         # 2. Whether the type is optional
-        return false if @required == false  # Explicitly set to false
+        return false if @required == false # Explicitly set to false
         return false if @type.respond_to?(:optional?) && @type.optional?
-        @required.nil? ? true : @required  # Default to true if not specified
+
+        @required.nil? || @required # Default to true if not specified
       end
 
       def optional?
@@ -40,7 +42,7 @@ module RapiTapir
 
         spec[:description] = @description if @description
         spec[:example] = @example if @example
-        
+
         spec
       end
 
@@ -74,7 +76,8 @@ module RapiTapir
     class EnhancedOutput
       attr_reader :status_code, :type, :content_type, :description, :example, :headers
 
-      def initialize(status_code:, type: nil, content_type: 'application/json', description: nil, example: nil, headers: {})
+      def initialize(status_code:, type: nil, content_type: 'application/json', description: nil, example: nil,
+                     headers: {})
         @status_code = status_code.to_i
         @type = type
         @content_type = content_type
@@ -86,14 +89,14 @@ module RapiTapir
       # Legacy compatibility method for validators
       def kind
         return :status if @type.nil?
-        
+
         case @content_type
         when 'application/json'
           :json
         when 'application/xml', 'text/xml'
           :xml
         else
-          :json  # Default to json for unknown content types
+          :json # Default to json for unknown content types
         end
       end
 
@@ -108,10 +111,8 @@ module RapiTapir
               schema: @type.to_json_schema
             }
           }
-          
-          if @example
-            spec[:content][@content_type][:example] = @example
-          end
+
+          spec[:content][@content_type][:example] = @example if @example
         end
 
         if @headers.any?
@@ -132,12 +133,13 @@ module RapiTapir
 
       def validate(value)
         return { valid: true, errors: [] } unless @type
+
         @type.validate(value)
       end
 
       def serialize(value)
         return nil unless @type
-        
+
         case @content_type
         when 'application/json'
           JSON.generate(value)
@@ -200,10 +202,8 @@ module RapiTapir
               schema: @type.to_json_schema
             }
           }
-          
-          if @example
-            spec[:content]['application/json'][:example] = @example
-          end
+
+          spec[:content]['application/json'][:example] = @example if @example
         end
 
         spec
@@ -313,12 +313,10 @@ module RapiTapir
       def validate_bearer_token(request)
         auth_header = request.env['HTTP_AUTHORIZATION']
         return { valid: false, error: 'Missing Authorization header' } unless auth_header
-        
-        unless auth_header.start_with?('Bearer ')
-          return { valid: false, error: 'Invalid Authorization header format' }
-        end
 
-        token = auth_header[7..-1] # Remove 'Bearer ' prefix
+        return { valid: false, error: 'Invalid Authorization header format' } unless auth_header.start_with?('Bearer ')
+
+        token = auth_header[7..] # Remove 'Bearer ' prefix
         return { valid: false, error: 'Empty token' } if token.empty?
 
         { valid: true, token: token }
@@ -326,15 +324,15 @@ module RapiTapir
 
       def validate_api_key(request)
         key_name = @name || 'X-API-Key'
-        
+
         key_value = case @location
-                   when :header
-                     request.env["HTTP_#{key_name.upcase.gsub('-', '_')}"]
-                   when :query
-                     request.params[key_name]
-                   else
-                     request.env["HTTP_#{key_name.upcase.gsub('-', '_')}"]
-                   end
+                    when :header
+                      request.env["HTTP_#{key_name.upcase.gsub('-', '_')}"]
+                    when :query
+                      request.params[key_name]
+                    else
+                      request.env["HTTP_#{key_name.upcase.gsub('-', '_')}"]
+                    end
 
         return { valid: false, error: "Missing API key: #{key_name}" } unless key_value
         return { valid: false, error: 'Empty API key' } if key_value.empty?
@@ -345,19 +343,17 @@ module RapiTapir
       def validate_basic_auth(request)
         auth_header = request.env['HTTP_AUTHORIZATION']
         return { valid: false, error: 'Missing Authorization header' } unless auth_header
-        
-        unless auth_header.start_with?('Basic ')
-          return { valid: false, error: 'Invalid Authorization header format' }
-        end
 
-        encoded_credentials = auth_header[6..-1] # Remove 'Basic ' prefix
+        return { valid: false, error: 'Invalid Authorization header format' } unless auth_header.start_with?('Basic ')
+
+        encoded_credentials = auth_header[6..] # Remove 'Basic ' prefix
         return { valid: false, error: 'Empty credentials' } if encoded_credentials.empty?
 
         begin
           decoded_credentials = Base64.decode64(encoded_credentials)
           username, password = decoded_credentials.split(':', 2)
           { valid: true, username: username, password: password }
-        rescue => e
+        rescue StandardError => e
           { valid: false, error: "Invalid credentials encoding: #{e.message}" }
         end
       end

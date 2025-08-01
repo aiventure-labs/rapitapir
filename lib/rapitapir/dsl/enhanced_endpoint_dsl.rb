@@ -17,7 +17,7 @@ module RapiTapir
         type = resolve_type(type_def)
         create_input(:path, name, type, **options)
       end
-      alias_method :path, :path_param
+      alias path path_param
 
       def header(name, type_def, **options)
         type = resolve_type(type_def)
@@ -55,19 +55,19 @@ module RapiTapir
       end
 
       # Authentication DSL methods
-      def bearer_auth(description = "Bearer token authentication")
-        create_input(:header, :authorization, Types.string(pattern: /\ABearer .+\z/), 
-                    description: description, auth_type: :bearer)
+      def bearer_auth(description = 'Bearer token authentication')
+        create_input(:header, :authorization, Types.string(pattern: /\ABearer .+\z/),
+                     description: description, auth_type: :bearer)
       end
 
-      def api_key_auth(header_name = 'X-API-Key', description = "API key authentication")
+      def api_key_auth(header_name = 'X-API-Key', description = 'API key authentication')
         create_input(:header, header_name.downcase.to_sym, Types.string,
-                    description: description, auth_type: :api_key)
+                     description: description, auth_type: :api_key)
       end
 
-      def basic_auth(description = "Basic authentication")
+      def basic_auth(description = 'Basic authentication')
         create_input(:header, :authorization, Types.string(pattern: /\ABasic .+\z/),
-                    description: description, auth_type: :basic)
+                     description: description, auth_type: :basic)
       end
 
       # Validation DSL methods
@@ -117,7 +117,7 @@ module RapiTapir
       def generate_metric_name
         # Generate a metric name based on HTTP method and path
         method = @method&.downcase || 'unknown'
-        path = @path&.gsub(/[\/:]/, '_')&.gsub(/_{2,}/, '_')&.strip('_') || 'unknown'
+        path = @path&.gsub(%r{[/:]}, '_')&.gsub(/_{2,}/, '_')&.strip('_') || 'unknown'
         "#{method}_#{path}"
       end
 
@@ -193,22 +193,21 @@ module RapiTapir
 
       def validate(value)
         return { valid: true, errors: [] } if value.nil? && optional?
-        
-        if value.nil? && required?
-          return { valid: false, errors: ["#{name} is required but got nil"] }
-        end
+
+        return { valid: false, errors: ["#{name} is required but got nil"] } if value.nil? && required?
 
         type.validate(value)
       end
 
       def coerce(value)
         return nil if value.nil? && optional?
+
         type.coerce(value)
       end
 
       def to_openapi_parameter
         schema = type.to_json_schema
-        
+
         {
           name: name.to_s,
           in: openapi_location,
@@ -253,6 +252,7 @@ module RapiTapir
 
       def validate(value)
         return { valid: true, errors: [] } if kind == :status
+
         type.validate(value)
       end
 
@@ -279,9 +279,9 @@ module RapiTapir
         else
           schema = type.respond_to?(:to_json_schema) ? type.to_json_schema : { type: 'string' }
           content_type = kind == :json ? 'application/json' : 'text/plain'
-          
+
           {
-            description: options[:description] || "Successful response",
+            description: options[:description] || 'Successful response',
             content: {
               content_type => {
                 schema: schema

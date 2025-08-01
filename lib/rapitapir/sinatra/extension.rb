@@ -34,22 +34,20 @@ module RapiTapir
         # Register an endpoint with automatic route creation
         def endpoint(definition, &handler)
           endpoint_obj = case definition
-                        when RapiTapir::Core::Endpoint, RapiTapir::Core::EnhancedEndpoint
-                          definition
-                        when Proc
-                          definition.call
-                        else
-                          raise ArgumentError, "Invalid endpoint definition"
-                        end
+                         when RapiTapir::Core::Endpoint, RapiTapir::Core::EnhancedEndpoint
+                           definition
+                         when Proc
+                           definition.call
+                         else
+                           raise ArgumentError, 'Invalid endpoint definition'
+                         end
 
           # Store the endpoint
           settings.rapitapir_endpoints << { endpoint: endpoint_obj, handler: handler }
-          
+
           # Register with adapter if available
-          if settings.rapitapir_adapter
-            settings.rapitapir_adapter.register_endpoint(endpoint_obj, handler)
-          end
-          
+          settings.rapitapir_adapter&.register_endpoint(endpoint_obj, handler)
+
           endpoint_obj
         end
 
@@ -78,18 +76,18 @@ module RapiTapir
 
         def setup_rapitapir_integration
           return if settings.rapitapir_adapter
-          
+
           config = settings.rapitapir_config
-          
+
           # Create and configure adapter
           adapter = RapiTapir::Server::SinatraAdapter.new(self)
           set :rapitapir_adapter, adapter
-          
+
           # Register existing endpoints
           settings.rapitapir_endpoints.each do |ep_data|
             adapter.register_endpoint(ep_data[:endpoint], ep_data[:handler])
           end
-          
+
           # Setup documentation endpoints
           setup_documentation_endpoints(config) if config.docs_enabled?
         end
@@ -117,13 +115,13 @@ module RapiTapir
         def generate_openapi_spec
           config = settings.rapitapir_config
           endpoints = settings.rapitapir_endpoints.map { |ep| ep[:endpoint] }
-          
+
           generator = RapiTapir::OpenAPI::SchemaGenerator.new(
             endpoints: endpoints,
             info: config.api_info,
             servers: config.servers
           )
-          
+
           generator.generate
         end
 
@@ -143,6 +141,7 @@ module RapiTapir
 
         def has_scope?(scope)
           return false unless authenticated?
+
           user_scopes = current_user.is_a?(Hash) ? current_user[:scopes] || [] : []
           user_scopes.include?(scope.to_s)
         end
@@ -159,7 +158,7 @@ module RapiTapir
         private
 
         # Simple placeholder for future security scheme building
-        def build_security_schemes(config)
+        def build_security_schemes(_config)
           {}
         end
       end

@@ -46,12 +46,12 @@ module RapiTapir
       # Environment-specific configurations
       def development_defaults!
         # Basic development settings
-        puts "📝 Applied development defaults for RapiTapir"
+        puts '📝 Applied development defaults for RapiTapir'
       end
 
       def production_defaults!
-        # Basic production settings  
-        puts "🔒 Applied production defaults for RapiTapir"
+        # Basic production settings
+        puts '🔒 Applied production defaults for RapiTapir'
       end
 
       # Documentation configuration

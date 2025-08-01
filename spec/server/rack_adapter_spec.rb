@@ -12,7 +12,7 @@ RSpec.describe RapiTapir::Server::RackAdapter do
 
   describe '#register_endpoint' do
     let(:endpoint) { RapiTapir.get('/users').build }
-    let(:handler) { proc { |inputs| { message: 'Hello' } } }
+    let(:handler) { proc { |_inputs| { message: 'Hello' } } }
 
     it 'registers an endpoint with handler' do
       expect { adapter.register_endpoint(endpoint, handler) }.not_to raise_error
@@ -24,7 +24,9 @@ RSpec.describe RapiTapir::Server::RackAdapter do
     end
 
     it 'validates handler responds to call' do
-      expect { adapter.register_endpoint(endpoint, 'invalid') }.to raise_error(ArgumentError, /Handler must respond to call/)
+      expect do
+        adapter.register_endpoint(endpoint, 'invalid')
+      end.to raise_error(ArgumentError, /Handler must respond to call/)
     end
   end
 
@@ -32,7 +34,7 @@ RSpec.describe RapiTapir::Server::RackAdapter do
     it 'adds middleware to stack' do
       middleware_class = Class.new
       adapter.use(middleware_class, option: 'value')
-      
+
       expect(adapter.middleware_stack.size).to eq(1)
       expect(adapter.middleware_stack.first).to eq([middleware_class, [{ option: 'value' }], nil])
     end
@@ -42,30 +44,30 @@ RSpec.describe RapiTapir::Server::RackAdapter do
     before do
       # Register a simple endpoint
       endpoint = RapiTapir.get('/hello')
-        .query(:name, :string, required: false)
-        .ok(RapiTapir::Types.hash({"message" => RapiTapir::Types.string}))
-        .build
-      
+                          .query(:name, :string, required: false)
+                          .ok(RapiTapir::Types.hash({ 'message' => RapiTapir::Types.string }))
+                          .build
+
       handler = proc do |inputs|
         { message: "Hello, #{inputs[:name] || 'World'}!" }
       end
-      
+
       adapter.register_endpoint(endpoint, handler)
     end
 
     it 'processes GET request successfully' do
       get '/hello?name=John'
-      
+
       expect(last_response.status).to eq(200)
       expect(last_response.content_type).to include('application/json')
-      
+
       response_data = JSON.parse(last_response.body)
       expect(response_data).to eq({ 'message' => 'Hello, John!' })
     end
 
     it 'handles missing optional parameters' do
       get '/hello'
-      
+
       expect(last_response.status).to eq(200)
       response_data = JSON.parse(last_response.body)
       expect(response_data).to eq({ 'message' => 'Hello, World!' })
@@ -73,7 +75,7 @@ RSpec.describe RapiTapir::Server::RackAdapter do
 
     it 'returns 404 for unregistered paths' do
       get '/unknown'
-      
+
       expect(last_response.status).to eq(404)
       response_data = JSON.parse(last_response.body)
       expect(response_data).to eq({ 'error' => 'Not Found' })
@@ -83,20 +85,20 @@ RSpec.describe RapiTapir::Server::RackAdapter do
   describe 'path parameters' do
     before do
       endpoint = RapiTapir.get('/users/:id')
-        .path_param(:id, :string)
-        .ok(RapiTapir::Types.hash({"user_id" => RapiTapir::Types.string}))
-        .build
-      
+                          .path_param(:id, :string)
+                          .ok(RapiTapir::Types.hash({ 'user_id' => RapiTapir::Types.string }))
+                          .build
+
       handler = proc do |inputs|
         { user_id: inputs[:id] }
       end
-      
+
       adapter.register_endpoint(endpoint, handler)
     end
 
     it 'extracts path parameters' do
       get '/users/123'
-      
+
       expect(last_response.status).to eq(200)
       response_data = JSON.parse(last_response.body)
       expect(response_data).to eq({ 'user_id' => '123' })
@@ -106,21 +108,22 @@ RSpec.describe RapiTapir::Server::RackAdapter do
   describe 'POST with JSON body' do
     before do
       endpoint = RapiTapir.post('/users')
-        .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string}))
-        .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string}))
-        .build
-      
+                          .json_body(RapiTapir::Types.hash({ 'name' => RapiTapir::Types.string }))
+                          .ok(RapiTapir::Types.hash({ 'id' => RapiTapir::Types.integer,
+                                                      'name' => RapiTapir::Types.string }))
+                          .build
+
       handler = proc do |inputs|
         user_data = inputs[:body]
         { id: 1, name: user_data['name'] }
       end
-      
+
       adapter.register_endpoint(endpoint, handler)
     end
 
     it 'processes JSON body' do
       post '/users', JSON.generate({ name: 'John Doe' }), { 'CONTENT_TYPE' => 'application/json' }
-      
+
       expect(last_response.status).to eq(200)
       response_data = JSON.parse(last_response.body)
       expect(response_data).to eq({ 'id' => 1, 'name' => 'John Doe' })
@@ -130,19 +133,19 @@ RSpec.describe RapiTapir::Server::RackAdapter do
   describe 'error handling' do
     before do
       endpoint = RapiTapir.get('/error')
-        .query(:required_param, :string)
-        .build
-      
-      handler = proc do |inputs|
+                          .query(:required_param, :string)
+                          .build
+
+      handler = proc do |_inputs|
         raise StandardError, 'Something went wrong'
       end
-      
+
       adapter.register_endpoint(endpoint, handler)
     end
 
     it 'handles missing required parameters' do
       get '/error'
-      
+
       expect(last_response.status).to eq(400)
       response_data = JSON.parse(last_response.body)
       expect(response_data['error']).to eq('ArgumentError')
@@ -151,7 +154,7 @@ RSpec.describe RapiTapir::Server::RackAdapter do
 
     it 'handles handler exceptions' do
       get '/error?required_param=value'
-      
+
       expect(last_response.status).to eq(500)
       response_data = JSON.parse(last_response.body)
       expect(response_data['error']).to eq('StandardError')

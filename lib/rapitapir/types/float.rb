@@ -5,21 +5,16 @@ require_relative 'base'
 module RapiTapir
   module Types
     class Float < Base
-      def initialize(minimum: nil, maximum: nil, exclusive_minimum: nil, exclusive_maximum: nil, multiple_of: nil, **options)
-        super(
-          minimum: minimum,
-          maximum: maximum,
-          exclusive_minimum: exclusive_minimum,
-          exclusive_maximum: exclusive_maximum,
-          multiple_of: multiple_of,
-          **options
-        )
+      def initialize(minimum: nil, maximum: nil, exclusive_minimum: nil, exclusive_maximum: nil, multiple_of: nil,
+                     **options)
+        super
       end
 
       protected
 
       def validate_type(value)
         return [] if value.is_a?(::Float) || value.is_a?(::Integer)
+
         ["Expected number (float or integer), got #{value.class}"]
       end
 
@@ -59,11 +54,10 @@ module RapiTapir
         when true then 1.0
         when false then 0.0
         else
-          if value.respond_to?(:to_f)
-            value.to_f
-          else
-            raise CoercionError.new(value, 'Float', 'Value cannot be converted to float')
-          end
+          raise CoercionError.new(value, 'Float', 'Value cannot be converted to float') unless value.respond_to?(:to_f)
+
+          value.to_f
+
         end
       rescue ArgumentError => e
         raise CoercionError.new(value, 'Float', e.message)

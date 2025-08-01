@@ -12,25 +12,25 @@ RSpec.describe 'Debug RackAdapter JSON parsing' do
 
   it 'debugs JSON body parsing' do
     endpoint = RapiTapir.post('/debug')
-      .json_body(RapiTapir::Types.hash({}))
-      .ok(RapiTapir::Types.hash({"received" => RapiTapir::Types.hash({})}))
-      .summary('Debug endpoint')
-      .build
-    
+                        .json_body(RapiTapir::Types.hash({}))
+                        .ok(RapiTapir::Types.hash({ 'received' => RapiTapir::Types.hash({}) }))
+                        .summary('Debug endpoint')
+                        .build
+
     handler = proc do |inputs|
       puts "Handler received: #{inputs.inspect}"
       puts "Data class: #{inputs[:data].class}"
       puts "Data content: #{inputs[:data]}"
       { received: inputs[:data] }
     end
-    
+
     adapter.register_endpoint(endpoint, handler)
-    
+
     post '/debug', JSON.generate({ test: 'value' }), { 'CONTENT_TYPE' => 'application/json' }
-    
+
     puts "Response status: #{last_response.status}"
     puts "Response body: #{last_response.body}"
-    
+
     expect(last_response.status).to eq(200)
   end
 end

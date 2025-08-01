@@ -28,7 +28,7 @@ RSpec.describe RapiTapir::Observability::Configuration do
     describe '#enable_prometheus' do
       it 'enables metrics with custom namespace and labels' do
         metrics_config.enable_prometheus(namespace: 'my_app', labels: { env: 'test' })
-        
+
         expect(metrics_config.enabled).to be true
         expect(metrics_config.provider).to eq :prometheus
         expect(metrics_config.namespace).to eq 'my_app'
@@ -40,7 +40,7 @@ RSpec.describe RapiTapir::Observability::Configuration do
       it 'disables metrics' do
         metrics_config.enable_prometheus
         metrics_config.disable
-        
+
         expect(metrics_config.enabled).to be false
       end
     end
@@ -59,7 +59,7 @@ RSpec.describe RapiTapir::Observability::Configuration do
     describe '#enable_opentelemetry' do
       it 'enables tracing with custom service info' do
         tracing_config.enable_opentelemetry(service_name: 'my-service', service_version: '2.0.0')
-        
+
         expect(tracing_config.enabled).to be true
         expect(tracing_config.provider).to eq :opentelemetry
         expect(tracing_config.service_name).to eq 'my-service'
@@ -81,9 +81,9 @@ RSpec.describe RapiTapir::Observability::Configuration do
 
     describe '#enable_structured' do
       it 'enables structured logging with custom fields' do
-        custom_fields = [:timestamp, :level, :message, :custom_field]
+        custom_fields = %i[timestamp level message custom_field]
         logging_config.enable_structured(level: :debug, fields: custom_fields)
-        
+
         expect(logging_config.enabled).to be true
         expect(logging_config.structured).to be true
         expect(logging_config.level).to eq :debug
@@ -104,7 +104,7 @@ RSpec.describe RapiTapir::Observability::Configuration do
     describe '#enable' do
       it 'enables health checks with custom endpoint' do
         health_check_config.enable(endpoint: '/status')
-        
+
         expect(health_check_config.enabled).to be true
         expect(health_check_config.endpoint).to eq '/status'
       end
@@ -114,7 +114,7 @@ RSpec.describe RapiTapir::Observability::Configuration do
       it 'adds a custom health check' do
         check_block = -> { { status: :healthy } }
         health_check_config.add_check(:custom_check, &check_block)
-        
+
         expect(health_check_config.checks.length).to eq(1)
         expect(health_check_config.checks.first[:name]).to eq :custom_check
         expect(health_check_config.checks.first[:check]).to eq check_block

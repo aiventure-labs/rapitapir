@@ -6,7 +6,7 @@ RSpec.describe RapiTapir::Auth::Context do
   describe '#initialize' do
     it 'creates an empty context by default' do
       context = described_class.new
-      
+
       expect(context.user).to be_nil
       expect(context.scopes).to be_empty
       expect(context.token).to be_nil
@@ -16,7 +16,7 @@ RSpec.describe RapiTapir::Auth::Context do
 
     it 'creates a context with provided data' do
       user = { id: 123, name: 'Test User' }
-      scopes = ['read', 'write']
+      scopes = %w[read write]
       token = 'abc123'
       session = { session_id: 'sess_123' }
       metadata = { ip: '127.0.0.1' }
@@ -50,7 +50,7 @@ RSpec.describe RapiTapir::Auth::Context do
   end
 
   describe '#has_scope?' do
-    let(:context) { described_class.new(scopes: ['read', 'write']) }
+    let(:context) { described_class.new(scopes: %w[read write]) }
 
     it 'returns true for existing scope' do
       expect(context.has_scope?('read')).to be true
@@ -63,7 +63,7 @@ RSpec.describe RapiTapir::Auth::Context do
   end
 
   describe '#has_any_scope?' do
-    let(:context) { described_class.new(scopes: ['read', 'write']) }
+    let(:context) { described_class.new(scopes: %w[read write]) }
 
     it 'returns true if any scope matches' do
       expect(context.has_any_scope?('read', 'admin')).to be true
@@ -75,7 +75,7 @@ RSpec.describe RapiTapir::Auth::Context do
   end
 
   describe '#has_all_scopes?' do
-    let(:context) { described_class.new(scopes: ['read', 'write']) }
+    let(:context) { described_class.new(scopes: %w[read write]) }
 
     it 'returns true if all scopes match' do
       expect(context.has_all_scopes?('read', 'write')).to be true
@@ -132,7 +132,7 @@ RSpec.describe RapiTapir::Auth::Context do
   end
 
   describe '#remove_scope' do
-    let(:context) { described_class.new(scopes: ['read', 'write']) }
+    let(:context) { described_class.new(scopes: %w[read write]) }
 
     it 'removes an existing scope' do
       context.remove_scope('read')
@@ -236,9 +236,9 @@ RSpec.describe RapiTapir::Auth::ContextStore do
     it 'clears the current context' do
       context = RapiTapir::Auth::Context.new(user: { id: 123 })
       described_class.current = context
-      
+
       described_class.clear
-      
+
       expect(described_class.current).to be_nil
     end
   end

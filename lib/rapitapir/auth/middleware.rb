@@ -18,7 +18,7 @@ module RapiTapir
         def call(env)
           request = create_request(env)
           auth_context = authenticate_request(request)
-          
+
           # Store context for the request
           ContextStore.with_context(auth_context) do
             @app.call(env)
@@ -38,7 +38,7 @@ module RapiTapir
 
         def parse_query_params(query_string)
           return {} if query_string.nil? || query_string.empty?
-          
+
           URI.decode_www_form(query_string).to_h
         end
 
@@ -46,7 +46,7 @@ module RapiTapir
           headers = {}
           env.each do |key, value|
             if key.start_with?('HTTP_')
-              header_name = key[5..-1].downcase.tr('_', '-')
+              header_name = key[5..].downcase.tr('_', '-')
               headers[header_name] = value
             end
           end
@@ -54,7 +54,7 @@ module RapiTapir
         end
 
         def authenticate_request(request)
-          @auth_schemes.each do |_name, scheme|
+          @auth_schemes.each_value do |scheme|
             context = scheme.authenticate(request)
             return context if context&.authenticated?
           end
@@ -73,14 +73,10 @@ module RapiTapir
 
         def call(env)
           context = ContextStore.current
-          
-          unless context&.authenticated?
-            return unauthorized_response("Authentication required")
-          end
 
-          unless authorized?(context)
-            return forbidden_response("Insufficient permissions")
-          end
+          return unauthorized_response('Authentication required') unless context&.authenticated?
+
+          return forbidden_response('Insufficient permissions') unless authorized?(context)
 
           @app.call(env)
         end
@@ -125,10 +121,8 @@ module RapiTapir
 
         def call(env)
           key = @key_generator.call(env)
-          
-          unless rate_limit_allowed?(key)
-            return rate_limit_exceeded_response
-          end
+
+          return rate_limit_exceeded_response unless rate_limit_allowed?(key)
 
           record_request(key)
           @app.call(env)
@@ -166,14 +160,14 @@ module RapiTapir
         def rate_limit_exceeded_response
           [
             429,
-            { 
+            {
               'Content-Type' => 'application/json',
               'Retry-After' => '60'
             },
-            [JSON.generate({ 
-              error: 'Rate Limit Exceeded', 
-              message: 'Too many requests. Please try again later.' 
-            })]
+            [JSON.generate({
+                             error: 'Rate Limit Exceeded',
+                             message: 'Too many requests. Please try again later.'
+                           })]
           ]
         end
 
@@ -189,7 +183,7 @@ module RapiTapir
               entry = @storage[key]
               return nil unless entry
               return nil if entry[:expires_at] && Time.now > entry[:expires_at]
-              
+
               entry[:value]
             end
           end
@@ -198,13 +192,11 @@ module RapiTapir
             @mutex.synchronize do
               entry = @storage[key]
               current_value = 0
-              
-              if entry && (!entry[:expires_at] || Time.now <= entry[:expires_at])
-                current_value = entry[:value]
-              end
-              
+
+              current_value = entry[:value] if entry && (!entry[:expires_at] || Time.now <= entry[:expires_at])
+
               expires_at = expires_in ? Time.now + expires_in : nil
-              
+
               @storage[key] = {
                 value: current_value + 1,
                 expires_at: expires_at
@@ -227,25 +219,23 @@ module RapiTapir
         def initialize(app, config = {})
           @app = app
           @allowed_origins = config[:allowed_origins] || ['*']
-          @allowed_methods = config[:allowed_methods] || ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-          @allowed_headers = config[:allowed_headers] || ['Authorization', 'Content-Type', 'X-API-Key']
-          @max_age = config[:max_age] || 86400
+          @allowed_methods = config[:allowed_methods] || %w[GET POST PUT DELETE OPTIONS]
+          @allowed_headers = config[:allowed_headers] || %w[Authorization Content-Type X-API-Key]
+          @max_age = config[:max_age] || 86_400
           @allow_credentials = config[:allow_credentials] || false
         end
 
         def call(env)
           origin = env['HTTP_ORIGIN']
-          
+
           # Handle preflight requests
-          if env['REQUEST_METHOD'] == 'OPTIONS'
-            return preflight_response(origin)
-          end
+          return preflight_response(origin) if env['REQUEST_METHOD'] == 'OPTIONS'
 
           status, headers, body = @app.call(env)
-          
+
           # Add CORS headers to actual requests
           headers = add_cors_headers(headers, origin)
-          
+
           [status, headers, body]
         end
 
@@ -256,16 +246,16 @@ module RapiTapir
             'Content-Type' => 'text/plain',
             'Content-Length' => '0'
           }
-          
+
           headers = add_cors_headers(headers, origin)
           headers['Access-Control-Max-Age'] = @max_age.to_s
-          
+
           [200, headers, ['']]
         end
 
         def add_cors_headers(headers, origin)
           headers = headers.dup
-          
+
           if @allowed_origins.include?('*')
             headers['Access-Control-Allow-Origin'] = '*'
           elsif origin_allowed?(origin)
@@ -274,10 +264,8 @@ module RapiTapir
 
           headers['Access-Control-Allow-Methods'] = @allowed_methods.join(', ')
           headers['Access-Control-Allow-Headers'] = @allowed_headers.join(', ')
-          
-          if @allow_credentials
-            headers['Access-Control-Allow-Credentials'] = 'true'
-          end
+
+          headers['Access-Control-Allow-Credentials'] = 'true' if @allow_credentials
 
           headers
         end
@@ -285,7 +273,7 @@ module RapiTapir
         def origin_allowed?(origin)
           return false unless origin
           return true if @allowed_origins.include?('*')
-          
+
           @allowed_origins.any? do |allowed|
             if allowed.include?('*')
               # Simple wildcard matching
@@ -312,12 +300,12 @@ module RapiTapir
 
         def call(env)
           status, headers, body = @app.call(env)
-          
+
           # Add security headers
           @headers.each do |name, value|
             headers[name] = value unless headers.key?(name)
           end
-          
+
           [status, headers, body]
         end
       end

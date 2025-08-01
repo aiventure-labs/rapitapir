@@ -24,14 +24,14 @@ module RapiTapir
         def call(env)
           start_time = Time.now
           request = Rack::Request.new(env)
-          
+
           @logger.info("Started #{request.request_method} #{request.fullpath}")
-          
+
           status, headers, body = @app.call(env)
-          
+
           duration = ((Time.now - start_time) * 1000).round(2)
           @logger.info("Completed #{status} in #{duration}ms")
-          
+
           [status, headers, body]
         end
 
@@ -41,7 +41,7 @@ module RapiTapir
           require 'logger'
           Logger.new($stdout).tap do |logger|
             logger.level = Logger::INFO
-            logger.formatter = proc do |severity, datetime, progname, msg|
+            logger.formatter = proc do |severity, datetime, _progname, msg|
               "[#{datetime.strftime('%Y-%m-%d %H:%M:%S')}] #{severity}: #{msg}\n"
             end
           end
@@ -56,7 +56,7 @@ module RapiTapir
             allow_origin: '*',
             allow_methods: %w[GET POST PUT DELETE OPTIONS PATCH],
             allow_headers: %w[Content-Type Authorization],
-            max_age: 86400
+            max_age: 86_400
           }.merge(options)
         end
 
@@ -95,7 +95,7 @@ module RapiTapir
         rescue StandardError => e
           @logger&.error("Unhandled exception: #{e.class}: #{e.message}")
           @logger&.error(e.backtrace.join("\n")) if @show_exceptions
-          
+
           error_response(e)
         end
 
@@ -103,7 +103,7 @@ module RapiTapir
 
         def error_response(error)
           error_data = { error: 'Internal Server Error' }
-          
+
           if @show_exceptions
             error_data.merge!(
               exception: error.class.name,
@@ -111,7 +111,7 @@ module RapiTapir
               backtrace: error.backtrace
             )
           end
-          
+
           [500, { 'Content-Type' => 'application/json' }, [JSON.generate(error_data)]]
         end
       end

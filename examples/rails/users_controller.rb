@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Example Rails controller using RapiTapir
-# 
+#
 # To use this in a Rails app:
 # 1. Add this file to app/controllers/
 # 2. Include RapiTapir::Server::Rails::Controller
@@ -18,76 +18,71 @@ class UsersController < ApplicationController
 
   # Define RapiTapir endpoints
   rapitapir_endpoint :index, RapiTapir.get('/users')
-    .summary('List all users')
-    .description('Returns a list of all users in the system')
-    .out(RapiTapir::Core::Output.new(kind: :json, type: { users: Array })) do |inputs|
-    
+                                      .summary('List all users')
+                                      .description('Returns a list of all users in the system')
+                                      .out(RapiTapir::Core::Output.new(kind: :json, type: { users: Array })) do |_inputs|
     { users: @users.values }
   end
 
   rapitapir_endpoint :show, RapiTapir.get('/users/:id')
-    .summary('Get user by ID')
-    .description('Returns a single user by their ID')
-    .in(RapiTapir::Core::Input.new(kind: :path, name: :id, type: :integer))
-    .out(RapiTapir::Core::Output.new(kind: :json, type: { id: :integer, name: :string, email: :string })) do |inputs|
-    
+                                     .summary('Get user by ID')
+                                     .description('Returns a single user by their ID')
+                                     .in(RapiTapir::Core::Input.new(kind: :path, name: :id, type: :integer))
+                                     .out(RapiTapir::Core::Output.new(kind: :json, type: { id: :integer, name: :string, email: :string })) do |inputs|
     user_id = inputs[:id]
     user = @users[user_id]
-    
-    raise ArgumentError, "User not found" unless user
-    
+
+    raise ArgumentError, 'User not found' unless user
+
     user
   end
 
   rapitapir_endpoint :create, RapiTapir.post('/users')
-    .summary('Create a new user')
-    .description('Creates a new user with the provided data')
-    .in(RapiTapir::Core::Input.new(kind: :body, name: :user_data, type: Hash))
-    .out(RapiTapir::Core::Output.new(kind: :json, type: { id: :integer, name: :string, email: :string })) do |inputs|
-    
+                                       .summary('Create a new user')
+                                       .description('Creates a new user with the provided data')
+                                       .in(RapiTapir::Core::Input.new(kind: :body, name: :user_data, type: Hash))
+                                       .out(RapiTapir::Core::Output.new(kind: :json, type: { id: :integer, name: :string, email: :string })) do |inputs|
     user_data = inputs[:user_data]
     new_id = (@users.keys.max || 0) + 1
-    
+
     new_user = {
       id: new_id,
       name: user_data['name'],
       email: user_data['email']
     }
-    
+
     @users[new_id] = new_user
     new_user
   end
 
   rapitapir_endpoint :update, RapiTapir.put('/users/:id')
-    .summary('Update an existing user')
-    .description('Updates an existing user with the provided data')
-    .in(RapiTapir::Core::Input.new(kind: :path, name: :id, type: :integer))
-    .in(RapiTapir::Core::Input.new(kind: :body, name: :user_data, type: Hash))
-    .out(RapiTapir::Core::Output.new(kind: :json, type: { id: :integer, name: :string, email: :string })) do |inputs|
-    
+                                       .summary('Update an existing user')
+                                       .description('Updates an existing user with the provided data')
+                                       .in(RapiTapir::Core::Input.new(kind: :path, name: :id, type: :integer))
+                                       .in(RapiTapir::Core::Input.new(kind: :body, name: :user_data, type: Hash))
+                                       .out(RapiTapir::Core::Output.new(kind: :json, type: { id: :integer, name: :string, email: :string })) do |inputs|
     user_id = inputs[:id]
     user_data = inputs[:user_data]
-    
-    raise ArgumentError, "User not found" unless @users[user_id]
-    
+
+    raise ArgumentError, 'User not found' unless @users[user_id]
+
     @users[user_id].merge!(
       name: user_data['name'] || @users[user_id][:name],
       email: user_data['email'] || @users[user_id][:email]
     )
-    
+
     @users[user_id]
   end
 
   rapitapir_endpoint :destroy, RapiTapir.delete('/users/:id')
-    .summary('Delete a user')
-    .description('Deletes a user by their ID')
-    .in(RapiTapir::Core::Input.new(kind: :path, name: :id, type: :integer))
-    .out(RapiTapir::Core::Output.new(kind: :json, type: { message: :string })) do |inputs|
-    
+                                        .summary('Delete a user')
+                                        .description('Deletes a user by their ID')
+                                        .in(RapiTapir::Core::Input.new(kind: :path, name: :id, type: :integer))
+                                        .out(RapiTapir::Core::Output.new(kind: :json, type: { message: :string })) do |inputs|
     user_id = inputs[:id]
-    
-    raise ArgumentError, "User not found" unless @users[user_id]
-    
+
+    raise ArgumentError, 'User not found' unless @users[user_id]
+
     @users.delete(user_id)
     { message: "User #{user_id} deleted successfully" }
   end

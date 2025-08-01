@@ -7,7 +7,7 @@ module RapiTapir
   module Types
     class DateTime < Base
       def initialize(format: nil, **options)
-        super(format: format, **options)
+        super
       end
 
       protected
@@ -15,12 +15,13 @@ module RapiTapir
       def validate_type(value)
         return [] if value.is_a?(::DateTime) || value.is_a?(::Time)
         return [] if value.is_a?(::String) && parseable_datetime?(value)
+
         ["Expected DateTime, Time, or datetime string, got #{value.class}"]
       end
 
       def validate_constraints(value)
         errors = []
-        
+
         if constraints[:format] && value.is_a?(::String)
           format_errors = validate_datetime_format(value, constraints[:format])
           errors.concat(format_errors)
@@ -40,11 +41,12 @@ module RapiTapir
           # Assume Unix timestamp
           ::Time.at(value).to_datetime
         else
-          if value.respond_to?(:to_datetime)
-            value.to_datetime
-          else
+          unless value.respond_to?(:to_datetime)
             raise CoercionError.new(value, 'DateTime', 'Value cannot be converted to DateTime')
           end
+
+          value.to_datetime
+
         end
       rescue ArgumentError => e
         raise CoercionError.new(value, 'DateTime', e.message)
@@ -73,11 +75,11 @@ module RapiTapir
         case format
         when :iso8601, 'iso8601'
           iso_datetime_pattern = /\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\z/
-          iso_datetime_pattern.match?(value) ? [] : ["DateTime must be in ISO8601 format"]
+          iso_datetime_pattern.match?(value) ? [] : ['DateTime must be in ISO8601 format']
         when :rfc3339, 'rfc3339'
           # RFC3339 is essentially the same as ISO8601 for our purposes
           iso_datetime_pattern = /\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\z/
-          iso_datetime_pattern.match?(value) ? [] : ["DateTime must be in RFC3339 format"]
+          iso_datetime_pattern.match?(value) ? [] : ['DateTime must be in RFC3339 format']
         when String
           # Custom format validation
           begin

@@ -17,7 +17,7 @@ module RapiTapir
     end
 
     # Alias for path_param for convenience
-    alias_method :path, :path_param
+    alias path path_param
 
     def header(name, type, options = {})
       validate_input_params!(name, type)
@@ -66,7 +66,7 @@ module RapiTapir
     end
 
     def deprecated(flag = true)
-      { deprecated: !!flag }
+      { deprecated: flag }
     end
 
     def error_description(text)
@@ -79,32 +79,33 @@ module RapiTapir
     def validate_input_params!(name, type)
       raise ArgumentError, 'Input name cannot be nil' if name.nil?
       raise ArgumentError, 'Input name must be a symbol or string' unless name.is_a?(Symbol) || name.is_a?(String)
+
       validate_type!(type)
     end
 
     def validate_type!(type)
-      valid_types = [:string, :integer, :float, :boolean, :date, :datetime]
+      valid_types = %i[string integer float boolean date datetime]
       return if valid_types.include?(type) || type.is_a?(Hash) || type.is_a?(Class)
-      
+
       raise ArgumentError, "Invalid type: #{type}. Must be one of #{valid_types} or a Hash/Class"
     end
 
     def validate_schema!(schema)
       return if schema.is_a?(Hash) || schema.is_a?(Class) || schema.is_a?(Symbol) || schema.is_a?(Array)
-      
+
       raise ArgumentError, "Invalid schema: #{schema}. Must be a Hash, Class, Symbol, or Array"
     end
 
     def validate_status_code!(code)
-      unless code.is_a?(Integer) && code >= 100 && code <= 599
-        raise ArgumentError, "Invalid status code: #{code}. Must be an integer between 100-599"
-      end
+      return if code.is_a?(Integer) && code >= 100 && code <= 599
+
+      raise ArgumentError, "Invalid status code: #{code}. Must be an integer between 100-599"
     end
 
     def validate_string!(value, name)
-      unless value.is_a?(String) && !value.empty?
-        raise ArgumentError, "#{name} must be a non-empty string"
-      end
+      return if value.is_a?(String) && !value.empty?
+
+      raise ArgumentError, "#{name} must be a non-empty string"
     end
   end
 end

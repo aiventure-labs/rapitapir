@@ -9,7 +9,7 @@ RSpec.describe RapiTapir::DSL do
     describe '#query' do
       it 'creates a query input' do
         input = query(:name, :string)
-        
+
         expect(input.kind).to eq(:query)
         expect(input.name).to eq(:name)
         expect(input.type).to eq(:string)
@@ -22,7 +22,7 @@ RSpec.describe RapiTapir::DSL do
 
       it 'accepts options' do
         input = query(:name, :string, optional: true)
-        
+
         expect(input.options[:optional]).to be(true)
       end
     end
@@ -30,7 +30,7 @@ RSpec.describe RapiTapir::DSL do
     describe '#path_param' do
       it 'creates a path parameter input' do
         input = path_param(:id, :integer)
-        
+
         expect(input.kind).to eq(:path)
         expect(input.name).to eq(:id)
         expect(input.type).to eq(:integer)
@@ -40,7 +40,7 @@ RSpec.describe RapiTapir::DSL do
     describe '#header' do
       it 'creates a header input' do
         input = header(:authorization, :string)
-        
+
         expect(input.kind).to eq(:header)
         expect(input.name).to eq(:authorization)
         expect(input.type).to eq(:string)
@@ -50,7 +50,7 @@ RSpec.describe RapiTapir::DSL do
     describe '#body' do
       it 'creates a body input' do
         input = body({ name: :string, age: :integer })
-        
+
         expect(input.kind).to eq(:body)
         expect(input.name).to eq(:body)
         expect(input.type).to eq({ name: :string, age: :integer })
@@ -62,7 +62,7 @@ RSpec.describe RapiTapir::DSL do
     describe '#json_body' do
       it 'creates a JSON output' do
         output = json_body({ message: :string })
-        
+
         expect(output.kind).to eq(:json)
         expect(output.type).to eq({ message: :string })
       end
@@ -75,7 +75,7 @@ RSpec.describe RapiTapir::DSL do
     describe '#xml_body' do
       it 'creates an XML output' do
         output = xml_body({ message: :string })
-        
+
         expect(output.kind).to eq(:xml)
         expect(output.type).to eq({ message: :string })
       end
@@ -84,7 +84,7 @@ RSpec.describe RapiTapir::DSL do
     describe '#status_code' do
       it 'creates a status output' do
         output = status_code(200)
-        
+
         expect(output.kind).to eq(:status)
         expect(output.type).to eq(200)
       end
@@ -100,7 +100,7 @@ RSpec.describe RapiTapir::DSL do
     describe '#description' do
       it 'returns description metadata' do
         result = description('Test description')
-        
+
         expect(result).to eq({ description: 'Test description' })
       end
 
@@ -113,7 +113,7 @@ RSpec.describe RapiTapir::DSL do
     describe '#summary' do
       it 'returns summary metadata' do
         result = summary('Test summary')
-        
+
         expect(result).to eq({ summary: 'Test summary' })
       end
     end
@@ -121,7 +121,7 @@ RSpec.describe RapiTapir::DSL do
     describe '#tag' do
       it 'returns tag metadata' do
         result = tag('users')
-        
+
         expect(result).to eq({ tag: 'users' })
       end
     end
@@ -130,7 +130,7 @@ RSpec.describe RapiTapir::DSL do
       it 'returns example metadata' do
         data = { name: 'John', age: 30 }
         result = example(data)
-        
+
         expect(result).to eq({ example: data })
       end
     end
@@ -138,7 +138,7 @@ RSpec.describe RapiTapir::DSL do
     describe '#deprecated' do
       it 'returns deprecated metadata as true by default' do
         result = deprecated
-        
+
         expect(result).to eq({ deprecated: true })
       end
 
@@ -151,7 +151,7 @@ RSpec.describe RapiTapir::DSL do
     describe '#error_description' do
       it 'returns error description metadata' do
         result = error_description('Not found')
-        
+
         expect(result).to eq({ error_description: 'Not found' })
       end
     end
@@ -163,16 +163,16 @@ RSpec.describe 'DSL integration with Endpoint' do
 
   it 'builds a complete endpoint with DSL' do
     endpoint = RapiTapir::Core::Endpoint.get('/users/:id')
-      .in(path_param(:id, :integer))
-      .in(query(:include, :string, optional: true))
-      .in(header(:authorization, :string))
-      .out(status_code(200))
-      .out(json_body({ id: :integer, name: :string, email: :string }))
-      .error_out(404, json_body({ error: :string }))
-      .error_out(401, json_body({ error: :string }))
-      .description('Get user by ID')
-      .summary('User retrieval')
-      .tag('users')
+                                        .in(path_param(:id, :integer))
+                                        .in(query(:include, :string, optional: true))
+                                        .in(header(:authorization, :string))
+                                        .out(status_code(200))
+                                        .out(json_body({ id: :integer, name: :string, email: :string }))
+                                        .error_out(404, json_body({ error: :string }))
+                                        .error_out(401, json_body({ error: :string }))
+                                        .description('Get user by ID')
+                                        .summary('User retrieval')
+                                        .tag('users')
 
     expect(endpoint.method).to eq(:get)
     expect(endpoint.path).to eq('/users/:id')
@@ -186,26 +186,26 @@ RSpec.describe 'DSL integration with Endpoint' do
 
   it 'validates inputs and outputs correctly' do
     endpoint = RapiTapir::Core::Endpoint.post('/users')
-      .in(body({ name: :string, email: :string }))
-      .out(status_code(201))
-      .out(json_body({ id: :integer, name: :string, email: :string }))
+                                        .in(body({ name: :string, email: :string }))
+                                        .out(status_code(201))
+                                        .out(json_body({ id: :integer, name: :string, email: :string }))
 
     # Valid input and output
-    expect { 
+    expect do
       endpoint.validate!(
         { body: { name: 'John', email: 'john@example.com' } },
         { id: 1, name: 'John', email: 'john@example.com' }
-      ) 
-    }.not_to raise_error
+      )
+    end.not_to raise_error
 
     # Invalid input
-    expect { 
-      endpoint.validate!({ body: { name: 123, email: 'john@example.com' } }) 
-    }.to raise_error(TypeError)
+    expect do
+      endpoint.validate!({ body: { name: 123, email: 'john@example.com' } })
+    end.to raise_error(TypeError)
 
     # Invalid output
-    expect { 
-      endpoint.validate!({}, { id: 'not-integer', name: 'John', email: 'john@example.com' }) 
-    }.to raise_error(TypeError)
+    expect do
+      endpoint.validate!({}, { id: 'not-integer', name: 'John', email: 'john@example.com' })
+    end.to raise_error(TypeError)
   end
 end

@@ -9,25 +9,29 @@ RSpec.describe RapiTapir::Docs::HtmlGenerator do
   let(:endpoints) do
     [
       RapiTapir.get('/users')
-        .ok(RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string})))
-        .summary('Get all users')
-        .description('Retrieve a list of all users')
-        .build,
+               .ok(RapiTapir::Types.array(RapiTapir::Types.hash({ 'id' => RapiTapir::Types.integer,
+                                                                  'name' => RapiTapir::Types.string })))
+               .summary('Get all users')
+               .description('Retrieve a list of all users')
+               .build,
 
       RapiTapir.post('/users')
-        .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
-        .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string, "email" => RapiTapir::Types.string}))
-        .summary('Create user')
-        .description('Create a new user')
-        .build,
+               .json_body(RapiTapir::Types.hash({ 'name' => RapiTapir::Types.string,
+                                                  'email' => RapiTapir::Types.string }))
+               .ok(RapiTapir::Types.hash({ 'id' => RapiTapir::Types.integer, 'name' => RapiTapir::Types.string,
+                                           'email' => RapiTapir::Types.string }))
+               .summary('Create user')
+               .description('Create a new user')
+               .build,
 
       RapiTapir.get('/users/search')
-        .query(:q, :string)
-        .query(:limit, :integer, required: false)
-        .ok(RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string})))
-        .summary('Search users')
-        .description('Search for users')
-        .build
+               .query(:q, :string)
+               .query(:limit, :integer, required: false)
+               .ok(RapiTapir::Types.array(RapiTapir::Types.hash({ 'id' => RapiTapir::Types.integer,
+                                                                  'name' => RapiTapir::Types.string })))
+               .summary('Search users')
+               .description('Search for users')
+               .build
     ]
   end
 
@@ -139,7 +143,7 @@ RSpec.describe RapiTapir::Docs::HtmlGenerator do
 
     it 'saves generated HTML to file' do
       generator.save_to_file(temp_file.path)
-      
+
       content = File.read(temp_file.path)
       expect(content).to include('<!DOCTYPE html>')
       expect(content).to include('<title>Test API</title>')
@@ -160,10 +164,10 @@ RSpec.describe RapiTapir::Docs::HtmlGenerator do
 
     describe '#generate_example_value' do
       it 'generates appropriate example values' do
-        expect(generator.send(:generate_example_value, :string)).to eq("example string")
+        expect(generator.send(:generate_example_value, :string)).to eq('example string')
         expect(generator.send(:generate_example_value, :integer)).to eq(123)
         expect(generator.send(:generate_example_value, :boolean)).to eq(true)
-        expect(generator.send(:generate_example_value, :date)).to eq("2025-01-15")
+        expect(generator.send(:generate_example_value, :date)).to eq('2025-01-15')
       end
     end
 

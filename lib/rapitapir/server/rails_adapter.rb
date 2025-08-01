@@ -30,7 +30,8 @@ module RapiTapir
         private
 
         # Process a RapiTapir endpoint within a Rails action
-        def process_rapitapir_endpoint(action_name = action_name)
+        def process_rapitapir_endpoint(action_name = nil)
+          action_name ||= action_name
           endpoint_config = self.class.rapitapir_endpoints[action_name.to_sym]
           
           unless endpoint_config

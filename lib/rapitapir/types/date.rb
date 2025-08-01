@@ -7,7 +7,7 @@ module RapiTapir
   module Types
     class Date < Base
       def initialize(format: nil, **options)
-        super(format: format, **options)
+        super
       end
 
       protected
@@ -15,12 +15,13 @@ module RapiTapir
       def validate_type(value)
         return [] if value.is_a?(::Date)
         return [] if value.is_a?(::String) && parseable_date?(value)
+
         ["Expected Date or date string, got #{value.class}"]
       end
 
       def validate_constraints(value)
         errors = []
-        
+
         if constraints[:format] && value.is_a?(::String)
           format_errors = validate_date_format(value, constraints[:format])
           errors.concat(format_errors)
@@ -40,11 +41,10 @@ module RapiTapir
           # Assume Unix timestamp
           ::Time.at(value).to_date
         else
-          if value.respond_to?(:to_date)
-            value.to_date
-          else
-            raise CoercionError.new(value, 'Date', 'Value cannot be converted to Date')
-          end
+          raise CoercionError.new(value, 'Date', 'Value cannot be converted to Date') unless value.respond_to?(:to_date)
+
+          value.to_date
+
         end
       rescue ArgumentError => e
         raise CoercionError.new(value, 'Date', e.message)
@@ -73,7 +73,7 @@ module RapiTapir
         case format
         when :iso8601, 'iso8601'
           iso_date_pattern = /\A\d{4}-\d{2}-\d{2}\z/
-          iso_date_pattern.match?(value) ? [] : ["Date must be in ISO8601 format (YYYY-MM-DD)"]
+          iso_date_pattern.match?(value) ? [] : ['Date must be in ISO8601 format (YYYY-MM-DD)']
         when String
           # Custom format validation
           begin

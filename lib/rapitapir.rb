@@ -85,7 +85,7 @@ module RapiTapir
   # Observability configuration
   def self.configure
     yield(Observability.configuration) if block_given?
-    
+
     # Initialize observability components after configuration
     if Observability.config.metrics.enabled
       Observability::Metrics.configure(
@@ -94,7 +94,7 @@ module RapiTapir
         custom_labels: Observability.config.metrics.custom_labels
       )
     end
-    
+
     if Observability.config.tracing.enabled
       Observability::Tracing.configure(
         service_name: Observability.config.tracing.service_name,
@@ -102,7 +102,7 @@ module RapiTapir
         provider: Observability.config.tracing.provider
       )
     end
-    
+
     if Observability.config.logging.enabled
       Observability::Logging.configure(
         level: Observability.config.logging.level,
@@ -110,16 +110,16 @@ module RapiTapir
         structured: Observability.config.logging.structured
       )
     end
-    
-    if Observability.config.health_check.enabled
-      Observability::HealthCheck.configure(
-        endpoint: Observability.config.health_check.endpoint
-      )
-      
-      # Register custom health checks
-      Observability.config.health_check.checks.each do |check|
-        Observability::HealthCheck.register(check[:name], &check[:check])
-      end
+
+    return unless Observability.config.health_check.enabled
+
+    Observability::HealthCheck.configure(
+      endpoint: Observability.config.health_check.endpoint
+    )
+
+    # Register custom health checks
+    Observability.config.health_check.checks.each do |check|
+      Observability::HealthCheck.register(check[:name], &check[:check])
     end
   end
 

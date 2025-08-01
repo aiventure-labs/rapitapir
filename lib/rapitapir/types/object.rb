@@ -10,11 +10,11 @@ module RapiTapir
       def initialize(**options, &block)
         @fields = {}
         super(**options)
-        
-        if block_given?
-          builder = ObjectBuilder.new(self)
-          builder.instance_eval(&block)
-        end
+
+        return unless block_given?
+
+        builder = ObjectBuilder.new(self)
+        builder.instance_eval(&block)
       end
 
       def field(name, type, required: true, **options)
@@ -36,6 +36,7 @@ module RapiTapir
 
       def validate_type(value)
         return ["Expected hash/object, got #{value.class}"] unless value.is_a?(::Hash)
+
         []
       end
 
@@ -45,12 +46,12 @@ module RapiTapir
         # Validate each defined field
         fields.each do |field_name, field_type|
           field_value = extract_field_value(value, field_name)
-          
+
           field_result = field_type.validate(field_value)
-          unless field_result[:valid]
-            field_result[:errors].each do |error|
-              errors << "Field '#{field_name}': #{error}"
-            end
+          next if field_result[:valid]
+
+          field_result[:errors].each do |error|
+            errors << "Field '#{field_name}': #{error}"
           end
         end
 
@@ -61,14 +62,12 @@ module RapiTapir
         case value
         when ::Hash
           coerced = {}
-          
+
           # Coerce each defined field
           fields.each do |field_name, field_type|
             field_value = extract_field_value(value, field_name)
-            
-            if field_value || !field_type.optional?
-              coerced[field_name] = field_type.coerce(field_value)
-            end
+
+            coerced[field_name] = field_type.coerce(field_value) if field_value || !field_type.optional?
           end
 
           coerced
@@ -76,9 +75,8 @@ module RapiTapir
           # Try to parse as JSON
           require 'json'
           parsed = JSON.parse(value)
-          unless parsed.is_a?(::Hash)
-            raise CoercionError.new(value, 'Object', 'JSON string did not parse to object')
-          end
+          raise CoercionError.new(value, 'Object', 'JSON string did not parse to object') unless parsed.is_a?(::Hash)
+
           coerce_value(parsed)
         else
           raise CoercionError.new(value, 'Object', 'Value cannot be converted to object')
@@ -93,7 +91,7 @@ module RapiTapir
 
       def apply_constraints_to_schema(schema)
         super
-        
+
         if fields.any?
           schema[:properties] = {}
           required_fields = []
@@ -111,7 +109,7 @@ module RapiTapir
 
       def to_s
         if fields.empty?
-          "Object"
+          'Object'
         else
           field_strs = fields.map { |name, type| "#{name}: #{type}" }
           "Object{#{field_strs.join(', ')}}"

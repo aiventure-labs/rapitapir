@@ -31,7 +31,7 @@ module RapiTapir
 
       def user_id
         return nil unless @user
-        
+
         case @user
         when Hash
           @user[:id] || @user['id']

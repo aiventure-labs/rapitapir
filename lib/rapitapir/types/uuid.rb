@@ -15,7 +15,8 @@ module RapiTapir
 
       def validate_type(value)
         return ["Expected string, got #{value.class}"] unless value.is_a?(::String)
-        return ["Invalid UUID format"] unless UUID_PATTERN.match?(value)
+        return ['Invalid UUID format'] unless UUID_PATTERN.match?(value)
+
         []
       end
 

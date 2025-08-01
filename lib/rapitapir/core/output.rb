@@ -22,7 +22,7 @@ module RapiTapir
         when :string then value.is_a?(String)
         when :integer then value.is_a?(Integer) || value.is_a?(Float)
         when :float then value.is_a?(Float) || value.is_a?(Integer)
-        when :boolean then value == true || value == false
+        when :boolean then [true, false].include?(value)
         when Hash then validate_hash_schema(value)
         when Class then value.is_a?(type)
         when Integer then true # For status codes
@@ -51,9 +51,9 @@ module RapiTapir
       private
 
       def validate_kind!(kind)
-        unless VALID_KINDS.include?(kind)
-          raise ArgumentError, "Invalid kind: #{kind}. Must be one of #{VALID_KINDS}"
-        end
+        return if VALID_KINDS.include?(kind)
+
+        raise ArgumentError, "Invalid kind: #{kind}. Must be one of #{VALID_KINDS}"
       end
 
       def validate_type!(type)
@@ -74,13 +74,13 @@ module RapiTapir
       def validate_hash_schema(value)
         return false unless value.is_a?(Hash)
         return true unless type.is_a?(Hash) # If type is not a hash schema, accept any hash
-        
+
         type.all? do |key, expected_type|
           case expected_type
           when :string then value[key].is_a?(String)
           when :integer then value[key].is_a?(Integer)
           when :float then value[key].is_a?(Float) || value[key].is_a?(Integer)
-          when :boolean then value[key] == true || value[key] == false
+          when :boolean then [true, false].include?(value[key])
           when :date then value[key].is_a?(Date) || value[key].is_a?(String)
           when :datetime then value[key].is_a?(DateTime) || value[key].is_a?(String)
           else true

@@ -44,7 +44,7 @@ module RapiTapir
 
           #{config[:description]}
 
-          **Version:** #{config[:version]}  
+          **Version:** #{config[:version]}#{'  '}
           **Base URL:** `#{config[:base_url]}`
 
           ---
@@ -52,14 +52,14 @@ module RapiTapir
       end
 
       def generate_table_of_contents
-        return "" unless config[:include_toc]
+        return '' unless config[:include_toc]
 
         toc_items = endpoints.map do |endpoint|
           method = endpoint.method.to_s.upcase
           path = endpoint.path
           summary = endpoint.metadata[:summary] || "#{method} #{path}"
           anchor = generate_anchor(method, path)
-          
+
           "- [#{method} #{path}](##{anchor}) - #{summary}"
         end
 
@@ -80,28 +80,24 @@ module RapiTapir
         method = endpoint.method.to_s.upcase
         path = endpoint.path
         anchor = generate_anchor(method, path)
-        
+
         doc = []
-        
+
         # Header
         doc << "## #{method} #{path} {##{anchor}}"
-        
+
         # Summary and description
-        if endpoint.metadata[:summary]
-          doc << "**#{endpoint.metadata[:summary]}**"
-        end
-        
-        if endpoint.metadata[:description]
-          doc << endpoint.metadata[:description]
-        end
+        doc << "**#{endpoint.metadata[:summary]}**" if endpoint.metadata[:summary]
+
+        doc << endpoint.metadata[:description] if endpoint.metadata[:description]
 
         # Path parameters
         path_params = endpoint.inputs.select { |input| input.kind == :path }
         if path_params.any?
-          doc << "### Path Parameters"
-          doc << ""
-          doc << "| Parameter | Type | Description |"
-          doc << "|-----------|------|-------------|"
+          doc << '### Path Parameters'
+          doc << ''
+          doc << '| Parameter | Type | Description |'
+          doc << '|-----------|------|-------------|'
           path_params.each do |param|
             doc << "| `#{param.name}` | #{format_type(param.type)} | #{(param.options && param.options[:description]) || 'No description'} |"
           end
@@ -110,12 +106,12 @@ module RapiTapir
         # Query parameters
         query_params = endpoint.inputs.select { |input| input.kind == :query }
         if query_params.any?
-          doc << "### Query Parameters"
-          doc << ""
-          doc << "| Parameter | Type | Required | Description |"
-          doc << "|-----------|------|----------|-------------|"
+          doc << '### Query Parameters'
+          doc << ''
+          doc << '| Parameter | Type | Required | Description |'
+          doc << '|-----------|------|----------|-------------|'
           query_params.each do |param|
-            required = param.required? ? "Yes" : "No"
+            required = param.required? ? 'Yes' : 'No'
             doc << "| `#{param.name}` | #{format_type(param.type)} | #{required} | #{(param.options && param.options[:description]) || 'No description'} |"
           end
         end
@@ -123,28 +119,28 @@ module RapiTapir
         # Request body
         body_param = endpoint.inputs.find { |input| input.kind == :body }
         if body_param
-          doc << "### Request Body"
-          doc << ""
-          doc << "**Content-Type:** `application/json`"
-          doc << ""
-          doc << "**Schema:**"
-          doc << "```json"
+          doc << '### Request Body'
+          doc << ''
+          doc << '**Content-Type:** `application/json`'
+          doc << ''
+          doc << '**Schema:**'
+          doc << '```json'
           doc << format_schema_example(body_param.type)
-          doc << "```"
+          doc << '```'
         end
 
         # Response
         if endpoint.outputs.any?
-          doc << "### Response"
-          doc << ""
+          doc << '### Response'
+          doc << ''
           endpoint.outputs.each do |output|
             if output.kind == :json
-              doc << "**Content-Type:** `application/json`"
-              doc << ""
-              doc << "**Schema:**"
-              doc << "```json"
+              doc << '**Content-Type:** `application/json`'
+              doc << ''
+              doc << '**Schema:**'
+              doc << '```json'
               doc << format_schema_example(output.type)
-              doc << "```"
+              doc << '```'
             elsif output.kind == :status
               doc << "**Status Code:** #{output.type}"
             end
@@ -152,37 +148,35 @@ module RapiTapir
         end
 
         # Examples
-        if config[:include_examples]
-          doc << generate_endpoint_examples(endpoint)
-        end
+        doc << generate_endpoint_examples(endpoint) if config[:include_examples]
 
         doc.join("\n\n")
       end
 
       def generate_endpoint_examples(endpoint)
-        method = endpoint.method.to_s.upcase
-        path = endpoint.path
-        
+        endpoint.method.to_s.upcase
+        endpoint.path
+
         # Generate curl example
         curl_example = generate_curl_example(endpoint)
-        
+
         # Generate response example
         response_example = generate_response_example(endpoint)
-        
+
         examples = []
-        examples << "### Example"
-        examples << ""
-        examples << "**Request:**"
-        examples << "```bash"
+        examples << '### Example'
+        examples << ''
+        examples << '**Request:**'
+        examples << '```bash'
         examples << curl_example
-        examples << "```"
-        
+        examples << '```'
+
         if response_example
-          examples << ""
-          examples << "**Response:**"
-          examples << "```json"
+          examples << ''
+          examples << '**Response:**'
+          examples << '```json'
           examples << response_example
-          examples << "```"
+          examples << '```'
         end
 
         examples.join("\n")
@@ -191,61 +185,61 @@ module RapiTapir
       def generate_curl_example(endpoint)
         method = endpoint.method.to_s.upcase
         path = endpoint.path
-        
+
         # Replace path parameters with example values
-        example_path = path.gsub(/:(\w+)/) { |match|
-          param_name = $1
+        example_path = path.gsub(/:(\w+)/) do |_match|
+          param_name = ::Regexp.last_match(1)
           case param_name
           when 'id' then '123'
           when 'slug' then 'example-slug'
           else 'example-value'
           end
-        }
-        
+        end
+
         curl_parts = ["curl -X #{method}"]
-        
+
         # Add headers
         curl_parts << "-H 'Content-Type: application/json'"
         curl_parts << "-H 'Accept: application/json'"
-        
+
         # Add query parameters example
         query_params = endpoint.inputs.select { |input| input.kind == :query }
         if query_params.any?
           query_string = query_params.map do |param|
             example_value = case param.type
-            when :string then 'example'
-            when :integer then '10'
-            when :boolean then 'true'
-            else 'value'
-            end
+                            when :string then 'example'
+                            when :integer then '10'
+                            when :boolean then 'true'
+                            else 'value'
+                            end
             "#{param.name}=#{example_value}"
           end.join('&')
           example_path += "?#{query_string}"
         end
-        
+
         # Add request body
         body_param = endpoint.inputs.find { |input| input.kind == :body }
         if body_param
           body_example = format_schema_example(body_param.type)
           curl_parts << "-d '#{body_example}'"
         end
-        
+
         # Add URL
         curl_parts << "'#{config[:base_url]}#{example_path}'"
-        
+
         curl_parts.join(' \\\n  ')
       end
 
       def generate_response_example(endpoint)
         output = endpoint.outputs.find { |o| o.kind == :json }
         return nil unless output
-        
+
         format_schema_example(output.type)
       end
 
       def format_schema_example(schema, indent_level = 0)
         indent = '  ' * indent_level
-        
+
         case schema
         when Hash
           lines = ['{']

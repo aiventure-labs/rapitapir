@@ -13,7 +13,7 @@ RSpec.describe RapiTapir::Server::PathMatcher do
 
     it 'extracts multiple parameter names' do
       matcher = described_class.new('/users/:user_id/posts/:post_id')
-      expect(matcher.param_names).to eq(['user_id', 'post_id'])
+      expect(matcher.param_names).to eq(%w[user_id post_id])
     end
   end
 
@@ -21,28 +21,28 @@ RSpec.describe RapiTapir::Server::PathMatcher do
     it 'matches simple path with parameter' do
       matcher = described_class.new('/users/:id')
       result = matcher.match('/users/123')
-      
+
       expect(result).to eq({ id: '123' })
     end
 
     it 'matches path with multiple parameters' do
       matcher = described_class.new('/users/:user_id/posts/:post_id')
       result = matcher.match('/users/123/posts/456')
-      
+
       expect(result).to eq({ user_id: '123', post_id: '456' })
     end
 
     it 'returns nil for non-matching path' do
       matcher = described_class.new('/users/:id')
       result = matcher.match('/posts/123')
-      
+
       expect(result).to be_nil
     end
 
     it 'matches exact path without parameters' do
       matcher = described_class.new('/users')
       result = matcher.match('/users')
-      
+
       expect(result).to eq({})
     end
   end

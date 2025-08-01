@@ -14,7 +14,7 @@ RSpec.describe RapiTapir::CLI::Server do
   before do
     # Clear any existing endpoints
     RapiTapir.instance_variable_set(:@endpoints, [])
-    
+
     # Create a test endpoints file
     File.write(test_endpoints_file, <<~RUBY)
       require 'rapitapir'
@@ -65,13 +65,13 @@ RSpec.describe RapiTapir::CLI::Server do
     # Integration test that actually starts the server briefly
     it 'serves documentation when started', slow: true do
       server_pid = nil
-      
+
       begin
         # Start server in a separate process
         server_pid = fork do
           # Suppress output in the child process
-          $stdout.reopen('/dev/null', 'w')
-          $stderr.reopen('/dev/null', 'w')
+          $stdout.reopen(File::NULL, 'w')
+          $stderr.reopen(File::NULL, 'w')
           server.start
         end
 
@@ -83,15 +83,22 @@ RSpec.describe RapiTapir::CLI::Server do
         expect(response.code).to eq('200')
         expect(response.body).to include('API Documentation')
         expect(response.body).to include('API Documentation')
-      expect(response.body).to include('/users')
-
-      rescue => e
+        expect(response.body).to include('/users')
+      rescue StandardError => e
         # If connection fails, that's expected in some environments
         puts "Server test skipped: #{e.message}"
       ensure
         if server_pid
-          Process.kill('TERM', server_pid) rescue nil
-          Process.wait(server_pid) rescue nil
+          begin
+            Process.kill('TERM', server_pid)
+          rescue StandardError
+            nil
+          end
+          begin
+            Process.wait(server_pid)
+          rescue StandardError
+            nil
+          end
         end
       end
     end
@@ -157,13 +164,13 @@ RSpec.describe RapiTapir::CLI::Server do
 
   describe 'configuration' do
     it 'accepts custom configuration' do
-      config = { 
+      config = {
         title: 'Custom API',
         description: 'Custom description',
         version: '2.0.0'
       }
       server = described_class.new(
-        endpoints_file: test_endpoints_file, 
+        endpoints_file: test_endpoints_file,
         port: port,
         config: config
       )

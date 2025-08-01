@@ -21,33 +21,33 @@ RSpec.describe RapiTapir::Types do
 
       it 'enforces minimum length' do
         type = RapiTapir::Types.string(min_length: 5)
-        
+
         result = type.validate('hi')
         expect(result[:valid]).to be false
         expect(result[:errors]).to include(match(/below minimum/))
-        
+
         result = type.validate('hello')
         expect(result[:valid]).to be true
       end
 
       it 'enforces maximum length' do
         type = RapiTapir::Types.string(max_length: 3)
-        
+
         result = type.validate('hello')
         expect(result[:valid]).to be false
         expect(result[:errors]).to include(match(/exceeds maximum/))
-        
+
         result = type.validate('hi')
         expect(result[:valid]).to be true
       end
 
       it 'validates pattern' do
         type = RapiTapir::Types.string(pattern: /\A[a-z]+\z/)
-        
+
         result = type.validate('Hello')
         expect(result[:valid]).to be false
         expect(result[:errors]).to include(match(/does not match pattern/))
-        
+
         result = type.validate('hello')
         expect(result[:valid]).to be true
       end
@@ -77,22 +77,22 @@ RSpec.describe RapiTapir::Types do
 
       it 'enforces minimum value' do
         type = RapiTapir::Types.integer(minimum: 10)
-        
+
         result = type.validate(5)
         expect(result[:valid]).to be false
         expect(result[:errors]).to include(match(/below minimum/))
-        
+
         result = type.validate(15)
         expect(result[:valid]).to be true
       end
 
       it 'enforces maximum value' do
         type = RapiTapir::Types.integer(maximum: 100)
-        
+
         result = type.validate(150)
         expect(result[:valid]).to be false
         expect(result[:errors]).to include(match(/exceeds maximum/))
-        
+
         result = type.validate(50)
         expect(result[:valid]).to be true
       end
@@ -109,10 +109,10 @@ RSpec.describe RapiTapir::Types do
     describe RapiTapir::Types::Boolean do
       it 'validates boolean values' do
         type = RapiTapir::Types.boolean
-        
+
         result = type.validate(true)
         expect(result[:valid]).to be true
-        
+
         result = type.validate(false)
         expect(result[:valid]).to be true
       end
@@ -139,10 +139,10 @@ RSpec.describe RapiTapir::Types do
     describe RapiTapir::Types::UUID do
       it 'validates UUID format' do
         type = RapiTapir::Types.uuid
-        
+
         result = type.validate('123e4567-e89b-12d3-a456-426614174000')
         expect(result[:valid]).to be true
-        
+
         result = type.validate('not-a-uuid')
         expect(result[:valid]).to be false
         expect(result[:errors]).to include(match(/Invalid UUID format/))
@@ -152,10 +152,10 @@ RSpec.describe RapiTapir::Types do
     describe RapiTapir::Types::Email do
       it 'validates email format' do
         type = RapiTapir::Types.email
-        
+
         result = type.validate('user@example.com')
         expect(result[:valid]).to be true
-        
+
         result = type.validate('not-an-email')
         expect(result[:valid]).to be false
         expect(result[:errors]).to include(match(/Invalid email format/))
@@ -167,10 +167,10 @@ RSpec.describe RapiTapir::Types do
     describe RapiTapir::Types::Array do
       it 'validates array with item type' do
         type = RapiTapir::Types.array(RapiTapir::Types.string)
-        
-        result = type.validate(['hello', 'world'])
+
+        result = type.validate(%w[hello world])
         expect(result[:valid]).to be true
-        
+
         result = type.validate(['hello', 123])
         expect(result[:valid]).to be false
         expect(result[:errors]).to include(match(/Item at index 1/))
@@ -178,22 +178,22 @@ RSpec.describe RapiTapir::Types do
 
       it 'enforces min/max items' do
         type = RapiTapir::Types.array(RapiTapir::Types.string, min_items: 2, max_items: 3)
-        
+
         result = type.validate(['one'])
         expect(result[:valid]).to be false
         expect(result[:errors]).to include(match(/below minimum/))
-        
-        result = type.validate(['one', 'two', 'three', 'four'])
+
+        result = type.validate(%w[one two three four])
         expect(result[:valid]).to be false
         expect(result[:errors]).to include(match(/exceeds maximum/))
-        
-        result = type.validate(['one', 'two'])
+
+        result = type.validate(%w[one two])
         expect(result[:valid]).to be true
       end
 
       it 'coerces array values' do
         type = RapiTapir::Types.array(RapiTapir::Types.integer)
-        result = type.coerce(['1', '2', '3'])
+        result = type.coerce(%w[1 2 3])
         expect(result).to eq([1, 2, 3])
       end
     end
@@ -204,10 +204,10 @@ RSpec.describe RapiTapir::Types do
           field :name, RapiTapir::Types.string
           field :age, RapiTapir::Types.integer
         end
-        
+
         result = type.validate({ name: 'John', age: 30 })
         expect(result[:valid]).to be true
-        
+
         result = type.validate({ name: 'John', age: 'thirty' })
         expect(result[:valid]).to be false
         expect(result[:errors]).to include(match(/Field 'age'/))
@@ -218,12 +218,12 @@ RSpec.describe RapiTapir::Types do
           field :name, RapiTapir::Types.string
           field :age, RapiTapir::Types.integer, required: false
         end
-        
+
         result = type.validate({ name: 'John' })
         expect(result[:valid]).to be true
-        
+
         result = type.validate({ age: 30 })
-        expect(result[:valid]).to be false  # name is required
+        expect(result[:valid]).to be false # name is required
       end
 
       it 'coerces object values' do
@@ -231,7 +231,7 @@ RSpec.describe RapiTapir::Types do
           field :id, RapiTapir::Types.integer
           field :name, RapiTapir::Types.string
         end
-        
+
         result = type.coerce({ 'id' => '123', 'name' => 'John' })
         expect(result).to eq({ id: 123, name: 'John' })
       end
@@ -240,13 +240,13 @@ RSpec.describe RapiTapir::Types do
     describe RapiTapir::Types::Optional do
       it 'allows nil values' do
         type = RapiTapir::Types.optional(RapiTapir::Types.string)
-        
+
         result = type.validate(nil)
         expect(result[:valid]).to be true
-        
+
         result = type.validate('hello')
         expect(result[:valid]).to be true
-        
+
         result = type.validate(123)
         expect(result[:valid]).to be false
       end
@@ -263,7 +263,7 @@ RSpec.describe RapiTapir::Types do
     it 'generates JSON schema for primitive types' do
       type = RapiTapir::Types.string(min_length: 1, max_length: 100)
       schema = type.to_json_schema
-      
+
       expect(schema[:type]).to eq('string')
       expect(schema[:minLength]).to eq(1)
       expect(schema[:maxLength]).to eq(100)
@@ -274,9 +274,9 @@ RSpec.describe RapiTapir::Types do
         field :name, RapiTapir::Types.string
         field :age, RapiTapir::Types.integer, required: false
       end
-      
+
       schema = type.to_json_schema
-      
+
       expect(schema[:type]).to eq('object')
       expect(schema[:properties][:name][:type]).to eq('string')
       expect(schema[:properties][:age][:type]).to eq('integer')
@@ -286,7 +286,7 @@ RSpec.describe RapiTapir::Types do
     it 'generates JSON schema for array types' do
       type = RapiTapir::Types.array(RapiTapir::Types.string, min_items: 1)
       schema = type.to_json_schema
-      
+
       expect(schema[:type]).to eq('array')
       expect(schema[:items][:type]).to eq('string')
       expect(schema[:minItems]).to eq(1)

@@ -5,21 +5,16 @@ require_relative 'base'
 module RapiTapir
   module Types
     class Integer < Base
-      def initialize(minimum: nil, maximum: nil, exclusive_minimum: nil, exclusive_maximum: nil, multiple_of: nil, **options)
-        super(
-          minimum: minimum,
-          maximum: maximum,
-          exclusive_minimum: exclusive_minimum,
-          exclusive_maximum: exclusive_maximum,
-          multiple_of: multiple_of,
-          **options
-        )
+      def initialize(minimum: nil, maximum: nil, exclusive_minimum: nil, exclusive_maximum: nil, multiple_of: nil,
+                     **options)
+        super
       end
 
       protected
 
       def validate_type(value)
         return ["Expected integer, got #{value.class}"] unless value.is_a?(::Integer)
+
         []
       end
 
@@ -58,11 +53,12 @@ module RapiTapir
         when true then 1
         when false then 0
         else
-          if value.respond_to?(:to_i)
-            value.to_i
-          else
+          unless value.respond_to?(:to_i)
             raise CoercionError.new(value, 'Integer', 'Value cannot be converted to integer')
           end
+
+          value.to_i
+
         end
       rescue ArgumentError => e
         raise CoercionError.new(value, 'Integer', e.message)

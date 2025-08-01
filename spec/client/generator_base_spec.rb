@@ -9,12 +9,13 @@ RSpec.describe RapiTapir::Client::GeneratorBase do
   let(:endpoints) do
     [
       RapiTapir.get('/users')
-        .ok(RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string})))
-        .build,
+               .ok(RapiTapir::Types.array(RapiTapir::Types.hash({ 'id' => RapiTapir::Types.integer,
+                                                                  'name' => RapiTapir::Types.string })))
+               .build,
       RapiTapir.post('/users')
-        .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string}))
-        .created(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string}))
-        .build
+               .json_body(RapiTapir::Types.hash({ 'name' => RapiTapir::Types.string }))
+               .created(RapiTapir::Types.hash({ 'id' => RapiTapir::Types.integer, 'name' => RapiTapir::Types.string }))
+               .build
     ]
   end
 
@@ -29,8 +30,8 @@ RSpec.describe RapiTapir::Client::GeneratorBase do
 
     it 'merges config with defaults' do
       expect(generator.config[:client_name]).to eq('TestClient')
-      expect(generator.config[:package_name]).to eq('api-client')  # default
-      expect(generator.config[:version]).to eq('1.0.0')  # default
+      expect(generator.config[:package_name]).to eq('api-client') # default
+      expect(generator.config[:version]).to eq('1.0.0') # default
     end
   end
 
@@ -98,7 +99,7 @@ RSpec.describe RapiTapir::Client::GeneratorBase do
     end
 
     it 'handles edge cases' do
-      expect(generator.send(:singularize, 'user')).to eq('user')  # already singular
+      expect(generator.send(:singularize, 'user')).to eq('user') # already singular
       expect(generator.send(:singularize, nil)).to be_nil
       expect(generator.send(:singularize, '')).to eq('')
     end
@@ -107,13 +108,13 @@ RSpec.describe RapiTapir::Client::GeneratorBase do
   describe 'parameter extraction methods' do
     let(:complex_endpoint) do
       RapiTapir.get('/users/:id')
-        .path_param(:id, :integer)
-        .query(:include, :string)
-        .query(:format, :string, required: false)
-        .header(:authorization, :string)
-        .json_body(RapiTapir::Types.hash({"data" => RapiTapir::Types.string}))
-        .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string}))
-        .build
+               .path_param(:id, :integer)
+               .query(:include, :string)
+               .query(:format, :string, required: false)
+               .header(:authorization, :string)
+               .json_body(RapiTapir::Types.hash({ 'data' => RapiTapir::Types.string }))
+               .ok(RapiTapir::Types.hash({ 'id' => RapiTapir::Types.integer, 'name' => RapiTapir::Types.string }))
+               .build
     end
 
     describe '#path_parameters' do
@@ -129,10 +130,10 @@ RSpec.describe RapiTapir::Client::GeneratorBase do
       it 'extracts only query parameters' do
         params = generator.send(:query_parameters, complex_endpoint)
         expect(params.length).to eq(2)
-        
+
         names = params.map(&:name)
         expect(names).to include(:include, :format)
-        
+
         params.each { |param| expect(param.kind).to eq(:query) }
       end
     end
@@ -143,8 +144,8 @@ RSpec.describe RapiTapir::Client::GeneratorBase do
         expect(body).not_to be_nil
         expect(body.kind).to eq(:body)
         expect(body.type).to be_a(RapiTapir::Types::Hash)
-        expect(body.type.field_types.keys).to include("data")
-        expect(body.type.field_types["data"]).to be_a(RapiTapir::Types::String)
+        expect(body.type.field_types.keys).to include('data')
+        expect(body.type.field_types['data']).to be_a(RapiTapir::Types::String)
       end
 
       it 'returns nil when no body' do
@@ -158,9 +159,9 @@ RSpec.describe RapiTapir::Client::GeneratorBase do
       it 'extracts response type from outputs' do
         response = generator.send(:response_type, complex_endpoint)
         expect(response).to be_a(RapiTapir::Types::Hash)
-        expect(response.field_types.keys).to include("id", "name")
-        expect(response.field_types["id"]).to be_a(RapiTapir::Types::Integer)
-        expect(response.field_types["name"]).to be_a(RapiTapir::Types::String)
+        expect(response.field_types.keys).to include('id', 'name')
+        expect(response.field_types['id']).to be_a(RapiTapir::Types::Integer)
+        expect(response.field_types['name']).to be_a(RapiTapir::Types::String)
       end
 
       it 'returns nil when no outputs' do
@@ -186,7 +187,7 @@ RSpec.describe RapiTapir::Client::GeneratorBase do
 
     it 'saves generated content to file' do
       concrete_generator.save_to_file(temp_file.path)
-      
+
       content = File.read(temp_file.path)
       expect(content).to eq("// Generated content\nexport class TestClient {}")
     end

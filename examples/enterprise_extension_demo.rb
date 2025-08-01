@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Enterprise Task Management API - RapiTapir Sinatra Extension Demo
-# 
+#
 # This example demonstrates the new ergonomic Sinatra extension that eliminates
 # boilerplate and provides a seamless developer experience for building
 # enterprise-grade APIs with RapiTapir.
@@ -12,17 +12,15 @@ begin
   SINATRA_AVAILABLE = true
 rescue LoadError
   SINATRA_AVAILABLE = false
-  puts "⚠️  Sinatra not available. Install with: gem install sinatra"
-  puts "🔄 Running in demo mode instead..."
+  puts '⚠️  Sinatra not available. Install with: gem install sinatra'
+  puts '🔄 Running in demo mode instead...'
 end
 
 require 'json'
 require_relative '../lib/rapitapir'
 
 # Only require extension if Sinatra is available
-if SINATRA_AVAILABLE
-  require_relative '../lib/rapitapir/sinatra/extension'
-end
+require_relative '../lib/rapitapir/sinatra/extension' if SINATRA_AVAILABLE
 
 # Sample databases (same as before)
 class UserDatabase
@@ -32,14 +30,14 @@ class UserDatabase
       name: 'John Doe',
       email: 'john.doe@example.com',
       role: 'user',
-      scopes: ['read', 'write']
+      scopes: %w[read write]
     },
     'admin-token-456' => {
       id: 2,
       name: 'Jane Admin',
       email: 'jane.admin@example.com',
       role: 'admin',
-      scopes: ['read', 'write', 'admin', 'delete']
+      scopes: %w[read write admin delete]
     }
   }.freeze
 
@@ -58,8 +56,10 @@ end
 
 class TaskDatabase
   @@tasks = [
-    { id: 1, title: 'Setup CI/CD Pipeline', description: 'Configure automated testing and deployment', status: 'in_progress', assignee_id: 1, created_at: Time.now - 86400 },
-    { id: 2, title: 'Review Security Audit', description: 'Complete quarterly security review', status: 'pending', assignee_id: 2, created_at: Time.now - 3600 }
+    { id: 1, title: 'Setup CI/CD Pipeline', description: 'Configure automated testing and deployment',
+      status: 'in_progress', assignee_id: 1, created_at: Time.now - 86_400 },
+    { id: 2, title: 'Review Security Audit', description: 'Complete quarterly security review', status: 'pending',
+      assignee_id: 2, created_at: Time.now - 3600 }
   ]
   @@next_id = 3
 
@@ -81,7 +81,7 @@ class TaskDatabase
   def self.update(id, attrs)
     task = find(id)
     return nil unless task
-    
+
     attrs.each { |key, value| task[key] = value }
     task[:updated_at] = Time.now
     task
@@ -94,22 +94,22 @@ end
 
 # Define schemas using RapiTapir types
 TASK_SCHEMA = RapiTapir::Types.hash({
-  "id" => RapiTapir::Types.integer,
-  "title" => RapiTapir::Types.string,
-  "description" => RapiTapir::Types.string,
-  "status" => RapiTapir::Types.string,
-  "assignee_id" => RapiTapir::Types.integer,
-  "created_at" => RapiTapir::Types.string,
-  "updated_at" => RapiTapir::Types.optional(RapiTapir::Types.string)
-})
+                                      'id' => RapiTapir::Types.integer,
+                                      'title' => RapiTapir::Types.string,
+                                      'description' => RapiTapir::Types.string,
+                                      'status' => RapiTapir::Types.string,
+                                      'assignee_id' => RapiTapir::Types.integer,
+                                      'created_at' => RapiTapir::Types.string,
+                                      'updated_at' => RapiTapir::Types.optional(RapiTapir::Types.string)
+                                    })
 
 USER_SCHEMA = RapiTapir::Types.hash({
-  "id" => RapiTapir::Types.integer,
-  "name" => RapiTapir::Types.string,
-  "email" => RapiTapir::Types.string,
-  "role" => RapiTapir::Types.string,
-  "scopes" => RapiTapir::Types.array(RapiTapir::Types.string)
-})
+                                      'id' => RapiTapir::Types.integer,
+                                      'name' => RapiTapir::Types.string,
+                                      'email' => RapiTapir::Types.string,
+                                      'role' => RapiTapir::Types.string,
+                                      'scopes' => RapiTapir::Types.array(RapiTapir::Types.string)
+                                    })
 
 # Main Application using RapiTapir Sinatra Extension
 if SINATRA_AVAILABLE
@@ -136,17 +136,17 @@ if SINATRA_AVAILABLE
 
       # Authentication configuration
       bearer_auth(:bearer, {
-        realm: 'Enterprise Task Management API',
-        token_validator: proc do |token|
-          user = UserDatabase.find_by_token(token)
-          next nil unless user
+                    realm: 'Enterprise Task Management API',
+                    token_validator: proc do |token|
+                      user = UserDatabase.find_by_token(token)
+                      next nil unless user
 
-          {
-            user: user,
-            scopes: user[:scopes]
-          }
-        end
-      })
+                      {
+                        user: user,
+                        scopes: user[:scopes]
+                      }
+                    end
+                  })
 
       # Middleware configuration based on environment
       if development?
@@ -165,13 +165,13 @@ if SINATRA_AVAILABLE
         .summary('Health check')
         .description('Returns the health status of the API')
         .ok(RapiTapir::Types.hash({
-          "status" => RapiTapir::Types.string,
-          "timestamp" => RapiTapir::Types.string,
-          "version" => RapiTapir::Types.string,
-          "features" => RapiTapir::Types.array(RapiTapir::Types.string)
-        }))
+                                    'status' => RapiTapir::Types.string,
+                                    'timestamp' => RapiTapir::Types.string,
+                                    'version' => RapiTapir::Types.string,
+                                    'features' => RapiTapir::Types.array(RapiTapir::Types.string)
+                                  }))
         .build
-    ) do |inputs|
+    ) do |_inputs|
       {
         status: 'healthy',
         timestamp: Time.now.iso8601,
@@ -187,17 +187,15 @@ if SINATRA_AVAILABLE
         # List tasks with filtering
         index do |inputs|
           tasks = TaskDatabase.all
-          
+
           # Apply filters if provided
-          if inputs[:status]
-            tasks = tasks.select { |task| task[:status] == inputs[:status] }
-          end
-          
+          tasks = tasks.select { |task| task[:status] == inputs[:status] } if inputs[:status]
+
           # Apply pagination
           limit = inputs[:limit] || 50
           offset = inputs[:offset] || 0
           tasks = tasks.drop(offset).take(limit)
-          
+
           # Format timestamps
           tasks.map do |task|
             task_copy = task.dup
@@ -216,23 +214,25 @@ if SINATRA_AVAILABLE
           assignee = UserDatabase.find_by_id(task[:assignee_id])
           task_with_assignee = task.dup
           task_with_assignee[:created_at] = task_with_assignee[:created_at].iso8601 if task_with_assignee[:created_at]
-          task_with_assignee[:assignee] = assignee ? {
-            id: assignee[:id],
-            name: assignee[:name],
-            email: assignee[:email]
-          } : nil
-          
+          task_with_assignee[:assignee] = if assignee
+                                            {
+                                              id: assignee[:id],
+                                              name: assignee[:name],
+                                              email: assignee[:email]
+                                            }
+                                          end
+
           task_with_assignee
         end
 
         # Create new task
         create do |inputs|
           body = inputs[:body]
-          
+
           # Validate assignee exists
           assignee = UserDatabase.find_by_id(body['assignee_id'])
           halt 400, { error: 'Invalid assignee ID' }.to_json unless assignee
-          
+
           # Create task
           task_data = {
             title: body['title'],
@@ -240,7 +240,7 @@ if SINATRA_AVAILABLE
             status: body['status'] || 'pending',
             assignee_id: body['assignee_id']
           }
-          
+
           task = TaskDatabase.create(task_data)
           task[:created_at] = task[:created_at].iso8601
           task
@@ -253,18 +253,18 @@ if SINATRA_AVAILABLE
 
           body = inputs[:body]
           update_data = {}
-          
+
           # Prepare update data
           update_data[:title] = body['title'] if body['title']
           update_data[:description] = body['description'] if body['description']
           update_data[:status] = body['status'] if body['status']
-          
+
           if body['assignee_id']
             assignee = UserDatabase.find_by_id(body['assignee_id'])
             halt 400, { error: 'Invalid assignee ID' }.to_json unless assignee
             update_data[:assignee_id] = body['assignee_id']
           end
-          
+
           # Update task
           updated_task = TaskDatabase.update(inputs[:id], update_data)
           updated_task[:created_at] = updated_task[:created_at].iso8601 if updated_task[:created_at]
@@ -285,13 +285,12 @@ if SINATRA_AVAILABLE
 
       # Custom endpoint: Get tasks by status
       custom(:get, 'by-status/:status',
-        summary: 'Get tasks by status',
-        configure: ->(endpoint) {
-          endpoint
-            .path_param(:status, RapiTapir::Types.string, description: 'Task status')
-            .ok(RapiTapir::Types.array(TASK_SCHEMA))
-        }
-      ) do |inputs|
+             summary: 'Get tasks by status',
+             configure: lambda { |endpoint|
+               endpoint
+                 .path_param(:status, RapiTapir::Types.string, description: 'Task status')
+                 .ok(RapiTapir::Types.array(TASK_SCHEMA))
+             }) do |inputs|
         tasks = TaskDatabase.all.select { |task| task[:status] == inputs[:status] }
         tasks.map do |task|
           task_copy = task.dup
@@ -307,14 +306,14 @@ if SINATRA_AVAILABLE
         .summary('Get current user profile')
         .description('Retrieve the profile of the authenticated user')
         .ok(RapiTapir::Types.hash({
-          "id" => RapiTapir::Types.integer,
-          "name" => RapiTapir::Types.string,
-          "email" => RapiTapir::Types.string,
-          "role" => RapiTapir::Types.string,
-          "scopes" => RapiTapir::Types.array(RapiTapir::Types.string)
-        }))
+                                    'id' => RapiTapir::Types.integer,
+                                    'name' => RapiTapir::Types.string,
+                                    'email' => RapiTapir::Types.string,
+                                    'role' => RapiTapir::Types.string,
+                                    'scopes' => RapiTapir::Types.array(RapiTapir::Types.string)
+                                  }))
         .build
-    ) do |inputs|
+    ) do |_inputs|
       require_authentication!
       current_user
     end
@@ -326,95 +325,93 @@ if SINATRA_AVAILABLE
         .description('Retrieve a list of all users in the system. Requires admin permission.')
         .ok(RapiTapir::Types.array(USER_SCHEMA))
         .build
-    ) do |inputs|
+    ) do |_inputs|
       require_scope!('admin')
       UserDatabase.all_users
     end
 
     # Development info
     configure :development do
-      puts "\n" + "="*70
-      puts "🚀 ENTERPRISE TASK MANAGEMENT API v2.0 - RapiTapir Extension"
-      puts "="*70
-      puts "📚 API Documentation: http://localhost:4567/docs"
-      puts "📋 OpenAPI Spec: http://localhost:4567/openapi.json"
-      puts "❤️  Health Check: http://localhost:4567/health"
+      puts "\n#{'=' * 70}"
+      puts '🚀 ENTERPRISE TASK MANAGEMENT API v2.0 - RapiTapir Extension'
+      puts '=' * 70
+      puts '📚 API Documentation: http://localhost:4567/docs'
+      puts '📋 OpenAPI Spec: http://localhost:4567/openapi.json'
+      puts '❤️  Health Check: http://localhost:4567/health'
       puts "\n🔑 Bearer Tokens:"
-      puts "   User: user-token-123 (scopes: read, write)"
-      puts "   Admin: admin-token-456 (scopes: read, write, admin, delete)"
+      puts '   User: user-token-123 (scopes: read, write)'
+      puts '   Admin: admin-token-456 (scopes: read, write, admin, delete)'
       puts "\n✨ NEW FEATURES with RapiTapir Extension:"
-      puts "   🎯 Zero boilerplate configuration"
-      puts "   🔧 Automatic middleware setup"
-      puts "   📦 RESTful resource builder"
-      puts "   🛡️  Built-in authentication helpers"
-      puts "   📖 Auto-generated beautiful documentation"
-      puts "   🏗️  SOLID principles architecture"
-      puts ""
+      puts '   🎯 Zero boilerplate configuration'
+      puts '   🔧 Automatic middleware setup'
+      puts '   📦 RESTful resource builder'
+      puts '   🛡️  Built-in authentication helpers'
+      puts '   📖 Auto-generated beautiful documentation'
+      puts '   🏗️  SOLID principles architecture'
+      puts ''
     end
   end
 
   # Start the server
-  if __FILE__ == $0
-    EnterpriseTaskAPI.run!
-  end
+  EnterpriseTaskAPI.run! if __FILE__ == $PROGRAM_NAME
 else
   # Demo mode when Sinatra is not available
-  puts "\n" + "="*70
-  puts "🚀 ENTERPRISE TASK MANAGEMENT API v2.0 - Demo Mode"
-  puts "="*70
-  
+  puts "\n#{'=' * 70}"
+  puts '🚀 ENTERPRISE TASK MANAGEMENT API v2.0 - Demo Mode'
+  puts '=' * 70
+
   puts "\n✅ Successfully loaded:"
-  puts "   • RapiTapir core and type system"
-  puts "   • Task and User schemas"
-  puts "   • Database classes"
-  
+  puts '   • RapiTapir core and type system'
+  puts '   • Task and User schemas'
+  puts '   • Database classes'
+
   puts "\n🎯 This enterprise API would provide:"
-  puts "   GET    /health                    - Health check (public)"
-  puts "   GET    /api/v1/tasks              - List tasks with filtering"
-  puts "   GET    /api/v1/tasks/:id          - Get specific task"
-  puts "   POST   /api/v1/tasks              - Create new task"
-  puts "   PUT    /api/v1/tasks/:id          - Update task"
-  puts "   DELETE /api/v1/tasks/:id          - Delete task (admin only)"
-  puts "   GET    /api/v1/tasks/by-status/:status - Tasks by status"
-  puts "   GET    /api/v1/profile            - Current user profile"
-  puts "   GET    /api/v1/admin/users        - List users (admin only)"
-  puts "   GET    /docs                      - Swagger UI documentation"
-  puts "   GET    /openapi.json              - OpenAPI 3.0 specification"
-  
+  puts '   GET    /health                    - Health check (public)'
+  puts '   GET    /api/v1/tasks              - List tasks with filtering'
+  puts '   GET    /api/v1/tasks/:id          - Get specific task'
+  puts '   POST   /api/v1/tasks              - Create new task'
+  puts '   PUT    /api/v1/tasks/:id          - Update task'
+  puts '   DELETE /api/v1/tasks/:id          - Delete task (admin only)'
+  puts '   GET    /api/v1/tasks/by-status/:status - Tasks by status'
+  puts '   GET    /api/v1/profile            - Current user profile'
+  puts '   GET    /api/v1/admin/users        - List users (admin only)'
+  puts '   GET    /docs                      - Swagger UI documentation'
+  puts '   GET    /openapi.json              - OpenAPI 3.0 specification'
+
   puts "\n🛡️  Security features:"
-  puts "   • Bearer token authentication"
-  puts "   • Scope-based authorization (read, write, admin, delete)"
-  puts "   • CORS protection"
-  puts "   • Rate limiting (configurable per environment)"
-  puts "   • Security headers"
-  
+  puts '   • Bearer token authentication'
+  puts '   • Scope-based authorization (read, write, admin, delete)'
+  puts '   • CORS protection'
+  puts '   • Rate limiting (configurable per environment)'
+  puts '   • Security headers'
+
   puts "\n🎯 Extension advantages demonstrated:"
-  puts "   • 90% less boilerplate code compared to manual implementation"
-  puts "   • One-line configuration: development_defaults!()"
-  puts "   • RESTful resource builder: api_resource + crud block"
-  puts "   • Built-in auth helpers: require_authentication!, require_scope!"
-  puts "   • Auto-generated OpenAPI 3.0 documentation"
-  puts "   • Production-ready middleware stack"
-  
+  puts '   • 90% less boilerplate code compared to manual implementation'
+  puts '   • One-line configuration: development_defaults!()'
+  puts '   • RESTful resource builder: api_resource + crud block'
+  puts '   • Built-in auth helpers: require_authentication!, require_scope!'
+  puts '   • Auto-generated OpenAPI 3.0 documentation'
+  puts '   • Production-ready middleware stack'
+
   puts "\n💡 Authentication tokens that would work:"
-  puts "   User token: user-token-123 (scopes: read, write)"
-  puts "   Admin token: admin-token-456 (scopes: read, write, admin, delete)"
-  
+  puts '   User token: user-token-123 (scopes: read, write)'
+  puts '   Admin token: admin-token-456 (scopes: read, write, admin, delete)'
+
   puts "\n📖 Sample API calls that would work:"
   puts "   curl -H 'Authorization: Bearer user-token-123' http://localhost:4567/api/v1/tasks"
   puts "   curl -H 'Authorization: Bearer admin-token-456' http://localhost:4567/api/v1/admin/users"
   puts "   curl -X POST -H 'Authorization: Bearer user-token-123' \\"
   puts "        -H 'Content-Type: application/json' \\"
   puts "        -d '{\"title\":\"New Task\",\"description\":\"Test\",\"assignee_id\":1}' \\"
-  puts "        http://localhost:4567/api/v1/tasks"
-  
+  puts '        http://localhost:4567/api/v1/tasks'
+
   puts "\n💡 To run the actual server:"
-  puts "   gem install sinatra"
+  puts '   gem install sinatra'
   puts "   ruby #{__FILE__}"
-  
+
   puts "\n🏗️  Architecture highlights:"
-  puts "   • SOLID principles implementation"
-  puts "   • Single Responsibility: Each class has one purpose"
-  puts "   • Open/Closed: Extensible without modification"
-  puts "   • Dependency Inversion: Auth logic injected via procs"
+  puts '   • SOLID principles implementation'
+  puts '   • Single Responsibility: Each class has one purpose'
+  puts '   • Open/Closed: Extensible without modification'
+  puts '   • Dependency Inversion: Auth logic injected via procs'
 end

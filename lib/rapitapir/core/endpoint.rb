@@ -56,7 +56,7 @@ module RapiTapir
       end
 
       def deprecated(flag = true)
-        with_metadata(deprecated: !!flag)
+        with_metadata(deprecated: flag)
       end
 
       # Validate input/output types for a given input/output hash
@@ -91,29 +91,30 @@ module RapiTapir
       end
 
       def validate_input!(input)
-        unless input.respond_to?(:kind) && input.respond_to?(:name) && input.respond_to?(:type)
-          raise ArgumentError, 'Input must respond to :kind, :name, and :type'
-        end
+        return if input.respond_to?(:kind) && input.respond_to?(:name) && input.respond_to?(:type)
+
+        raise ArgumentError, 'Input must respond to :kind, :name, and :type'
       end
 
       def validate_output!(output)
-        unless output.respond_to?(:kind) && output.respond_to?(:type)
-          raise ArgumentError, 'Output must respond to :kind and :type'
-        end
+        return if output.respond_to?(:kind) && output.respond_to?(:type)
+
+        raise ArgumentError, 'Output must respond to :kind and :type'
       end
 
       def validate_status_code!(code)
-        unless code.is_a?(Integer) && code >= 100 && code <= 599
-          raise ArgumentError, "Invalid status code: #{code}. Must be an integer between 100-599"
-        end
+        return if code.is_a?(Integer) && code >= 100 && code <= 599
+
+        raise ArgumentError, "Invalid status code: #{code}. Must be an integer between 100-599"
       end
 
       def validate_inputs!(input_hash)
         inputs.each do |input|
           next unless input_hash.key?(input.name)
-          
+
           unless input.valid_type?(input_hash[input.name])
-            raise TypeError, "Invalid type for input '#{input.name}': expected #{input.type}, got #{input_hash[input.name].class}"
+            raise TypeError,
+                  "Invalid type for input '#{input.name}': expected #{input.type}, got #{input_hash[input.name].class}"
           end
         end
       end

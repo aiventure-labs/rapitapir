@@ -14,11 +14,11 @@ module RapiTapir
 
         def call
           start_time = Time.now
-          
+
           begin
             result = @check_block.call
             duration = Time.now - start_time
-            
+
             case result
             when TrueClass, FalseClass
               status = result ? :healthy : :unhealthy
@@ -30,7 +30,7 @@ module RapiTapir
             else
               create_result(:healthy, result.to_s, duration)
             end
-          rescue => e
+          rescue StandardError => e
             duration = Time.now - start_time
             create_result(:unhealthy, "#{e.class}: #{e.message}", duration)
           end
@@ -63,7 +63,7 @@ module RapiTapir
         def run_all
           results = @checks.map(&:call)
           overall_status = results.all? { |r| r[:status] == :healthy } ? :healthy : :unhealthy
-          
+
           {
             status: overall_status,
             timestamp: Time.now.utc.iso8601,
@@ -76,7 +76,7 @@ module RapiTapir
         def run_check(name)
           check = @checks.find { |c| c.name.to_s == name.to_s }
           return { error: "Check '#{name}' not found" } unless check
-          
+
           check.call
         end
 
@@ -128,7 +128,7 @@ module RapiTapir
 
         def call(env)
           request = Rack::Request.new(env)
-          
+
           case request.path_info
           when @path
             handle_overall_health
@@ -139,11 +139,11 @@ module RapiTapir
           else
             [404, {}, ['Not Found']]
           end
-        rescue => e
+        rescue StandardError => e
           [500, { 'Content-Type' => 'application/json' }, [JSON.generate({
-            error: 'Internal server error',
-            message: e.message
-          })]]
+                                                                           error: 'Internal server error',
+                                                                           message: e.message
+                                                                         })]]
         end
 
         private
@@ -151,16 +151,16 @@ module RapiTapir
         def handle_overall_health
           result = @registry.run_all
           status_code = result[:status] == :healthy ? 200 : 503
-          
+
           [status_code, json_headers, [JSON.generate(result)]]
         end
 
         def handle_individual_check(name)
           return [400, json_headers, [JSON.generate({ error: 'Missing check name parameter' })]] unless name
-          
+
           result = @registry.run_check(name)
           status_code = result[:status] == :healthy ? 200 : 503
-          
+
           [status_code, json_headers, [JSON.generate(result)]]
         end
 
@@ -171,11 +171,11 @@ module RapiTapir
               url: "#{@path}/check?name=#{name}"
             }
           end
-          
+
           [200, json_headers, [JSON.generate({
-            available_checks: checks,
-            total: checks.length
-          })]]
+                                               available_checks: checks,
+                                               total: checks.length
+                                             })]]
         end
 
         def json_headers
@@ -207,6 +207,7 @@ module RapiTapir
 
         def run_all
           return { error: 'Health checks disabled' } unless enabled?
+
           @registry ||= Registry.new
           @registry.run_all
         end

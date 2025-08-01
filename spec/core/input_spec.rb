@@ -6,7 +6,7 @@ RSpec.describe RapiTapir::Core::Input do
   describe '.new' do
     it 'creates an input with valid parameters' do
       input = described_class.new(kind: :query, name: :test, type: :string)
-      
+
       expect(input.kind).to eq(:query)
       expect(input.name).to eq(:test)
       expect(input.type).to eq(:string)
@@ -42,13 +42,13 @@ RSpec.describe RapiTapir::Core::Input do
   describe '#required?' do
     it 'returns true by default' do
       input = described_class.new(kind: :query, name: :test, type: :string)
-      
+
       expect(input.required?).to be(true)
     end
 
     it 'returns false when optional' do
       input = described_class.new(kind: :query, name: :test, type: :string, options: { optional: true })
-      
+
       expect(input.required?).to be(false)
     end
   end
@@ -56,13 +56,13 @@ RSpec.describe RapiTapir::Core::Input do
   describe '#optional?' do
     it 'returns false by default' do
       input = described_class.new(kind: :query, name: :test, type: :string)
-      
+
       expect(input.optional?).to be(false)
     end
 
     it 'returns true when optional' do
       input = described_class.new(kind: :query, name: :test, type: :string, options: { optional: true })
-      
+
       expect(input.optional?).to be(true)
     end
   end
@@ -172,7 +172,7 @@ RSpec.describe RapiTapir::Core::Input do
 
     it 'returns a hash representation' do
       hash = input.to_h
-      
+
       expect(hash[:kind]).to eq(:query)
       expect(hash[:name]).to eq(:test)
       expect(hash[:type]).to eq(:string)

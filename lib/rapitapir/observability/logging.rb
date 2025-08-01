@@ -48,7 +48,11 @@ module RapiTapir
             request_id: request_id || generate_request_id
           }.merge(extra_fields)
 
-          level = status >= 500 ? :error : (status >= 400 ? :warn : :info)
+          level = if status >= 500
+                    :error
+                  else
+                    (status >= 400 ? :warn : :info)
+                  end
           log(level, "#{method.to_s.upcase} #{path} #{status} (#{fields[:duration_ms]}ms)", **fields)
         end
 
@@ -70,7 +74,7 @@ module RapiTapir
           return unless enabled?
 
           message = block.call if block_given? && message.nil?
-          
+
           # Add common fields
           fields = common_fields.merge(fields)
           fields[:message] = message if message
@@ -119,7 +123,7 @@ module RapiTapir
       end
 
       class JsonFormatter
-        def call(severity, timestamp, progname, msg)
+        def call(severity, timestamp, _progname, msg)
           case msg
           when Hash
             msg_with_metadata = msg.merge(
@@ -138,7 +142,7 @@ module RapiTapir
       end
 
       class LogfmtFormatter
-        def call(severity, timestamp, progname, msg)
+        def call(severity, timestamp, _progname, msg)
           case msg
           when Hash
             fields = msg.map { |k, v| "#{k}=#{format_value(v)}" }
@@ -163,7 +167,7 @@ module RapiTapir
       end
 
       class TextFormatter
-        def call(severity, timestamp, progname, msg)
+        def call(severity, timestamp, _progname, msg)
           case msg
           when Hash
             message = msg.delete(:message) || ''
@@ -184,13 +188,13 @@ module RapiTapir
           else
             @logger = ::Logger.new(output)
             @logger.level = case level.to_sym
-                           when :debug then ::Logger::DEBUG
-                           when :info then ::Logger::INFO
-                           when :warn then ::Logger::WARN
-                           when :error then ::Logger::ERROR
-                           when :fatal then ::Logger::FATAL
-                           else ::Logger::INFO
-                           end
+                            when :debug then ::Logger::DEBUG
+                            when :info then ::Logger::INFO
+                            when :warn then ::Logger::WARN
+                            when :error then ::Logger::ERROR
+                            when :fatal then ::Logger::FATAL
+                            else ::Logger::INFO
+                            end
           end
         end
 
@@ -198,20 +202,23 @@ module RapiTapir
           RapiTapir::Observability.config.logging.enabled
         end
 
-        [:debug, :info, :warn, :error, :fatal].each do |level|
+        %i[debug info warn error fatal].each do |level|
           define_method(level) do |*args, **kwargs, &block|
             return unless enabled?
+
             @logger&.public_send(level, *args, **kwargs, &block)
           end
         end
 
         def log_request(**args)
           return unless enabled?
+
           @logger&.log_request(**args)
         end
 
         def log_error(exception, **extra_fields)
           return unless enabled?
+
           @logger&.log_error(exception, **extra_fields)
         end
       end

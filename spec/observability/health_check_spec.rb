@@ -73,7 +73,7 @@ RSpec.describe RapiTapir::Observability::HealthCheck do
 
       it 'runs all checks and returns overall status' do
         result = registry.run_all
-        
+
         expect(result[:status]).to eq :unhealthy # Because check3 fails
         expect(result[:service]).to eq 'rapitapir'
         expect(result[:version]).to eq RapiTapir::VERSION
@@ -127,10 +127,10 @@ RSpec.describe RapiTapir::Observability::HealthCheck do
 
         it 'returns overall health status' do
           status, headers, body = endpoint.call(env)
-          
+
           expect(status).to eq 200
           expect(headers['Content-Type']).to eq 'application/json'
-          
+
           response = JSON.parse(body.first)
           expect(response['status']).to eq 'healthy'
           expect(response['checks']).to be_an Array
@@ -148,7 +148,7 @@ RSpec.describe RapiTapir::Observability::HealthCheck do
 
         it 'returns individual check result' do
           status, _headers, body = endpoint.call(env)
-          
+
           expect(status).to eq 200
           response = JSON.parse(body.first)
           expect(response['status']).to eq 'healthy'
@@ -160,7 +160,7 @@ RSpec.describe RapiTapir::Observability::HealthCheck do
 
         it 'returns list of available checks' do
           status, _headers, body = endpoint.call(env)
-          
+
           expect(status).to eq 200
           response = JSON.parse(body.first)
           expect(response['available_checks']).to be_an Array
@@ -172,7 +172,7 @@ RSpec.describe RapiTapir::Observability::HealthCheck do
         let(:env) { { 'REQUEST_METHOD' => 'GET', 'PATH_INFO' => '/unknown' } }
 
         it 'returns 404' do
-          status, _, _ = endpoint.call(env)
+          status, = endpoint.call(env)
           expect(status).to eq 404
         end
       end

@@ -64,7 +64,7 @@ module RapiTapir
           @structured = false
           @level = :info
           @format = :text
-          @fields = [:timestamp, :level, :message, :request_id, :method, :path, :status, :duration]
+          @fields = %i[timestamp level message request_id method path status duration]
         end
 
         def enable_structured(level: :info, fields: nil)

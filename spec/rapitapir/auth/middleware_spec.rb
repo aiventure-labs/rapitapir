@@ -14,7 +14,7 @@ RSpec.describe RapiTapir::Auth::Middleware do
     describe '#call' do
       it 'authenticates request and stores context' do
         user_context = RapiTapir::Auth::Context.new(user: { id: 123 })
-        
+
         expect(bearer_scheme).to receive(:authenticate).and_return(user_context)
         expect(app).to receive(:call).with(env).and_return([200, {}, ['OK']])
 
@@ -37,7 +37,7 @@ RSpec.describe RapiTapir::Auth::Middleware do
         stored_context = nil
 
         expect(bearer_scheme).to receive(:authenticate).and_return(user_context)
-        expect(app).to receive(:call) do |env|
+        expect(app).to receive(:call) do |_env|
           stored_context = RapiTapir::Auth::ContextStore.current
           [200, {}, ['OK']]
         end
@@ -50,7 +50,7 @@ RSpec.describe RapiTapir::Auth::Middleware do
   end
 
   describe RapiTapir::Auth::Middleware::AuthorizationMiddleware do
-    let(:middleware) { described_class.new(app, required_scopes: ['read', 'write']) }
+    let(:middleware) { described_class.new(app, required_scopes: %w[read write]) }
     let(:env) { {} }
 
     before do
@@ -85,7 +85,7 @@ RSpec.describe RapiTapir::Auth::Middleware do
       end
 
       context 'when user has all required scopes' do
-        let(:context) { RapiTapir::Auth::Context.new(user: { id: 123 }, scopes: ['read', 'write', 'admin']) }
+        let(:context) { RapiTapir::Auth::Context.new(user: { id: 123 }, scopes: %w[read write admin]) }
 
         it 'allows the request to proceed' do
           expect(app).to receive(:call).with(env).and_return([200, {}, ['OK']])
@@ -97,7 +97,7 @@ RSpec.describe RapiTapir::Auth::Middleware do
       end
 
       context 'when require_all is false' do
-        let(:middleware) { described_class.new(app, required_scopes: ['read', 'admin'], require_all: false) }
+        let(:middleware) { described_class.new(app, required_scopes: %w[read admin], require_all: false) }
         let(:context) { RapiTapir::Auth::Context.new(user: { id: 123 }, scopes: ['read']) }
 
         it 'allows the request if user has any required scope' do
@@ -146,7 +146,7 @@ RSpec.describe RapiTapir::Auth::Middleware do
 
         it 'records the request' do
           allow(app).to receive(:call).and_return([200, {}, ['OK']])
-          
+
           expect(storage).to receive(:increment).twice # minute and hour keys
 
           middleware.call(env)

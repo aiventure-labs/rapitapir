@@ -25,18 +25,18 @@ module RapiTapir
 
         # Ensure we're working with an enhanced endpoint
         enhanced_endpoint = case endpoint
-                           when Core::EnhancedEndpoint
-                             endpoint
-                           when Core::Endpoint
-                             # Convert regular endpoint to enhanced endpoint
-                             convert_to_enhanced(endpoint)
-                           else
-                             raise ArgumentError, 'Endpoint must be a RapiTapir::Core::Endpoint'
-                           end
+                            when Core::EnhancedEndpoint
+                              endpoint
+                            when Core::Endpoint
+                              # Convert regular endpoint to enhanced endpoint
+                              convert_to_enhanced(endpoint)
+                            else
+                              raise ArgumentError, 'Endpoint must be a RapiTapir::Core::Endpoint'
+                            end
 
         enhanced_endpoint.validate!
         path_matcher = PathMatcher.new(enhanced_endpoint.path)
-        
+
         @endpoints << {
           endpoint: enhanced_endpoint,
           handler: handler,
@@ -63,18 +63,18 @@ module RapiTapir
       # Build the complete middleware stack
       def build_app
         app = method(:handle_request)
-        
+
         @middleware_stack.reverse.each do |middleware_class, args, block|
           app = middleware_class.new(app, *args, &block)
         end
-        
+
         app
       end
 
       # Core request handler with enhanced type validation
       def handle_request(env)
         request = Rack::Request.new(env)
-        
+
         # Find matching endpoint
         endpoint_match = find_matching_endpoint(request)
         return not_found_response unless endpoint_match
@@ -117,23 +117,23 @@ module RapiTapir
 
         # Extract and validate inputs using the enhanced type system
         processed_inputs = extract_and_validate_inputs(request, endpoint, path_params)
-        
+
         # Validate the complete request
         validated_inputs = endpoint.process_request(processed_inputs)
-        
+
         # Call the handler with validated inputs
         result = handler.call(validated_inputs)
-        
+
         # Validate and serialize response
         serialize_validated_response(result, endpoint)
       end
 
       def extract_and_validate_inputs(request, endpoint, path_params = {})
         inputs = {}
-        
+
         endpoint.inputs.each do |input|
           value = extract_input_value(request, input, path_params)
-          
+
           # Handle required inputs
           if value.nil? && input.required?
             raise Core::EnhancedEndpoint::ValidationError, "Required input '#{input.name}' is missing"
@@ -146,12 +146,12 @@ module RapiTapir
           begin
             coerced_value = input.coerce(value)
             validation_result = input.validate(coerced_value)
-            
+
             unless validation_result[:valid]
               errors = validation_result[:errors].join(', ')
               raise Core::EnhancedEndpoint::ValidationError, "Input '#{input.name}' validation failed: #{errors}"
             end
-            
+
             inputs[input.name] = coerced_value
           rescue Types::CoercionError => e
             raise Core::EnhancedEndpoint::ValidationError, "Input '#{input.name}' coercion failed: #{e.message}"
@@ -171,25 +171,23 @@ module RapiTapir
           path_params[input.name]
         when :body
           parse_request_body(request, input)
-        else
-          nil
         end
       end
 
       def extract_header_value(request, input)
         header_name = case input.name
-                     when :authorization
-                       'HTTP_AUTHORIZATION'
-                     else
-                       "HTTP_#{input.name.to_s.upcase.gsub('-', '_')}"
-                     end
+                      when :authorization
+                        'HTTP_AUTHORIZATION'
+                      else
+                        "HTTP_#{input.name.to_s.upcase.gsub('-', '_')}"
+                      end
         request.get_header(header_name)
       end
 
       def parse_request_body(request, input)
         body = request.body.read
         request.body.rewind
-        
+
         return nil if body.empty?
 
         content_type = request.content_type&.downcase
@@ -209,9 +207,9 @@ module RapiTapir
 
       def detect_format_from_content_type(content_type)
         case content_type
-        when /application\/json/
+        when %r{application/json}
           :json
-        when /application\/x-www-form-urlencoded/, /multipart\/form-data/
+        when %r{application/x-www-form-urlencoded}, %r{multipart/form-data}
           :form
         else
           :text
@@ -223,10 +221,10 @@ module RapiTapir
         json_output = endpoint.outputs.find { |o| o.kind == :json }
         text_output = endpoint.outputs.find { |o| o.kind == :text }
         status_output = endpoint.outputs.find { |o| o.kind == :status }
-        
+
         output = json_output || text_output || endpoint.outputs.first
         status_code = status_output&.type || determine_default_status(endpoint.method)
-        
+
         if output
           # Validate the response
           validation_result = output.validate(result)
@@ -234,10 +232,10 @@ module RapiTapir
             errors = validation_result[:errors].join(', ')
             raise StandardError, "Response validation failed: #{errors}"
           end
-          
+
           serialized = output.serialize(result)
           content_type = determine_content_type(output)
-          
+
           [status_code, { 'Content-Type' => content_type }, [serialized]]
         else
           # Default response
@@ -282,11 +280,11 @@ module RapiTapir
       def handle_custom_error(error)
         handler = @error_handlers[error.class] || @error_handlers[StandardError]
         return nil unless handler
-        
+
         begin
           result = handler.call(error)
           [500, { 'Content-Type' => 'application/json' }, [JSON.generate(result)]]
-        rescue => handler_error
+        rescue StandardError
           # If custom error handler fails, fall back to default
           nil
         end
@@ -341,7 +339,7 @@ module RapiTapir
           message: error.message,
           code: 500
         }
-        
+
         [500, { 'Content-Type' => 'application/json' }, [JSON.generate(error_data)]]
       end
     end

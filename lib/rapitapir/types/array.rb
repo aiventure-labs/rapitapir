@@ -21,6 +21,7 @@ module RapiTapir
 
       def validate_type(value)
         return ["Expected array, got #{value.class}"] unless value.is_a?(::Array)
+
         []
       end
 
@@ -36,16 +37,16 @@ module RapiTapir
         end
 
         if constraints[:unique_items] && value.uniq.length != value.length
-          errors << "Array contains duplicate items but must be unique"
+          errors << 'Array contains duplicate items but must be unique'
         end
 
         # Validate each item
         value.each_with_index do |item, index|
           item_result = item_type.validate(item)
-          unless item_result[:valid]
-            item_result[:errors].each do |error|
-              errors << "Item at index #{index}: #{error}"
-            end
+          next if item_result[:valid]
+
+          item_result[:errors].each do |error|
+            errors << "Item at index #{index}: #{error}"
           end
         end
 
@@ -60,9 +61,8 @@ module RapiTapir
           # Try to parse as JSON array
           require 'json'
           parsed = JSON.parse(value)
-          unless parsed.is_a?(::Array)
-            raise CoercionError.new(value, 'Array', 'JSON string did not parse to array')
-          end
+          raise CoercionError.new(value, 'Array', 'JSON string did not parse to array') unless parsed.is_a?(::Array)
+
           parsed.map { |item| item_type.coerce(item) }
         else
           # Wrap single value in array
@@ -70,7 +70,7 @@ module RapiTapir
         end
       rescue JSON::ParserError => e
         raise CoercionError.new(value, 'Array', "Invalid JSON: #{e.message}")
-      rescue => e
+      rescue StandardError => e
         raise CoercionError.new(value, 'Array', e.message)
       end
 
@@ -92,8 +92,8 @@ module RapiTapir
         constraint_strs << "min_items: #{constraints[:min_items]}" if constraints[:min_items]
         constraint_strs << "max_items: #{constraints[:max_items]}" if constraints[:max_items]
         constraint_strs << "unique: #{constraints[:unique_items]}" if constraints[:unique_items]
-        
-        constraint_part = constraint_strs.empty? ? "" : "(#{constraint_strs.join(', ')})"
+
+        constraint_part = constraint_strs.empty? ? '' : "(#{constraint_strs.join(', ')})"
         "Array[#{item_type_str}]#{constraint_part}"
       end
     end

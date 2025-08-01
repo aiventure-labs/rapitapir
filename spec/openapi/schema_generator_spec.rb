@@ -9,22 +9,24 @@ RSpec.describe RapiTapir::OpenAPI::SchemaGenerator do
     let(:endpoints) do
       [
         RapiTapir.get('/users')
-          .summary('List all users')
-          .description('Returns a list of all users')
-          .ok(RapiTapir::Types.hash({"users" => RapiTapir::Types.array(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string}))}))
-          .build,
-        
+                 .summary('List all users')
+                 .description('Returns a list of all users')
+                 .ok(RapiTapir::Types.hash({ 'users' => RapiTapir::Types.array(RapiTapir::Types.hash({
+                                                                                                       'id' => RapiTapir::Types.integer, 'name' => RapiTapir::Types.string
+                                                                                                     })) }))
+                 .build,
+
         RapiTapir.get('/users/:id')
-          .summary('Get user by ID')
-          .path_param(:id, :integer)
-          .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string}))
-          .build,
-        
+                 .summary('Get user by ID')
+                 .path_param(:id, :integer)
+                 .ok(RapiTapir::Types.hash({ 'id' => RapiTapir::Types.integer, 'name' => RapiTapir::Types.string }))
+                 .build,
+
         RapiTapir.post('/users')
-          .summary('Create user')
-          .json_body(RapiTapir::Types.hash({"name" => RapiTapir::Types.string}))
-          .ok(RapiTapir::Types.hash({"id" => RapiTapir::Types.integer, "name" => RapiTapir::Types.string}))
-          .build
+                 .summary('Create user')
+                 .json_body(RapiTapir::Types.hash({ 'name' => RapiTapir::Types.string }))
+                 .ok(RapiTapir::Types.hash({ 'id' => RapiTapir::Types.integer, 'name' => RapiTapir::Types.string }))
+                 .build
       ]
     end
 
@@ -69,7 +71,7 @@ RSpec.describe RapiTapir::OpenAPI::SchemaGenerator do
     it 'generates path parameters' do
       get_user = schema[:paths]['/users/{id}']['get']
       param = get_user[:parameters].first
-      
+
       expect(param[:name]).to eq('id')
       expect(param[:in]).to eq('path')
       expect(param[:required]).to be true
@@ -79,10 +81,10 @@ RSpec.describe RapiTapir::OpenAPI::SchemaGenerator do
     it 'generates request body for POST operations' do
       post_users = schema[:paths]['/users']['post']
       request_body = post_users[:requestBody]
-      
+
       expect(request_body[:required]).to be true
       expect(request_body[:content]).to have_key('application/json')
-      
+
       schema_def = request_body[:content]['application/json'][:schema]
       expect(schema_def[:type]).to eq('object')
       expect(schema_def[:properties]).to have_key('name')
@@ -92,10 +94,10 @@ RSpec.describe RapiTapir::OpenAPI::SchemaGenerator do
     it 'generates response schemas' do
       get_user = schema[:paths]['/users/{id}']['get']
       response = get_user[:responses]['200']
-      
+
       expect(response[:description]).to eq('Successful response')
       expect(response[:content]).to have_key('application/json')
-      
+
       schema_def = response[:content]['application/json'][:schema]
       expect(schema_def[:type]).to eq('object')
       expect(schema_def[:properties]).to have_key('id')
@@ -105,7 +107,7 @@ RSpec.describe RapiTapir::OpenAPI::SchemaGenerator do
     it 'converts complex types to OpenAPI schemas' do
       response = schema[:paths]['/users']['get'][:responses]['200']
       schema_def = response[:content]['application/json'][:schema]
-      
+
       # Should be object with users array
       expect(schema_def[:type]).to eq('object')
       expect(schema_def[:properties]['users'][:type]).to eq('array')
@@ -115,7 +117,7 @@ RSpec.describe RapiTapir::OpenAPI::SchemaGenerator do
 
   describe '#to_json' do
     let(:generator) { described_class.new(endpoints: []) }
-    
+
     it 'generates valid JSON' do
       json_output = generator.to_json
       expect { JSON.parse(json_output) }.not_to raise_error
@@ -124,7 +126,7 @@ RSpec.describe RapiTapir::OpenAPI::SchemaGenerator do
 
   describe '#to_yaml' do
     let(:generator) { described_class.new(endpoints: []) }
-    
+
     it 'generates valid YAML' do
       yaml_output = generator.to_yaml
       expect(yaml_output).to include('openapi: 3.0.3')

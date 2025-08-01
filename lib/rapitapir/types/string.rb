@@ -6,19 +6,14 @@ module RapiTapir
   module Types
     class String < Base
       def initialize(min_length: nil, max_length: nil, pattern: nil, format: nil, **options)
-        super(
-          min_length: min_length,
-          max_length: max_length,
-          pattern: pattern,
-          format: format,
-          **options
-        )
+        super
       end
 
       protected
 
       def validate_type(value)
         return ["Expected string, got #{value.class}"] unless value.is_a?(::String)
+
         []
       end
 
@@ -51,11 +46,10 @@ module RapiTapir
         when Symbol then value.to_s
         when Numeric then value.to_s
         else
-          if value.respond_to?(:to_s)
-            value.to_s
-          else
-            raise CoercionError.new(value, 'String', 'Value does not respond to to_s')
-          end
+          raise CoercionError.new(value, 'String', 'Value does not respond to to_s') unless value.respond_to?(:to_s)
+
+          value.to_s
+
         end
       end
 
@@ -96,8 +90,8 @@ module RapiTapir
 
       def validate_email_format(value)
         # Basic email validation - in production, consider using a more robust library
-        email_pattern = /\A[\w+\-.]+@[a-z\d\-]+(\.[a-z\d\-]+)*\.[a-z]+\z/i
-        email_pattern.match?(value) ? [] : ["Invalid email format"]
+        email_pattern = /\A[\w+\-.]+@[a-z\d-]+(\.[a-z\d-]+)*\.[a-z]+\z/i
+        email_pattern.match?(value) ? [] : ['Invalid email format']
       end
 
       def validate_uri_format(value)
@@ -105,12 +99,12 @@ module RapiTapir
         URI.parse(value)
         []
       rescue URI::InvalidURIError
-        ["Invalid URI format"]
+        ['Invalid URI format']
       end
 
       def validate_uuid_format(value)
         uuid_pattern = /\A[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/i
-        uuid_pattern.match?(value) ? [] : ["Invalid UUID format"]
+        uuid_pattern.match?(value) ? [] : ['Invalid UUID format']
       end
 
       def validate_date_format(value)
@@ -118,7 +112,7 @@ module RapiTapir
         ::Date.parse(value)
         []
       rescue ArgumentError
-        ["Invalid date format"]
+        ['Invalid date format']
       end
 
       def validate_datetime_format(value)
@@ -126,12 +120,12 @@ module RapiTapir
         ::DateTime.parse(value)
         []
       rescue ArgumentError
-        ["Invalid datetime format"]
+        ['Invalid datetime format']
       end
 
       def validate_ipv4_format(value)
         ipv4_pattern = /\A(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\z/
-        ipv4_pattern.match?(value) ? [] : ["Invalid IPv4 format"]
+        ipv4_pattern.match?(value) ? [] : ['Invalid IPv4 format']
       end
 
       def validate_ipv6_format(value)
@@ -140,7 +134,7 @@ module RapiTapir
         IPAddr.new(value, Socket::AF_INET6)
         []
       rescue IPAddr::InvalidAddressError
-        ["Invalid IPv6 format"]
+        ['Invalid IPv6 format']
       end
     end
   end

@@ -12,7 +12,7 @@ module RapiTapir
 
       # Generate client code - to be implemented by subclasses
       def generate
-        raise NotImplementedError, "Subclasses must implement #generate"
+        raise NotImplementedError, 'Subclasses must implement #generate'
       end
 
       # Save generated client to file
@@ -120,10 +120,8 @@ module RapiTapir
           end
         when Hash
           if type.empty?
-            'Dict[str, Any]'
-          else
-            'Dict[str, Any]'  # Could be more specific with TypedDict
           end
+          'Dict[str, Any]'
         else
           'Any'
         end
@@ -135,38 +133,38 @@ module RapiTapir
         path_parts = endpoint.path.split('/').reject(&:empty?).map do |part|
           part.start_with?(':') ? nil : part
         end.compact
-        
+
         case method
         when 'get'
           if endpoint.path.include?(':')
             # GET /users/:id -> getUserById
-            base_name = path_parts.map(&:capitalize).join('')
+            base_name = path_parts.map(&:capitalize).join
             "get#{base_name}ById"
           else
             # GET /users -> getUsers
-            "get#{path_parts.map(&:capitalize).join('')}"
+            "get#{path_parts.map(&:capitalize).join}"
           end
         when 'post'
           # POST /users -> createUser
           singular_name = singularize(path_parts.last) if path_parts.any?
-          "create#{singular_name&.capitalize || path_parts.map(&:capitalize).join('')}"
+          "create#{singular_name&.capitalize || path_parts.map(&:capitalize).join}"
         when 'put'
           # PUT /users/:id -> updateUser
           singular_name = singularize(path_parts.last) if path_parts.any?
-          "update#{singular_name&.capitalize || path_parts.map(&:capitalize).join('')}"
+          "update#{singular_name&.capitalize || path_parts.map(&:capitalize).join}"
         when 'delete'
           # DELETE /users/:id -> deleteUser
           singular_name = singularize(path_parts.last) if path_parts.any?
-          "delete#{singular_name&.capitalize || path_parts.map(&:capitalize).join('')}"
+          "delete#{singular_name&.capitalize || path_parts.map(&:capitalize).join}"
         else
-          "#{method}#{path_parts.map(&:capitalize).join('')}"
+          "#{method}#{path_parts.map(&:capitalize).join}"
         end
       end
-      
+
       # Simple singularize method (basic implementation)
       def singularize(word)
         return nil unless word
-        
+
         word = word.to_s
         case word
         when /ies$/
@@ -196,7 +194,7 @@ module RapiTapir
       # Get response type from endpoint
       def response_type(endpoint)
         output = endpoint.outputs.first
-        output ? output.type : nil
+        output&.type
       end
     end
   end

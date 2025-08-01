@@ -20,6 +20,7 @@ module RapiTapir
       # Type validation helpers
       def validate_with_type(type, value)
         return true if type.nil?
+
         type.validate(value)
         true
       rescue Types::CoercionError => e
@@ -34,13 +35,13 @@ module RapiTapir
           type: error_type,
           options: options.merge(status_code: status_code)
         )
-        
+
         error_entry = {
           code: status_code,
           output: error_output,
           type: error_type
         }.merge(options)
-        
+
         copy_with(errors: errors + [error_entry])
       end
 
@@ -69,20 +70,18 @@ module RapiTapir
         validation_errors = []
         inputs.each do |input|
           next unless extracted_inputs.key?(input.name)
-          
+
           value = extracted_inputs[input.name]
           result = input.validate(value)
-          
-          unless result[:valid]
-            result[:errors].each do |error|
-              validation_errors << "Input '#{input.name}': #{error}"
-            end
+
+          next if result[:valid]
+
+          result[:errors].each do |error|
+            validation_errors << "Input '#{input.name}': #{error}"
           end
         end
 
-        if validation_errors.any?
-          raise ValidationError, "Request validation failed:\n#{validation_errors.join("\n")}"
-        end
+        raise ValidationError, "Request validation failed:\n#{validation_errors.join("\n")}" if validation_errors.any?
 
         extracted_inputs
       end
@@ -100,6 +99,7 @@ module RapiTapir
         # Add parameters
         inputs.each do |input|
           next if input.kind == :body
+
           spec[:parameters] << input.to_openapi_parameter
         end
 
@@ -119,7 +119,7 @@ module RapiTapir
         # Add responses
         outputs.each do |output|
           next if output.kind == :status
-          
+
           status_code = find_status_code || 200
           spec[:responses][status_code.to_s] = output.to_openapi_response
         end
@@ -151,7 +151,7 @@ module RapiTapir
       # Enhanced validation with detailed errors
       def validate!
         super
-        
+
         # Additional validations for enhanced features
         validate_security_schemes!
         validate_type_consistency!
@@ -172,7 +172,7 @@ module RapiTapir
 
       def validate_security_schemes!
         security_schemes.each do |scheme|
-          unless [:bearer, :api_key, :basic].include?(scheme.options[:auth_type])
+          unless %i[bearer api_key basic].include?(scheme.options[:auth_type])
             raise ArgumentError, "Unknown authentication type: #{scheme.options[:auth_type]}"
           end
         end
@@ -187,9 +187,7 @@ module RapiTapir
 
         outputs.each do |output|
           next if output.kind == :status
-          unless output.type.respond_to?(:validate)
-            raise ArgumentError, "Output type does not support validation"
-          end
+          raise ArgumentError, 'Output type does not support validation' unless output.type.respond_to?(:validate)
         end
       end
 

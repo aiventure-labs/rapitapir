@@ -6,7 +6,7 @@ RSpec.describe RapiTapir::Core::Output do
   describe '.new' do
     it 'creates an output with valid parameters' do
       output = described_class.new(kind: :json, type: { message: :string })
-      
+
       expect(output.kind).to eq(:json)
       expect(output.type).to eq({ message: :string })
       expect(output.options).to eq({})
@@ -83,7 +83,7 @@ RSpec.describe RapiTapir::Core::Output do
       it 'handles serialization errors' do
         circular = {}
         circular[:self] = circular
-        
+
         expect { output.serialize(circular) }.to raise_error(TypeError, /Cannot serialize value to JSON/)
       end
     end
@@ -126,7 +126,7 @@ RSpec.describe RapiTapir::Core::Output do
 
     it 'returns a hash representation' do
       hash = output.to_h
-      
+
       expect(hash[:kind]).to eq(:json)
       expect(hash[:type]).to eq({ message: :string })
       expect(hash[:options]).to eq({ format: 'pretty' })

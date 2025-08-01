@@ -12,7 +12,7 @@ module RapiTapir
         validate_kind!(kind)
         validate_name!(name)
         validate_type!(type)
-        
+
         @kind = kind
         @name = name.to_sym
         @type = type
@@ -29,12 +29,12 @@ module RapiTapir
 
       def valid_type?(value)
         return true if value.nil? && optional?
-        
+
         case type
         when :string then value.is_a?(String)
         when :integer then value.is_a?(Integer)
         when :float then value.is_a?(Float) || value.is_a?(Integer)
-        when :boolean then value == true || value == false
+        when :boolean then [true, false].include?(value)
         when :date then value.is_a?(Date) || (value.is_a?(String) && date_string?(value))
         when :datetime then value.is_a?(DateTime) || (value.is_a?(String) && datetime_string?(value))
         when Hash then validate_hash_type(value)
@@ -45,7 +45,7 @@ module RapiTapir
 
       def coerce(value)
         return nil if value.nil? && optional?
-        
+
         case type
         when :string then value.to_s
         when :integer then Integer(value)
@@ -72,32 +72,32 @@ module RapiTapir
       private
 
       def validate_kind!(kind)
-        unless VALID_KINDS.include?(kind)
-          raise ArgumentError, "Invalid kind: #{kind}. Must be one of #{VALID_KINDS}"
-        end
+        return if VALID_KINDS.include?(kind)
+
+        raise ArgumentError, "Invalid kind: #{kind}. Must be one of #{VALID_KINDS}"
       end
 
       def validate_name!(name)
-        if name.nil? || (name.respond_to?(:empty?) && name.empty?)
-          raise ArgumentError, 'Input name cannot be nil or empty'
-        end
+        return unless name.nil? || (name.respond_to?(:empty?) && name.empty?)
+
+        raise ArgumentError, 'Input name cannot be nil or empty'
       end
 
       def validate_type!(type)
         return if VALID_TYPES.include?(type) || type.is_a?(Hash) || type.is_a?(Class)
-        
+
         raise ArgumentError, "Invalid type: #{type}. Must be one of #{VALID_TYPES}, a Hash, or a Class"
       end
 
       def validate_hash_type(value)
         return false unless value.is_a?(Hash)
-        
+
         type.all? do |key, expected_type|
           case expected_type
           when :string then value[key].is_a?(String)
           when :integer then value[key].is_a?(Integer)
           when :float then value[key].is_a?(Float) || value[key].is_a?(Integer)
-          when :boolean then value[key] == true || value[key] == false
+          when :boolean then [true, false].include?(value[key])
           else true
           end
         end

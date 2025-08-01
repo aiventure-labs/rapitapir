@@ -49,83 +49,77 @@ module RapiTapir
         end
 
         puts "Documentation server running at http://localhost:#{port}"
-        puts "Press Ctrl+C to stop"
-        
+        puts 'Press Ctrl+C to stop'
+
         server.start
       end
 
       private
 
       def serve_documentation(response)
-        begin
-          endpoints = load_endpoints
-          
-          require_relative '../docs/html_generator'
-          generator = RapiTapir::Docs::HtmlGenerator.new(
-            endpoints: endpoints,
-            config: config.merge(include_reload: true)
+        endpoints = load_endpoints
+
+        require_relative '../docs/html_generator'
+        generator = RapiTapir::Docs::HtmlGenerator.new(
+          endpoints: endpoints,
+          config: config.merge(include_reload: true)
+        )
+
+        html_content = generator.generate
+
+        # Add auto-reload script if enabled
+        if config[:auto_reload]
+          html_content = html_content.gsub(
+            '</body>',
+            "#{auto_reload_script}</body>"
           )
-          
-          html_content = generator.generate
-          
-          # Add auto-reload script if enabled
-          if config[:auto_reload]
-            html_content = html_content.gsub(
-              '</body>',
-              auto_reload_script + '</body>'
-            )
-          end
-          
-          response['Content-Type'] = 'text/html'
-          response.body = html_content
-        rescue => e
-          response.status = 500
-          response['Content-Type'] = 'text/html'
-          response.body = error_page(e)
         end
+
+        response['Content-Type'] = 'text/html'
+        response.body = html_content
+      rescue StandardError => e
+        response.status = 500
+        response['Content-Type'] = 'text/html'
+        response.body = error_page(e)
       end
 
       def serve_openapi_json(response)
-        begin
-          endpoints = load_endpoints
-          
-          require_relative '../openapi/schema_generator'
-          generator = RapiTapir::OpenAPI::SchemaGenerator.new(endpoints: endpoints)
-          
-          response['Content-Type'] = 'application/json'
-          response.body = generator.to_json
-        rescue => e
-          response.status = 500
-          response['Content-Type'] = 'application/json'
-          response.body = JSON.generate({ error: e.message })
-        end
+        endpoints = load_endpoints
+
+        require_relative '../openapi/schema_generator'
+        generator = RapiTapir::OpenAPI::SchemaGenerator.new(endpoints: endpoints)
+
+        response['Content-Type'] = 'application/json'
+        response.body = generator.to_json
+      rescue StandardError => e
+        response.status = 500
+        response['Content-Type'] = 'application/json'
+        response.body = JSON.generate({ error: e.message })
       end
 
       def serve_reload_endpoint(response)
         # This endpoint is called by the auto-reload script
         # Return current file modification time
         mtime = File.exist?(input_file) ? File.mtime(input_file).to_i : 0
-        
+
         response['Content-Type'] = 'application/json'
         response.body = JSON.generate({ mtime: mtime })
       end
 
       def load_endpoints
-        unless File.exist?(@endpoints_file)
-          raise "Error loading endpoints: File '#{@endpoints_file}' not found"
-        end
+        raise "Error loading endpoints: File '#{@endpoints_file}' not found" unless File.exist?(@endpoints_file)
 
         # Create a new binding to evaluate the endpoints file
         evaluation_context = Object.new
         evaluation_context.extend(RapiTapir::DSL)
-        
+
         begin
           code = File.read(@endpoints_file)
           evaluation_context.instance_eval(code, @endpoints_file)
-          
+
           # Return the registered endpoints
           RapiTapir.endpoints
-        rescue => e
+        rescue StandardError => e
           raise "Error loading endpoints from '#{@endpoints_file}': #{e.message}"
         end
       end
@@ -134,12 +128,12 @@ module RapiTapir
         <<~JAVASCRIPT
           <script>
             let lastMtime = 0;
-            
+          #{'  '}
             async function checkForUpdates() {
               try {
                 const response = await fetch('/reload');
                 const data = await response.json();
-                
+          #{'      '}
                 if (lastMtime === 0) {
                   lastMtime = data.mtime;
                 } else if (data.mtime > lastMtime) {
@@ -150,7 +144,7 @@ module RapiTapir
                 console.log('Auto-reload check failed:', error);
               }
             }
-            
+          #{'  '}
             // Check for updates every 2 seconds
             setInterval(checkForUpdates, 2000);
             checkForUpdates(); // Initial check
@@ -165,9 +159,9 @@ module RapiTapir
           <head>
             <title>Error - API Documentation</title>
             <style>
-              body { 
-                font-family: Arial, sans-serif; 
-                margin: 40px; 
+              body {#{' '}
+                font-family: Arial, sans-serif;#{' '}
+                margin: 40px;#{' '}
                 background-color: #f8f9fa;
               }
               .error {
@@ -214,8 +208,6 @@ module RapiTapir
           </html>
         HTML
       end
-
-      private
 
       def mime_type(extension)
         case extension

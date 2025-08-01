@@ -12,13 +12,13 @@ module RapiTapir
 
       def validate
         @errors.clear
-        
+
         return false if @endpoints.nil? || @endpoints.empty?
-        
+
         @endpoints.each_with_index do |endpoint, index|
           validate_endpoint(endpoint, index)
         end
-        
+
         @errors.empty?
       end
 
@@ -26,7 +26,7 @@ module RapiTapir
 
       def validate_endpoint(endpoint, index)
         context = "Endpoint #{index + 1}"
-        
+
         # Validate basic structure
         unless endpoint.respond_to?(:method) && endpoint.respond_to?(:path)
           @errors << "#{context}: Missing method or path"
@@ -50,9 +50,7 @@ module RapiTapir
         end
 
         # Validate parameters
-        if endpoint.respond_to?(:input_specs) && endpoint.input_specs
-          validate_parameters(endpoint)
-        end
+        validate_parameters(endpoint) if endpoint.respond_to?(:input_specs) && endpoint.input_specs
 
         # Validate path
         validate_path(endpoint.path, context)
@@ -84,14 +82,10 @@ module RapiTapir
           return
         end
 
-        unless path.start_with?('/')
-          @errors << "#{context}: Path must start with '/'"
-        end
+        @errors << "#{context}: Path must start with '/'" unless path.start_with?('/')
 
         # Check for invalid characters
-        if path.match?(/[^a-zA-Z0-9\/_:-]/)
-          @errors << "#{context}: Path contains invalid characters"
-        end
+        @errors << "#{context}: Path contains invalid characters" if path.match?(%r{[^a-zA-Z0-9/_:-]})
 
         # Check path parameter format
         path.scan(/:(\w+)/).each do |param_match|
@@ -109,10 +103,8 @@ module RapiTapir
         end
 
         # Validate kind
-        valid_kinds = [:query, :path, :header, :body]
-        unless valid_kinds.include?(input.kind)
-          @errors << "#{context}: Invalid input kind '#{input.kind}'"
-        end
+        valid_kinds = %i[query path header body]
+        @errors << "#{context}: Invalid input kind '#{input.kind}'" unless valid_kinds.include?(input.kind)
 
         # Validate name
         unless input.name.is_a?(Symbol) || input.name.is_a?(String)
@@ -123,9 +115,9 @@ module RapiTapir
         validate_type(input.type, "#{context} type")
 
         # Validate options if present
-        if input.respond_to?(:options) && input.options
-          validate_input_options(input.options, context)
-        end
+        return unless input.respond_to?(:options) && input.options
+
+        validate_input_options(input.options, context)
       end
 
       def validate_output(output, context)
@@ -135,10 +127,8 @@ module RapiTapir
         end
 
         # Validate kind
-        valid_kinds = [:json, :xml, :status, :header]
-        unless valid_kinds.include?(output.kind)
-          @errors << "#{context}: Invalid output kind '#{output.kind}'"
-        end
+        valid_kinds = %i[json xml status header]
+        @errors << "#{context}: Invalid output kind '#{output.kind}'" unless valid_kinds.include?(output.kind)
 
         # Validate type based on kind
         case output.kind
@@ -152,13 +142,11 @@ module RapiTapir
       end
 
       def validate_type(type, context)
-        valid_simple_types = [:string, :integer, :float, :boolean, :date, :datetime]
-        
+        valid_simple_types = %i[string integer float boolean date datetime]
+
         case type
         when Symbol
-          unless valid_simple_types.include?(type)
-            @errors << "#{context}: Unknown type '#{type}'"
-          end
+          @errors << "#{context}: Unknown type '#{type}'" unless valid_simple_types.include?(type)
         when Hash
           validate_hash_schema(type, context)
         when Array
@@ -183,7 +171,7 @@ module RapiTapir
           unless key.is_a?(Symbol) || key.is_a?(String)
             @errors << "#{context}: Hash key '#{key}' must be a symbol or string"
           end
-          
+
           validate_type(value, "#{context}.#{key}")
         end
       end
@@ -195,51 +183,47 @@ module RapiTapir
         end
 
         # Check for conflicting options
-        if options[:required] && options[:optional]
-          @errors << "#{context}: Cannot be both required and optional"
-        end
+        @errors << "#{context}: Cannot be both required and optional" if options[:required] && options[:optional]
 
         # Validate description if present
-        if options[:description] && !options[:description].is_a?(String)
-          @errors << "#{context}: Description must be a string"
-        end
+        return unless options[:description] && !options[:description].is_a?(String)
+
+        @errors << "#{context}: Description must be a string"
       end
 
       def validate_path_parameters_consistency(endpoint, context)
         # Extract path parameters from the path
         path_param_names = endpoint.path.scan(/:(\w+)/).flatten.map(&:to_sym)
-        
+
         # Find path input parameters
-        if endpoint.respond_to?(:inputs)
-          input_path_params = endpoint.inputs
-            .select { |input| input.kind == :path }
-            .map(&:name)
-            .map(&:to_sym)
+        return unless endpoint.respond_to?(:inputs)
 
-          # Check if all path parameters have corresponding inputs
-          missing_inputs = path_param_names - input_path_params
-          unless missing_inputs.empty?
-            @errors << "#{context}: Missing input definitions for path parameters: #{missing_inputs.join(', ')}"
-          end
+        input_path_params = endpoint.inputs
+                                    .select { |input| input.kind == :path }
+                                    .map(&:name)
+                                    .map(&:to_sym)
 
-          # Check if there are extra path inputs
-          extra_inputs = input_path_params - path_param_names
-          unless extra_inputs.empty?
-            @errors << "#{context}: Extra path input definitions (not in path): #{extra_inputs.join(', ')}"
-          end
+        # Check if all path parameters have corresponding inputs
+        missing_inputs = path_param_names - input_path_params
+        unless missing_inputs.empty?
+          @errors << "#{context}: Missing input definitions for path parameters: #{missing_inputs.join(', ')}"
         end
+
+        # Check if there are extra path inputs
+        extra_inputs = input_path_params - path_param_names
+        return if extra_inputs.empty?
+
+        @errors << "#{context}: Extra path input definitions (not in path): #{extra_inputs.join(', ')}"
       end
 
       def validate_metadata(endpoint, context)
         return unless endpoint.respond_to?(:metadata)
-        
+
         metadata = endpoint.metadata
         return unless metadata.is_a?(Hash)
 
         # Validate summary
-        if metadata[:summary] && !metadata[:summary].is_a?(String)
-          @errors << "#{context}: Summary must be a string"
-        end
+        @errors << "#{context}: Summary must be a string" if metadata[:summary] && !metadata[:summary].is_a?(String)
 
         # Validate description
         if metadata[:description] && !metadata[:description].is_a?(String)
@@ -247,29 +231,25 @@ module RapiTapir
         end
 
         # Validate tags
-        if metadata[:tags]
-          unless metadata[:tags].is_a?(Array) && metadata[:tags].all? { |tag| tag.is_a?(String) }
-            @errors << "#{context}: Tags must be an array of strings"
-          end
+        if metadata[:tags] && !(metadata[:tags].is_a?(Array) && metadata[:tags].all? { |tag| tag.is_a?(String) })
+          @errors << "#{context}: Tags must be an array of strings"
         end
 
         # Validate deprecated flag
-        if metadata[:deprecated] && ![true, false].include?(metadata[:deprecated])
-          @errors << "#{context}: Deprecated must be a boolean"
-        end
+        return unless metadata[:deprecated] && ![true, false].include?(metadata[:deprecated])
+
+        @errors << "#{context}: Deprecated must be a boolean"
       end
 
       def validate_parameters(endpoint)
         return unless endpoint.input_specs
 
         body_params = endpoint.input_specs.select { |spec| spec.type == :body }
-        if body_params.length > 1
-          @errors << "#{endpoint.path}: multiple body parameters not allowed"
-        end
+        @errors << "#{endpoint.path}: multiple body parameters not allowed" if body_params.length > 1
 
         endpoint.input_specs.each do |input_spec|
           next unless input_spec.respond_to?(:param_type)
-          
+
           unless valid_param_type?(input_spec.param_type)
             @errors << "#{endpoint.path}: invalid parameter type '#{input_spec.param_type}'"
           end
@@ -286,13 +266,14 @@ module RapiTapir
           @errors << "#{endpoint.path}: missing summary"
         end
 
-        if !endpoint.respond_to?(:outputs) || endpoint.outputs.nil? || endpoint.outputs.empty?
-          @errors << "#{endpoint.path}: missing output definition"
-        end
+        return unless !endpoint.respond_to?(:outputs) || endpoint.outputs.nil? || endpoint.outputs.empty?
+
+        @errors << "#{endpoint.path}: missing output definition"
       end
 
       def validate_output_definition(endpoint)
         return true if endpoint.respond_to?(:outputs) && endpoint.outputs && !endpoint.outputs.empty?
+
         false
       end
     end

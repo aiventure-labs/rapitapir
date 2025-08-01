@@ -15,13 +15,14 @@ module RapiTapir
       def validate(value)
         # Optional types allow nil
         return validation_result(true, []) if value.nil?
-        
+
         # Delegate to wrapped type
         wrapped_type.validate(value)
       end
 
       def coerce(value)
         return nil if value.nil?
+
         wrapped_type.coerce(value)
       end
 
@@ -34,10 +35,9 @@ module RapiTapir
       end
 
       def to_json_schema
-        schema = wrapped_type.to_json_schema
+        wrapped_type.to_json_schema
         # Optional types are handled by not including them in the required array
         # at the parent level, so we don't need to modify the schema here
-        schema
       end
 
       def to_s

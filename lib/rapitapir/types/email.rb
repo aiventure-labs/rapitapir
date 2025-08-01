@@ -5,7 +5,7 @@ require_relative 'string'
 module RapiTapir
   module Types
     class Email < String
-      EMAIL_PATTERN = /\A[\w+\-.]+@[a-z\d\-]+(\.[a-z\d\-]+)*\.[a-z]+\z/i
+      EMAIL_PATTERN = /\A[\w+\-.]+@[a-z\d-]+(\.[a-z\d-]+)*\.[a-z]+\z/i
 
       def initialize(**options)
         super(pattern: EMAIL_PATTERN, format: :email, **options)
@@ -15,7 +15,8 @@ module RapiTapir
 
       def validate_type(value)
         return ["Expected string, got #{value.class}"] unless value.is_a?(::String)
-        return ["Invalid email format"] unless EMAIL_PATTERN.match?(value)
+        return ['Invalid email format'] unless EMAIL_PATTERN.match?(value)
+
         []
       end
 

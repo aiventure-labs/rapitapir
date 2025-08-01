@@ -79,13 +79,13 @@ RSpec.describe RapiTapir::CLI::Command do
     context 'with openapi type' do
       it 'generates OpenAPI schema' do
         output_file = File.join(temp_dir, 'openapi.json')
-        
+
         expect do
           described_class.new([
-            'generate', 'openapi',
-            '--endpoints', test_endpoints_file,
-            '--output', output_file
-          ]).run
+                                'generate', 'openapi',
+                                '--endpoints', test_endpoints_file,
+                                '--output', output_file
+                              ]).run
         end.not_to raise_error
 
         expect(File.exist?(output_file)).to be(true)
@@ -96,13 +96,13 @@ RSpec.describe RapiTapir::CLI::Command do
 
       it 'supports YAML format' do
         output_file = File.join(temp_dir, 'openapi.yaml')
-        
+
         described_class.new([
-          'generate', 'openapi',
-          '--endpoints', test_endpoints_file,
-          '--output', output_file,
-          '--format', 'yaml'
-        ]).run
+                              'generate', 'openapi',
+                              '--endpoints', test_endpoints_file,
+                              '--output', output_file,
+                              '--format', 'yaml'
+                            ]).run
 
         expect(File.exist?(output_file)).to be(true)
         content = File.read(output_file)
@@ -114,12 +114,12 @@ RSpec.describe RapiTapir::CLI::Command do
     context 'with client type' do
       it 'generates TypeScript client' do
         output_file = File.join(temp_dir, 'client.ts')
-        
+
         described_class.new([
-          'generate', 'client',
-          '--endpoints', test_endpoints_file,
-          '--output', output_file
-        ]).run
+                              'generate', 'client',
+                              '--endpoints', test_endpoints_file,
+                              '--output', output_file
+                            ]).run
 
         expect(File.exist?(output_file)).to be(true)
         content = File.read(output_file)
@@ -131,13 +131,13 @@ RSpec.describe RapiTapir::CLI::Command do
 
       it 'supports different client languages' do
         output_file = File.join(temp_dir, 'client.ts')
-        
+
         described_class.new([
-          'generate', 'client',
-          '--endpoints', test_endpoints_file,
-          '--output', output_file,
-          '--format', 'ts'
-        ]).run
+                              'generate', 'client',
+                              '--endpoints', test_endpoints_file,
+                              '--output', output_file,
+                              '--format', 'ts'
+                            ]).run
 
         expect(File.exist?(output_file)).to be(true)
       end
@@ -146,12 +146,12 @@ RSpec.describe RapiTapir::CLI::Command do
     context 'with docs type' do
       it 'generates HTML documentation' do
         output_file = File.join(temp_dir, 'docs.html')
-        
+
         described_class.new([
-          'generate', 'docs',
-          '--endpoints', test_endpoints_file,
-          '--output', output_file
-        ]).run
+                              'generate', 'docs',
+                              '--endpoints', test_endpoints_file,
+                              '--output', output_file
+                            ]).run
 
         expect(File.exist?(output_file)).to be(true)
         content = File.read(output_file)
@@ -162,12 +162,12 @@ RSpec.describe RapiTapir::CLI::Command do
 
       it 'generates Markdown documentation' do
         output_file = File.join(temp_dir, 'docs.md')
-        
+
         described_class.new([
-          'generate', 'docs', 'markdown',
-          '--endpoints', test_endpoints_file,
-          '--output', output_file
-        ]).run
+                              'generate', 'docs', 'markdown',
+                              '--endpoints', test_endpoints_file,
+                              '--output', output_file
+                            ]).run
 
         expect(File.exist?(output_file)).to be(true)
         content = File.read(output_file)
@@ -180,7 +180,7 @@ RSpec.describe RapiTapir::CLI::Command do
     context 'with missing required options' do
       it 'shows error for missing endpoints file' do
         output = capture_output do
-          described_class.new(['generate', 'openapi']).run
+          described_class.new(%w[generate openapi]).run
         end
         expect(output).to include('--endpoints is required')
       end
@@ -188,9 +188,9 @@ RSpec.describe RapiTapir::CLI::Command do
       it 'shows error for missing output file' do
         output = capture_output do
           described_class.new([
-            'generate', 'openapi',
-            '--endpoints', test_endpoints_file
-          ]).run
+                                'generate', 'openapi',
+                                '--endpoints', test_endpoints_file
+                              ]).run
         end
         expect(output).to include('--output is required')
       end
@@ -200,10 +200,10 @@ RSpec.describe RapiTapir::CLI::Command do
       it 'shows error for non-existent file' do
         output = capture_output do
           described_class.new([
-            'generate', 'openapi',
-            '--endpoints', 'non_existent.rb',
-            '--output', 'output.json'
-          ]).run
+                                'generate', 'openapi',
+                                '--endpoints', 'non_existent.rb',
+                                '--output', 'output.json'
+                              ]).run
         end
         expect(output).to include('Error generating OpenAPI schema')
       end
@@ -214,9 +214,9 @@ RSpec.describe RapiTapir::CLI::Command do
     it 'validates endpoints successfully' do
       output = capture_output do
         described_class.new([
-          'validate',
-          '--endpoints', test_endpoints_file
-        ]).run
+                              'validate',
+                              '--endpoints', test_endpoints_file
+                            ]).run
       end
       # The endpoints have both missing validation because they accumulate
       # Let's just check that validation runs
@@ -255,9 +255,9 @@ RSpec.describe RapiTapir::CLI::Command do
       it 'reports validation errors' do
         output = capture_output do
           described_class.new([
-            'validate',
-            '--endpoints', invalid_endpoints_file
-          ]).run
+                                'validate',
+                                '--endpoints', invalid_endpoints_file
+                              ]).run
         end
         expect(output).to include('✗ Validation failed')
       end
@@ -272,10 +272,10 @@ RSpec.describe RapiTapir::CLI::Command do
         # Use a signal to interrupt the server quickly
         pid = fork do
           described_class.new([
-            'serve',
-            '--endpoints', test_endpoints_file,
-            '9999'
-          ]).run
+                                'serve',
+                                '--endpoints', test_endpoints_file,
+                                '9999'
+                              ]).run
         end
         sleep(0.1) # Give it a moment to start
         Process.kill('TERM', pid)

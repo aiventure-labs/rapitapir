@@ -10,10 +10,10 @@ module RapiTapir
       def initialize(sinatra_app)
         @app = sinatra_app
         @endpoints = []
-        
+
         # Store adapter reference in the app for access in route handlers
         @app.instance_variable_set(:@rapitapir_adapter, self)
-        
+
         # Define a helper method on the app to access the adapter
         @app.define_singleton_method(:rapitapir_adapter) do
           @rapitapir_adapter
@@ -22,17 +22,19 @@ module RapiTapir
 
       # Register an endpoint with automatic Sinatra route creation
       def register_endpoint(endpoint, handler = nil, &block)
-        raise ArgumentError, 'Endpoint must be a RapiTapir::Core::Endpoint' unless endpoint.is_a?(RapiTapir::Core::Endpoint)
-        
+        unless endpoint.is_a?(RapiTapir::Core::Endpoint)
+          raise ArgumentError, 'Endpoint must be a RapiTapir::Core::Endpoint'
+        end
+
         endpoint.validate!
-        
+
         # Use provided handler or block
         endpoint_handler = handler || block
         raise ArgumentError, 'Handler must be provided' unless endpoint_handler
-        
+
         endpoint_info = { endpoint: endpoint, handler: endpoint_handler, id: @endpoints.length }
         @endpoints << endpoint_info
-        
+
         # Register route with Sinatra
         register_sinatra_route(endpoint_info)
       end
@@ -43,28 +45,34 @@ module RapiTapir
         method_name = endpoint_info[:endpoint].method.to_s.downcase.to_sym
         path_pattern = convert_path_to_sinatra(endpoint_info[:endpoint].path)
         endpoint_id = endpoint_info[:id]
-        adapter = self  # Capture the adapter in a local variable
-        
+        adapter = self # Capture the adapter in a local variable
+
         # Define the route on the Sinatra app instance
         @app.send(method_name, path_pattern) do
           endpoint_data = adapter.endpoints[endpoint_id]
-          
+
           begin
             # Extract inputs using Sinatra's params (which includes path parameters)
             processed_inputs = adapter.extract_sinatra_inputs(request, params, endpoint_data[:endpoint])
-            
+
             # Call the handler in the app context with access to instance variables
             result = case endpoint_data[:handler]
                      when Proc
                        instance_exec(processed_inputs, &endpoint_data[:handler])
                      else
-                       endpoint_data[:handler].respond_to?(:call) ? endpoint_data[:handler].call(processed_inputs) : instance_exec(processed_inputs, &endpoint_data[:handler])
+                       if endpoint_data[:handler].respond_to?(:call)
+                         endpoint_data[:handler].call(processed_inputs)
+                       else
+                         instance_exec(
+                           processed_inputs, &endpoint_data[:handler]
+                         )
+                       end
                      end
-            
+
             # Set content type and return response
             content_type adapter.determine_content_type(endpoint_data[:endpoint])
             status adapter.determine_status_code(endpoint_data[:endpoint])
-            
+
             adapter.serialize_response(result, endpoint_data[:endpoint])
           rescue ArgumentError => e
             halt 400, { error: e.message }.to_json
@@ -83,7 +91,7 @@ module RapiTapir
 
       def extract_sinatra_inputs(request, params, endpoint)
         inputs = {}
-        
+
         endpoint.inputs.each do |input|
           value = case input.kind
                   when :query
@@ -95,14 +103,10 @@ module RapiTapir
                     params[input.name.to_s] || params[input.name.to_sym]
                   when :body
                     parse_sinatra_body(request, input)
-                  else
-                    nil
                   end
 
           # Validate and coerce the value
-          if value.nil? && input.required?
-            raise ArgumentError, "Required input '#{input.name}' is missing"
-          end
+          raise ArgumentError, "Required input '#{input.name}' is missing" if value.nil? && input.required?
 
           inputs[input.name] = input.coerce(value) if value || !input.required?
         end
@@ -113,7 +117,7 @@ module RapiTapir
       def parse_sinatra_body(request, input)
         body = request.body.read
         request.body.rewind
-        
+
         return nil if body.empty?
 
         if input.type == Hash || input.type.is_a?(Hash)
@@ -122,12 +126,12 @@ module RapiTapir
           body
         end
       rescue JSON::ParserError
-        raise ArgumentError, "Invalid JSON in request body"
+        raise ArgumentError, 'Invalid JSON in request body'
       end
 
       def serialize_response(result, endpoint)
         output = endpoint.outputs.find { |o| o.kind == :json } || endpoint.outputs.first
-        
+
         if output
           output.serialize(result)
         else
@@ -137,7 +141,7 @@ module RapiTapir
 
       def determine_content_type(endpoint)
         output = endpoint.outputs.find { |o| o.kind == :json } || endpoint.outputs.first
-        
+
         case output&.kind
         when :json
           'application/json'

@@ -13,10 +13,10 @@ module RapiTapir
       # Validate a value against this type
       def validate(value)
         errors = []
-        
+
         # Check if value is required but nil
         if value.nil? && required?
-          errors << "Value is required but got nil"
+          errors << 'Value is required but got nil'
           return validation_result(false, errors)
         end
 
@@ -37,10 +37,8 @@ module RapiTapir
       # Coerce a value to this type
       def coerce(value)
         return nil if value.nil? && !required?
-        
-        if value.nil? && required?
-          raise CoercionError.new(value, self.class.name, "Required value cannot be nil")
-        end
+
+        raise CoercionError.new(value, self.class.name, 'Required value cannot be nil') if value.nil? && required?
 
         coerce_value(value)
       end
@@ -65,7 +63,7 @@ module RapiTapir
       # Get a string representation
       def to_s
         constraint_strs = constraints.map { |k, v| "#{k}: #{v}" }
-        constraint_part = constraint_strs.empty? ? "" : "(#{constraint_strs.join(', ')})"
+        constraint_part = constraint_strs.empty? ? '' : "(#{constraint_strs.join(', ')})"
         "#{self.class.name.split('::').last}#{constraint_part}"
       end
 
@@ -87,12 +85,12 @@ module RapiTapir
       protected
 
       # Override in subclasses to implement type-specific validation
-      def validate_type(value)
+      def validate_type(_value)
         []
       end
 
       # Override in subclasses to implement constraint validation
-      def validate_constraints(value)
+      def validate_constraints(_value)
         []
       end
 

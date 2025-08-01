@@ -21,11 +21,11 @@ module RapiTapir
         # Mount an endpoint in Sinatra
         def mount_endpoint(endpoint, &handler)
           rapitapir_adapter.mount(endpoint, &handler)
-          
+
           # Register the route with Sinatra
           method_name = endpoint.method.to_s.downcase
           path_pattern = convert_path_to_sinatra(endpoint.path)
-          
+
           send(method_name, path_pattern) do
             # Delegate to RapiTapir adapter
             rapitapir_adapter.call(env)
@@ -33,8 +33,8 @@ module RapiTapir
         end
 
         # Use middleware with RapiTapir
-        def rapitapir_use(middleware_class, *args, &block)
-          rapitapir_adapter.use(middleware_class, *args, &block)
+        def rapitapir_use(middleware_class, ...)
+          rapitapir_adapter.use(middleware_class, ...)
         end
 
         # Register error handlers
@@ -58,7 +58,7 @@ module RapiTapir
             endpoint = endpoint_data[:endpoint]
             path = endpoint.path
             method = endpoint.method.to_s.downcase
-            
+
             spec[:paths][path] ||= {}
             spec[:paths][path][method] = endpoint.to_openapi_spec
           end
