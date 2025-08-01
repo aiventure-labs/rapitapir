@@ -19,6 +19,8 @@ require_relative '../lib/rapitapir'
 # Only require SinatraAdapter if Sinatra is available
 if SINATRA_AVAILABLE
   require_relative '../lib/rapitapir/server/sinatra_adapter'
+  require_relative '../lib/rapitapir/openapi/schema_generator'
+  require_relative '../lib/rapitapir/sinatra/swagger_ui_generator'
 end
 
 # Simple in-memory data store
@@ -67,6 +69,35 @@ if SINATRA_AVAILABLE
       puts "📝 RapiTapir integration enabled"
     end
 
+    # OpenAPI JSON endpoint - clean and simple
+    get '/openapi.json' do
+      content_type :json
+      endpoints = settings.rapitapir.endpoints.map { |ep_data| ep_data[:endpoint] }
+      
+      generator = RapiTapir::OpenAPI::SchemaGenerator.new(
+        endpoints: endpoints,
+        info: {
+          title: 'WORKING Bookstore API',
+          description: 'A simple bookstore API built with RapiTapir and Sinatra - WORKING VERSION!',
+          version: '1.0.0'
+        },
+        servers: [{ url: 'http://localhost:4567', description: 'Development server' }]
+      )
+      
+      generator.to_json
+    end
+
+    # Swagger UI documentation endpoint - clean and simple
+    get '/docs' do
+      content_type :html
+      api_info = {
+        title: 'WORKING Bookstore API',
+        description: 'A simple bookstore API built with RapiTapir and Sinatra - WORKING VERSION!'
+      }
+      
+      RapiTapir::Sinatra::SwaggerUIGenerator.new('/openapi.json', api_info).generate
+    end
+
     # Health check - super simple
     health_endpoint = RapiTapir.get('/health')
       .summary('Health check')
@@ -110,8 +141,11 @@ if SINATRA_AVAILABLE
       puts "📖 Books: http://localhost:4567/books"
       puts "📋 Published: http://localhost:4567/books/published"
       puts "📖 Book by ID: http://localhost:4567/books/1"
+      puts "📚 Documentation: http://localhost:4567/docs"
+      puts "📋 OpenAPI: http://localhost:4567/openapi.json"
       puts "\n✅ Zero boilerplate, working integration!"
       puts "💡 Key: Direct use of SinatraAdapter.register_endpoint()"
+      puts "📖 Full OpenAPI 3.0 documentation auto-generated!"
     end
   end
 

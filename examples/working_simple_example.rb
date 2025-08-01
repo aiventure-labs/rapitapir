@@ -9,6 +9,8 @@ require_relative '../lib/rapitapir'
 begin
   require 'sinatra/base'
   require_relative '../lib/rapitapir/server/sinatra_adapter'
+  require_relative '../lib/rapitapir/openapi/schema_generator'
+  require_relative '../lib/rapitapir/sinatra/swagger_ui_generator'
   SINATRA_AVAILABLE = true
 rescue LoadError
   SINATRA_AVAILABLE = false
@@ -59,6 +61,35 @@ if SINATRA_AVAILABLE
     configure do
       # Create the RapiTapir adapter
       set :rapitapir, RapiTapir::Server::SinatraAdapter.new(self)
+    end
+
+    # OpenAPI JSON endpoint - clean and simple
+    get '/openapi.json' do
+      content_type :json
+      endpoints = settings.rapitapir.endpoints.map { |ep_data| ep_data[:endpoint] }
+      
+      generator = RapiTapir::OpenAPI::SchemaGenerator.new(
+        endpoints: endpoints,
+        info: {
+          title: 'Working Bookstore API',
+          description: 'A simple bookstore API built with RapiTapir and Sinatra',
+          version: '1.0.0'
+        },
+        servers: [{ url: 'http://localhost:4567', description: 'Development server' }]
+      )
+      
+      generator.to_json
+    end
+
+    # Swagger UI documentation endpoint - clean and simple  
+    get '/docs' do
+      content_type :html
+      api_info = {
+        title: 'Working Bookstore API',
+        description: 'A simple bookstore API built with RapiTapir and Sinatra'
+      }
+      
+      RapiTapir::Sinatra::SwaggerUIGenerator.new('/openapi.json', api_info).generate
     end
 
     # Health endpoint
@@ -120,7 +151,10 @@ if SINATRA_AVAILABLE
       puts "🌐 Health: http://localhost:4567/health"
       puts "📖 Books: http://localhost:4567/books"
       puts "📋 Published: http://localhost:4567/books/published"
+      puts "📚 Documentation: http://localhost:4567/docs"
+      puts "📋 OpenAPI: http://localhost:4567/openapi.json"
       puts "\n✅ Using direct SinatraAdapter integration"
+      puts "📖 Full OpenAPI 3.0 documentation auto-generated!"
     end
   end
 
