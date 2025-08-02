@@ -131,5 +131,25 @@ module RapiTapir
     def self.object(&block)
       Object.new(&block)
     end
+
+    # Auto-derivation convenience methods
+    def self.from_hash(hash, **options)
+      Types::AutoDerivation.from_hash(hash, **options)
+    end
+
+    def self.from_protobuf(proto_class, **options)
+      Types::AutoDerivation.from_protobuf(proto_class, **options)
+    end
+
+    def self.from_json_schema(json_schema, **options)
+      Types::AutoDerivation.from_json_schema(json_schema, **options)
+    end
+
+    def self.from_open_struct(open_struct, **options)
+      Types::AutoDerivation.from_open_struct(open_struct, **options)
+    end
   end
 end
+
+# Load auto-derivation after Types module is fully defined
+require_relative 'types/auto_derivation'
