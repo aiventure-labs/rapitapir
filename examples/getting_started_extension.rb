@@ -86,19 +86,11 @@ if SINATRA_AVAILABLE
         version: '1.0.0'
       )
 
-      development_defaults! # Sets up CORS, rate limiting, docs, etc.
-      add_public_paths('/health', '/books') # No auth required for these
+      development_defaults! # Sets up CORS, rate limiting, docs, health check, etc.
+      add_public_paths('/books') # No auth required for books (health check is auto-public)
     end
 
-    # Health check - super simple
-    endpoint(
-      RapiTapir.get('/health')
-        .summary('Health check')
-        .ok(RapiTapir::Types.hash({ 'status' => RapiTapir::Types.string }))
-        .build
-    ) { { status: 'healthy' } }
-
-        # Full RESTful books resource - individual endpoints for better control
+    # Full RESTful books resource - individual endpoints for better control
     
     # List all books
     endpoint(

@@ -5,7 +5,7 @@ module RapiTapir
     # Configuration class for RapiTapir Sinatra integration
     # Follows Single Responsibility Principle - manages configuration only
     class Configuration
-      attr_accessor :docs_path, :openapi_path
+      attr_accessor :docs_path, :openapi_path, :health_check_enabled, :health_check_path
       attr_reader :api_info, :servers, :public_paths
 
       def initialize
@@ -18,6 +18,8 @@ module RapiTapir
         @public_paths = []
         @docs_path = '/docs'
         @openapi_path = '/openapi.json'
+        @health_check_enabled = false
+        @health_check_path = '/health'
       end
 
       # API Information configuration
@@ -45,13 +47,28 @@ module RapiTapir
 
       # Environment-specific configurations
       def development_defaults!
-        # Basic development settings
-        puts '📝 Applied development defaults for RapiTapir'
+        # Enable health check endpoint
+        enable_health_check
+        # Enable docs by default in development
+        enable_docs unless @docs_path.nil? && @openapi_path.nil?
+        # Add health check to public paths (no auth required)
+        add_public_paths(@health_check_path)
+        puts '📝 Applied development defaults for RapiTapir (includes health check at /health)'
       end
 
       def production_defaults!
         # Basic production settings
         puts '🔒 Applied production defaults for RapiTapir'
+      end
+
+      # Health check configuration
+      def enable_health_check(path: '/health')
+        @health_check_enabled = true
+        @health_check_path = path
+      end
+
+      def health_check_enabled?
+        @health_check_enabled
       end
 
       # Documentation configuration

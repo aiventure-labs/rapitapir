@@ -90,6 +90,9 @@ module RapiTapir
 
           # Setup documentation endpoints
           setup_documentation_endpoints(config) if config.docs_enabled?
+
+          # Setup health check endpoint automatically
+          setup_health_check_endpoint(config) if config.health_check_enabled?
         end
 
         def setup_documentation_endpoints(config)
@@ -105,6 +108,45 @@ module RapiTapir
           # Swagger UI endpoint
           get docs_path do
             generate_swagger_ui(openapi_path, config.api_info)
+          end
+        end
+
+        def setup_health_check_endpoint(config)
+          health_path = config.health_check_path
+          health_endpoint = build_health_check_endpoint(health_path)
+          health_handler = build_health_check_handler(config)
+
+          # Register the health check endpoint
+          settings.rapitapir_endpoints << { endpoint: health_endpoint, handler: health_handler }
+
+          # Register with adapter
+          settings.rapitapir_adapter&.register_endpoint(health_endpoint, health_handler)
+        end
+
+        def build_health_check_endpoint(health_path)
+          RapiTapir.get(health_path)
+                   .summary('Health check')
+                   .description('Returns the health status of the API')
+                   .tags('Health')
+                   .ok(build_health_check_schema)
+                   .build
+        end
+
+        def build_health_check_schema
+          RapiTapir::Types.hash({
+                                  'status' => RapiTapir::Types.string,
+                                  'timestamp' => RapiTapir::Types.string,
+                                  'version' => RapiTapir::Types.optional(RapiTapir::Types.string)
+                                })
+        end
+
+        def build_health_check_handler(config)
+          proc do |_inputs|
+            {
+              status: 'healthy',
+              timestamp: Time.now.iso8601,
+              version: config.api_info[:version]
+            }
           end
         end
       end
