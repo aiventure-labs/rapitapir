@@ -1,14 +1,57 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All- 📏 **Type Shortcuts**: Global `T` constant for cleaner type syntax (automatically available - no setup needed)notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased] - 2025-08-02
 
-### Added
-- Preparing for initial release
+### Summary
+This release introduces the **SinatraRapiTapir** base class, providing the cleanest possible syntax for creating RapiTapir APIs. The new inheritance-based approach eliminates boilerplate while maintaining 100% backward compatibility.
+
+### Added - SinatraRapiTapir Base Class & Enhanced Developer Experience
+- 🎯 **SinatraRapiTapir Base Class**: Clean inheritance syntax `class MyAPI < SinatraRapiTapir`
+- ✨ **Enhanced HTTP Verb DSL**: Built-in GET, POST, PUT, DELETE methods with fluent chaining
+- 🔧 **Automatic Extension Registration**: Zero-boilerplate setup with automatic feature inclusion
+- � **Type Shortcuts**: Global `T` constant for cleaner type syntax (`T.string` vs `RapiTapir::Types.string`)
+- �📖 **Comprehensive Documentation**: Added detailed guides for base class usage and setup
+- 🚀 **GitHub Pages Deployment**: Modern workflow with build/deploy separation for documentation
+- 🧪 **Enhanced Test Suite**: Complete test coverage for SinatraRapiTapir functionality
+- 📋 **Setup Guides**: Step-by-step documentation for GitHub Pages and repository configuration
+
+### Enhanced
+- 🔄 **Examples Updated**: Hello World and Getting Started examples now use clean base class syntax
+- 📚 **Documentation Structure**: Improved organization with separate guides for each feature
+- 🛠️ **Developer Experience**: Cleaner API with fewer required imports and automatic setup
+- � **Type Syntax**: Introduced global `T` shortcut for much cleaner type definitions
+- �🔧 **GitHub Actions**: Fixed workflow permissions and modernized deployment pattern
+
+### Fixed
+- 📄 **GitHub Pages Deployment**: Resolved 404 errors with proper workflow configuration
+- 🔒 **Workflow Permissions**: Added required `pages: write` and `id-token: write` permissions
+- ⚙️ **YAML Syntax**: Simplified HTML generation to prevent parsing conflicts
+- 🏗️ **Build Pipeline**: Separated build and deploy jobs for better error handling
+
+### Technical Improvements
+- **Backward Compatibility**: 100% compatible with existing manual extension registration
+- **Top-level Constant**: `SinatraRapiTapir` available at both module and top level
+- **Automatic Features**: Health checks, CORS, documentation, and middleware auto-enabled
+- **Development Messages**: Helpful startup messages indicating active features
+
+### Documentation
+- `docs/sinatra_rapitapir.md` - Complete base class usage guide
+- `docs/github_pages_setup.md` - Repository configuration instructions  
+- `docs/github_pages_fix.md` - Workflow troubleshooting guide
+- Updated examples demonstrating clean syntax patterns
+
+### Breaking Changes
+- None - all changes are additive and backward compatible
+
+### Migration Guide
+- **New Projects**: Use `class MyAPI < SinatraRapiTapir` for cleanest syntax
+- **Existing Projects**: Continue using manual extension registration (no changes required)
+- **Enhanced DSL**: Access GET, POST, etc. methods directly without additional setup
 
 ## [0.1.0] - 2024-08-01
 
@@ -42,9 +85,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Technical Details
 - **Ruby Compatibility**: Supports Ruby 3.0+
 - **Framework Support**: Sinatra 2.0+, with Rack 2.0+ compatibility
-- **Test Coverage**: 100% passing test suite with comprehensive validation
-- **Documentation**: Complete API docs, tutorials, and contribution guidelines
+- **Test Coverage**: 470 tests passing (100% success rate) with 70.13% coverage
+- **Documentation**: Complete API docs, tutorials, and contribution guidelines  
 - **Code Quality**: Professional codebase following Ruby best practices
+- **Developer Experience**: Clean inheritance syntax with automatic feature setup
 
-[Unreleased]: https://github.com/riccardomerolla/ruby-tapir/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/riccardomerolla/ruby-tapir/releases/tag/v0.1.0
+[Unreleased]: https://github.com/riccardomerolla/rapitapir/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/riccardomerolla/rapitapir/releases/tag/v0.1.0

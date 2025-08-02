@@ -167,3 +167,7 @@ module RapiTapir
     Core::Endpoint.new
   end
 end
+
+# Convenience constant for cleaner type syntax
+# Users can use T instead of RapiTapir::Types for shorter, more readable code
+T = RapiTapir::Types

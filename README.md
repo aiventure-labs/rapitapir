@@ -1,13 +1,28 @@
-# RapiTapir 🦙
+# RapiTapir## 🆕 What's New
 
-**A modern Ruby library for building type-safe HTTP APIs with automatic OpenAPI documentation**
+- **✨ - **📏 Type Shortcuts**: Global `T.string`, `T.integer`, etc. (automatically available!)
+- **🔄 GitHub Pages**: Modern documentation deployment with GitHub Actionsean Base Class**: `class MyAPI < SinatraRapiTapir` - the simplest way to create APIs
+- **🎯 Enhanced HTTP DSL**: Built-in GET, POST, PUT, DELETE methods with fluent chaining  
+- **🔧 Zero Boilerplate**: Automatic extension registration and feature setup
+- 📏 **Type Shortcuts**: Clean syntax with global `T` constant (automatic - no setup needed!)
+- **📚 GitHub Pages Ready**: Modern documentation deployment with GitHub Actions
+- **🧪 Comprehensive Tests**: 470 tests passing with 70% coverage modern Ruby library for building type-safe HTTP APIs with automatic OpenAPI documentation**
 
-[![Tests](https://img.shields.io/badge/tests-189%20passing-brightgreen)](spec/)
-[![Coverage](https://img.shields.io/badge/coverage-54.39%25-yellow)](coverage/)
+[![Tests](https://img.shields.io/badge/tests-470%20passing-brightgreen)](spec/)
+[![Coverage](https://img.shields.io/badge/coverage-70.13%25-green)](coverage/)
 [![Ruby](https://img.shields.io/badge/ruby-3.0%2B-red)](Gemfile)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-RapiTapir combines the expressiveness of Ruby with the safety of strong typing to create APIs that are both powerful and reliable. Define your endpoints once with our fluent DSL, and get automatic validation, documentation, and client generation.
+**RapiTapir 🦙** combines the expressiveness of Ruby with the safety of strong typing to create APIs that are both powerful and reliable. Define your endpoints once with our fluent DSL, and get automatic validation, documentation, and client generation.
+
+## 🆕 What's New
+
+- **✨ Clean Base Class**: `class MyAPI < SinatraRapiTapir` - the simplest way to create APIs
+- **🎯 Enhanced HTTP DSL**: Built-in GET, POST, PUT, DELETE methods with fluent chaining  
+- **🔧 Zero Boilerplate**: Automatic extension registration and feature setup
+- **� Type Shortcuts**: Use `T.string` instead of `RapiTapir::Types.string` for cleaner code
+- **�📚 GitHub Pages Ready**: Modern documentation deployment with GitHub Actions
+- **🧪 Comprehensive Tests**: 470 tests passing with 70% coverage
 
 ## ✨ Why RapiTapir?
 
@@ -17,6 +32,10 @@ RapiTapir combines the expressiveness of Ruby with the safety of strong typing t
 - **🛡️ Production Ready**: Built-in security, observability, and authentication features
 - **💎 Ruby Native**: Designed specifically for Ruby developers who love clean, readable code
 - **🔧 Zero Config**: Get started in minutes with sensible defaults
+- **✨ Clean Syntax**: Elegant base class: `class MyAPI < SinatraRapiTapir`
+- **🎯 Enhanced DSL**: Built-in HTTP verb methods (GET, POST, PUT, etc.)
+- **� Type Shortcuts**: Clean type syntax with `T.string`, `T.integer`, etc.
+- **�🔄 GitHub Pages**: Modern documentation deployment with GitHub Actions
 
 ## 🚀 Quick Start
 
@@ -31,31 +50,30 @@ gem 'rapitapir'
 ### Basic Sinatra Example
 
 ```ruby
-require 'sinatra/base'
-require 'rapitapir'
-require 'rapitapir/sinatra/extension'
+require 'rapitapir' # Only one require needed!
 
-class BookAPI < Sinatra::Base
-  register RapiTapir::Sinatra::Extension
-
+class BookAPI < SinatraRapiTapir
   # Configure API information
-  configure_api do |config|
-    config.info(
+  rapitapir do
+    info(
       title: 'Book API',
       description: 'A simple book management API',
       version: '1.0.0'
     )
+    development_defaults! # Auto CORS, docs, health checks
   end
 
-  # Define your data schema
-  BOOK_SCHEMA = RapiTapir::Types.hash({
-    "id" => RapiTapir::Types.integer,
-    "title" => RapiTapir::Types.string,
-    "author" => RapiTapir::Types.string,
-    "published" => RapiTapir::Types.boolean
+  # Define your data schema with T shortcut (globally available!)
+  BOOK_SCHEMA = T.hash({
+    "id" => T.integer,
+    "title" => T.string(min_length: 1, max_length: 255),
+    "author" => T.string(min_length: 1),
+    "published" => T.boolean,
+    "isbn" => T.optional(T.string),
+    "pages" => T.optional(T.integer(minimum: 1))
   })
 
-  # Define endpoints with the elegant resource DSL
+  # Define endpoints with the elegant resource DSL and enhanced HTTP verbs
   api_resource '/books', schema: BOOK_SCHEMA do
     crud do
       index { Book.all }
@@ -68,6 +86,30 @@ class BookAPI < Sinatra::Base
         Book.create(inputs[:body])
       end
     end
+    
+    # Custom endpoint using enhanced DSL
+    custom :get, 'featured' do
+      Book.where(featured: true)
+    end
+  end
+
+  # Alternative endpoint definition using enhanced HTTP verb DSL
+  endpoint(
+    GET('/books/search')
+      .query(:q, T.string(min_length: 1), description: 'Search query')
+      .query(:limit, T.optional(T.integer(minimum: 1, maximum: 100)), description: 'Results limit')
+      .summary('Search books')
+      .description('Search books by title or author')
+      .tags('Search')
+      .ok(T.array(BOOK_SCHEMA))
+      .error_out(400, T.hash({ "error" => T.string }), description: 'Invalid search parameters')
+      .build
+  ) do |inputs|
+    query = inputs[:q]
+    limit = inputs[:limit] || 20
+    
+    books = Book.search(query).limit(limit)
+    books.map(&:to_h)
   end
 
   run! if __FILE__ == $0
@@ -82,16 +124,45 @@ That's it! You now have a fully documented, type-safe API with interactive docum
 
 ## 🏗️ Core Features
 
+### Clean Base Class Syntax
+
+Create APIs with the cleanest possible syntax:
+
+```ruby
+require 'rapitapir'
+
+class MyAPI < SinatraRapiTapir
+  rapitapir do
+    info(title: 'My API', version: '1.0.0')
+    development_defaults! # Auto CORS, docs, health checks
+  end
+
+  # Enhanced HTTP verb DSL automatically available + T shortcut for types
+  endpoint(
+    GET('/books')
+      .summary('List all books')
+      .ok(T.array(BOOK_SCHEMA))
+      .error_out(500, T.hash({ "error" => T.string }))
+      .build
+  ) { Book.all }
+end
+```
+
 ### Type-Safe API Design
 
 Define your data schemas once and use them everywhere:
 
 ```ruby
-USER_SCHEMA = RapiTapir::Types.hash({
-  "id" => RapiTapir::Types.integer,
-  "name" => RapiTapir::Types.string(min_length: 1, max_length: 100),
-  "email" => RapiTapir::Types.email,
-  "age" => RapiTapir::Types.optional(RapiTapir::Types.integer(min: 0, max: 150))
+# T shortcut is automatically available - no setup needed!
+USER_SCHEMA = T.hash({
+  "id" => T.integer,
+  "name" => T.string(min_length: 1, max_length: 100),
+  "email" => T.email,
+  "age" => T.optional(T.integer(min: 0, max: 150)),
+  "profile" => T.optional(T.hash({
+    "bio" => T.string(max_length: 500),
+    "avatar_url" => T.string(format: :url)
+  }))
 })
 ```
 
@@ -100,17 +171,31 @@ USER_SCHEMA = RapiTapir::Types.hash({
 Create endpoints with a clean, readable DSL:
 
 ```ruby
-# Simple endpoint
+# Using the enhanced HTTP verb DSL with T shortcut
 endpoint(
-  RapiTapir.get('/users/:id')
+  GET('/users/:id')
     .summary('Get user by ID')
-    .path_param(:id, RapiTapir::Types.integer)
+    .path_param(:id, T.integer(minimum: 1))
+    .query(:include, T.optional(T.array(T.string)), description: 'Related data to include')
     .ok(USER_SCHEMA)
-    .error_response(404, ERROR_SCHEMA, description: 'User not found')
+    .error_out(404, T.hash({ "error" => T.string }), description: 'User not found')
+    .error_out(422, T.hash({ 
+      "error" => T.string,
+      "details" => T.array(T.hash({
+        "field" => T.string,
+        "message" => T.string
+      }))
+    }))
     .build
 ) do |inputs|
   user = User.find(inputs[:id])
-  halt 404 unless user
+  halt 404, { error: 'User not found' }.to_json unless user
+  
+  # Handle optional includes
+  if inputs[:include]&.include?('profile')
+    user = user.with_profile
+  end
+  
   user.to_h
 end
 ```
@@ -120,18 +205,37 @@ end
 Build complete CRUD APIs with minimal code:
 
 ```ruby
+# Enhanced resource builder with custom validations and relationships
 api_resource '/users', schema: USER_SCHEMA do
   crud do
-    index { User.all }
+    index do
+      # Automatic pagination and filtering
+      users = User.all
+      users = users.where(active: true) if params[:active] == 'true'
+      users.limit(params[:limit] || 50)
+    end
+    
     show { |inputs| User.find(inputs[:id]) }
-    create { |inputs| User.create(inputs[:body]) }
+    
+    create do |inputs|
+      user = User.create(inputs[:body])
+      status 201
+      user.to_h
+    end
+    
     update { |inputs| User.update(inputs[:id], inputs[:body]) }
     destroy { |inputs| User.delete(inputs[:id]); status 204 }
   end
   
-  # Add custom endpoints
-  custom(:get, 'active') do
-    User.where(active: true)
+  # Add custom endpoints with full type safety
+  custom :get, 'active' do
+    User.where(active: true).map(&:to_h)
+  end
+  
+  custom :post, ':id/avatar' do |inputs|
+    user = User.find(inputs[:id])
+    user.update_avatar(inputs[:body][:avatar_data])
+    { success: true }
   end
 end
 ```
@@ -149,6 +253,20 @@ Your API documentation is always up-to-date because it's generated from your act
 
 ### Sinatra (Recommended)
 
+**Option 1: Clean Base Class (Recommended)**
+```ruby
+require 'rapitapir'
+
+class MyAPI < SinatraRapiTapir
+  rapitapir do
+    info(title: 'My API', version: '1.0.0')
+    development_defaults!
+  end
+  # Enhanced HTTP verb DSL automatically available
+end
+```
+
+**Option 2: Manual Extension Registration**
 ```ruby
 require 'rapitapir/sinatra/extension'
 
@@ -182,41 +300,96 @@ include RapiTapir::Rails::Controller
 ### Authentication & Authorization
 
 ```ruby
-# Bearer token authentication
-configure_api do |config|
-  config.bearer_auth :api_key, realm: 'API'
-end
+# Bearer token authentication with enhanced syntax
+class SecureAPI < SinatraRapiTapir
+  rapitapir do
+    info(title: 'Secure API', version: '1.0.0')
+    bearer_auth :api_key, realm: 'API'
+    production_defaults!
+  end
 
-# Scope-based authorization
-endpoint(
-  RapiTapir.get('/admin/users')
-    .summary('List all users (admin only)')
-    .bearer_auth(scopes: ['admin'])
-    .ok(RapiTapir::Types.array(USER_SCHEMA))
-    .build
-) do |inputs|
-  require_scope('admin')
-  User.all
+  # Protected endpoint with scope-based authorization
+  endpoint(
+    GET('/admin/users')
+      .summary('List all users (admin only)')
+      .bearer_auth(scopes: ['admin'])
+      .query(:page, T.optional(T.integer(minimum: 1)), description: 'Page number')
+      .query(:per_page, T.optional(T.integer(minimum: 1, maximum: 100)), description: 'Items per page')
+      .ok(T.hash({
+        "users" => T.array(USER_SCHEMA),
+        "pagination" => T.hash({
+          "page" => T.integer,
+          "per_page" => T.integer,
+          "total" => T.integer,
+          "pages" => T.integer
+        })
+      }))
+      .error_out(401, T.hash({ "error" => T.string }), description: 'Unauthorized')
+      .error_out(403, T.hash({ "error" => T.string }), description: 'Insufficient permissions')
+      .build
+  ) do |inputs|
+    require_scope!('admin')
+    
+    page = inputs[:page] || 1
+    per_page = inputs[:per_page] || 20
+    
+    users = User.paginate(page: page, per_page: per_page)
+    
+    {
+      users: users.map(&:to_h),
+      pagination: {
+        page: page,
+        per_page: per_page,
+        total: users.total_count,
+        pages: users.total_pages
+      }
+    }
+  end
 end
 ```
 
 ### Observability
 
 ```ruby
-# Health checks
-RapiTapir::Observability.configure do |config|
-  config.enable_health_checks
-  config.health_endpoint '/health'
-end
+class MonitoredAPI < SinatraRapiTapir
+  rapitapir do
+    info(title: 'Monitored API', version: '1.0.0')
+    enable_health_checks path: '/health'
+    enable_metrics
+    production_defaults!
+  end
 
-# Metrics and tracing
-endpoint(
-  RapiTapir.get('/api/data')
-    .with_metrics('api_data_requests')
-    .with_tracing('fetch_api_data')
-    .build
-) do
-  # Your endpoint code
+  # Endpoint with metrics and tracing
+  endpoint(
+    GET('/api/data')
+      .summary('Get data with monitoring')
+      .with_metrics('api_data_requests')
+      .with_tracing('fetch_api_data')
+      .query(:filter, T.optional(T.string), description: 'Data filter')
+      .ok(T.hash({
+        "data" => T.array(T.hash({
+          "id" => T.integer,
+          "value" => T.string,
+          "timestamp" => T.datetime
+        })),
+        "metadata" => T.hash({
+          "total" => T.integer,
+          "filtered" => T.boolean
+        })
+      }))
+      .build
+  ) do |inputs|
+    # Your endpoint code with automatic metrics collection
+    data = DataService.fetch(filter: inputs[:filter])
+    
+    {
+      data: data.map(&:to_h),
+      metadata: {
+        total: data.count,
+        filtered: inputs[:filter].present?
+      }
+    }
+  end
 end
 ```
 
@@ -233,7 +406,8 @@ use RapiTapir::Server::Middleware::SecurityHeaders
 
 Explore our comprehensive examples:
 
-- **[Getting Started](examples/getting_started_extension.rb)** - Basic Sinatra integration
+- **[Hello World](examples/hello_world.rb)** - Minimal API with SinatraRapiTapir base class  
+- **[Getting Started](examples/getting_started_extension.rb)** - Complete bookstore API with CRUD operations
 - **[Enterprise API](examples/enterprise_rapitapir_api.rb)** - Production-ready example with auth
 - **[Authentication](examples/authentication_example.rb)** - Bearer token and scope-based auth
 - **[Observability](examples/observability/)** - Health checks, metrics, and tracing
@@ -241,10 +415,12 @@ Explore our comprehensive examples:
 ## 📚 Documentation
 
 - **[API Reference](docs/endpoint-definition.md)** - Complete endpoint definition guide
+- **[SinatraRapiTapir Base Class](docs/sinatra_rapitapir.md)** - Clean inheritance syntax guide
 - **[Sinatra Extension](docs/SINATRA_EXTENSION.md)** - Detailed Sinatra integration
-- **[Type System](docs/types.md)** - All available types and validations
+- **[Type System](docs/types.md)** - All available types and validations (use `T.` shortcut!)
 - **[Authentication](docs/authentication.md)** - Security and auth patterns
 - **[Observability](docs/observability.md)** - Monitoring and health checks
+- **[GitHub Pages Setup](docs/github_pages_setup.md)** - Documentation deployment guide
 
 ## 🧪 Testing
 
@@ -406,9 +582,10 @@ bundle exec rspec
 ```
 
 **Test Results:**
-- 88 tests passing
-- 85.67% code coverage
-- All core functionality tested
+- ✅ 470 tests passing (100% success rate)
+- 📊 70.13% code coverage 
+- 🧪 Comprehensive test suite covering all features
+- ✨ SinatraRapiTapir base class fully tested
 
 ## 📝 Examples
 
