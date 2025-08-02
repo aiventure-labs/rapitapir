@@ -79,40 +79,10 @@ jobs:
         </html>
         EOF
         
-    - name: 🚀 Deploy to GitHub Pages
-      uses: actions/deploy-pages@v2
-      with:
-        artifact_name: github-pages
-        
-    - name: 📤 Upload Pages artifact
-      uses: actions/upload-pages-artifact@v2
+    - name: � Upload Pages artifact
+      uses: actions/upload-pages-artifact@v3
       with:
         path: public/
-
-  generate-examples:
-    name: 🚀 Generate Example Documentation
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: 🔄 Checkout code
-      uses: actions/checkout@v4
-      
-    - name: 💎 Set up Ruby
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: '3.2'
-        bundler-cache: true
         
-    - name: 📝 Generate documentation from examples
-      run: |
-        mkdir -p tmp/example-docs
-        
-        # Generate OpenAPI spec from getting started example
-        timeout 30s ruby examples/getting_started_extension.rb &
-        sleep 5
-        curl -s http://localhost:4567/api/docs/openapi.json > tmp/example-docs/getting-started-openapi.json || true
-        
-        # Generate client code examples
-        if [ -f tmp/example-docs/getting-started-openapi.json ]; then
-          echo "✅ Generated OpenAPI documentation from examples"
-        fi
+    - name: � Deploy to GitHub Pages
+      uses: actions/deploy-pages@v4
