@@ -18,7 +18,7 @@ end
 require_relative '../lib/rapitapir'
 
 # Only require extension if Sinatra is available
-require_relative '../lib/rapitapir/sinatra/extension' if SINATRA_AVAILABLE
+# Note: Extension and SinatraRapiTapir are auto-loaded when requiring rapitapir
 
 # Simple in-memory data store
 class BookStore
@@ -75,14 +75,13 @@ BOOK_CREATE_SCHEMA = RapiTapir::Types.hash({
 
 # Your API application - incredibly simple!
 if SINATRA_AVAILABLE
-  class BookstoreAPI < Sinatra::Base
-    register RapiTapir::Sinatra::Extension
+  class BookstoreAPI < SinatraRapiTapir
 
     # One-line configuration for the entire API
     rapitapir do
       info(
         title: 'Bookstore API',
-        description: 'A simple bookstore API built with RapiTapir Extension',
+        description: 'A simple bookstore API built with SinatraRapiTapir',
         version: '1.0.0'
       )
 
@@ -167,7 +166,8 @@ if SINATRA_AVAILABLE
     end
 
     configure :development do
-      puts "\n📚 Bookstore API with RapiTapir Extension"
+      puts "\n📚 Bookstore API with SinatraRapiTapir"
+      puts "🚀 Clean syntax: class BookstoreAPI < SinatraRapiTapir" 
       puts '🌐 Documentation: http://localhost:4567/docs'
       puts '📋 OpenAPI: http://localhost:4567/openapi.json'
       puts '❤️  Health: http://localhost:4567/health'

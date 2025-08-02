@@ -7,11 +7,9 @@
 
 require 'sinatra/base'
 require_relative '../lib/rapitapir'
-require_relative '../lib/rapitapir/sinatra/extension'
 
 # Your entire API in under 20 lines! 🚀
-class HelloWorldAPI < Sinatra::Base
-  register RapiTapir::Sinatra::Extension  # Automatically includes enhanced HTTP verb DSL
+class HelloWorldAPI < SinatraRapiTapir
 
   # One-line API configuration
   rapitapir do
@@ -62,14 +60,14 @@ class HelloWorldAPI < Sinatra::Base
   end
 
   configure :development do
-    puts "\n🌟 Hello World API with RapiTapir Extension"
-    puts "🚀 Enhanced DSL: GET() automatically available (no manual extend needed!)"
+    puts "\n🌟 Hello World API with SinatraRapiTapir base class"
+    puts "🚀 Clean syntax: class HelloWorldAPI < SinatraRapiTapir"
     puts "🌐 Swagger UI:  http://localhost:4567/docs"
     puts "📋 OpenAPI:     http://localhost:4567/openapi.json"
     puts "👋 Try it:      http://localhost:4567/hello?name=Developer"
     puts "🌍 Languages:   http://localhost:4567/greet/spanish"
     puts "❤️  Health:     http://localhost:4567/health"
-    puts "\n✨ Beautiful, type-safe API in under 20 lines of code!"
+    puts "\n✨ Beautiful, type-safe API in under 15 lines of code!"
   end
 end
 

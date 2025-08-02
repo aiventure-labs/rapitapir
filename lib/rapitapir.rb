@@ -35,7 +35,10 @@ end
 
 # Framework adapters (optional, only load if framework is available)
 begin
-  require_relative 'rapitapir/server/sinatra_adapter' if defined?(Sinatra)
+  if defined?(Sinatra)
+    require_relative 'rapitapir/server/sinatra_adapter'
+    require_relative 'rapitapir/sinatra_rapitapir'
+  end
 rescue LoadError
   # Sinatra not available
 end
