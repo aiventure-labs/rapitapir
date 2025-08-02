@@ -11,7 +11,7 @@ require_relative '../lib/rapitapir/sinatra/extension'
 
 # Your entire API in under 20 lines! 🚀
 class HelloWorldAPI < Sinatra::Base
-  register RapiTapir::Sinatra::Extension
+  register RapiTapir::Sinatra::Extension  # Automatically includes enhanced HTTP verb DSL
 
   # One-line API configuration
   rapitapir do
@@ -19,9 +19,9 @@ class HelloWorldAPI < Sinatra::Base
     development_defaults! # Auto CORS, docs, health checks, etc.
   end
 
-  # Hello World endpoint - beautifully typed and documented
+  # Hello World endpoint - beautifully typed and documented using enhanced DSL
   endpoint(
-    RapiTapir.get('/hello')
+    GET('/hello')
       .query(:name, RapiTapir::Types.optional(RapiTapir::Types.string))
       .summary('Say hello to someone')
       .description('Returns a personalized greeting')
@@ -39,9 +39,9 @@ class HelloWorldAPI < Sinatra::Base
     }
   end
 
-  # Another endpoint showing path parameters
+  # Another endpoint showing path parameters with enhanced DSL
   endpoint(
-    RapiTapir.get('/greet/:language')
+    GET('/greet/:language')
       .path_param(:language, RapiTapir::Types.string)
       .summary('Multilingual greeting')
       .tags('Greetings')
@@ -56,13 +56,14 @@ class HelloWorldAPI < Sinatra::Base
       'german' => 'Hallo!',
       'japanese' => 'こんにちは!'
     }
-    
+
     greeting = greetings[inputs[:language].downcase] || 'Hello!'
     { greeting: greeting }
   end
 
   configure :development do
     puts "\n🌟 Hello World API with RapiTapir Extension"
+    puts "🚀 Enhanced DSL: GET() automatically available (no manual extend needed!)"
     puts "🌐 Swagger UI:  http://localhost:4567/docs"
     puts "📋 OpenAPI:     http://localhost:4567/openapi.json"
     puts "👋 Try it:      http://localhost:4567/hello?name=Developer"

@@ -94,7 +94,7 @@ if SINATRA_AVAILABLE
     
     # List all books
     endpoint(
-      RapiTapir.get('/books')
+      GET('/books')
         .summary('List all books')
         .ok(RapiTapir::Types.array(BOOK_SCHEMA))
         .build
@@ -102,7 +102,7 @@ if SINATRA_AVAILABLE
 
     # Get published books only (MUST come before /books/:id)
     endpoint(
-      RapiTapir.get('/books/published')
+      GET('/books/published')
         .summary('Get published books')
         .ok(RapiTapir::Types.array(BOOK_SCHEMA))
         .build
@@ -110,7 +110,7 @@ if SINATRA_AVAILABLE
 
     # Get book by ID
     endpoint(
-      RapiTapir.get('/books/:id')
+      GET('/books/:id')
         .path_param(:id, RapiTapir::Types.integer)
         .summary('Get book by ID')
         .ok(BOOK_SCHEMA)
@@ -124,7 +124,7 @@ if SINATRA_AVAILABLE
 
     # Create new book  
     endpoint(
-      RapiTapir.post('/books')
+      POST('/books')
         .summary('Create new book')
         .json_body(BOOK_CREATE_SCHEMA)
         .created(BOOK_SCHEMA)
@@ -137,7 +137,7 @@ if SINATRA_AVAILABLE
 
     # Update book
     endpoint(
-      RapiTapir.put('/books/:id')
+      PUT('/books/:id')
         .path_param(:id, RapiTapir::Types.integer)
         .json_body(BOOK_CREATE_SCHEMA)
         .summary('Update book')
@@ -153,7 +153,7 @@ if SINATRA_AVAILABLE
 
     # Delete book
     endpoint(
-      RapiTapir.delete('/books/:id')
+      DELETE('/books/:id')
         .path_param(:id, RapiTapir::Types.integer)
         .summary('Delete book')
         .no_content

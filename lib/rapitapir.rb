@@ -16,6 +16,7 @@ require_relative 'rapitapir/dsl/enhanced_endpoint_dsl'
 require_relative 'rapitapir/server/enhanced_rack_adapter'
 require_relative 'rapitapir/server/sinatra_integration'
 require_relative 'rapitapir/dsl/fluent_dsl'
+require_relative 'rapitapir/dsl/http_verbs'
 
 # Observability components (Phase 2.1)
 require_relative 'rapitapir/observability'
@@ -76,10 +77,20 @@ end
 #     .ok(:json, { id: :integer, name: :string })
 #     .build
 #
+# @example Enhanced DSL usage
+#   include RapiTapir::DSL::HTTPVerbs
+#   endpoint = GET('/users/{id}')
+#     .path_param(:id, :integer)
+#     .ok(:json, { id: :integer, name: :string })
+#     .build
+#
 # @see https://github.com/riccardomerolla/ruby-tapir
 module RapiTapir
   # Will be extended with FluentDSL later
   @endpoints = []
+
+  # Extend the module with HTTP verbs for global access
+  extend DSL::HTTPVerbs
 
   def self.endpoints
     @endpoints
