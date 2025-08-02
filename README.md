@@ -102,7 +102,7 @@ class BookAPI < SinatraRapiTapir
       .description('Search books by title or author')
       .tags('Search')
       .ok(T.array(BOOK_SCHEMA))
-      .error_out(400, T.hash({ "error" => T.string }), description: 'Invalid search parameters')
+      .bad_request(T.hash({ "error" => T.string }), description: 'Invalid search parameters')
       .build
   ) do |inputs|
     query = inputs[:q]
@@ -142,7 +142,7 @@ class MyAPI < SinatraRapiTapir
     GET('/books')
       .summary('List all books')
       .ok(T.array(BOOK_SCHEMA))
-      .error_out(500, T.hash({ "error" => T.string }))
+      .error_response(500, T.hash({ "error" => T.string }))
       .build
   ) { Book.all }
 end
@@ -178,8 +178,8 @@ endpoint(
     .path_param(:id, T.integer(minimum: 1))
     .query(:include, T.optional(T.array(T.string)), description: 'Related data to include')
     .ok(USER_SCHEMA)
-    .error_out(404, T.hash({ "error" => T.string }), description: 'User not found')
-    .error_out(422, T.hash({ 
+    .error_response(404, T.hash({ "error" => T.string }), description: 'User not found')
+    .error_response(422, T.hash({ 
       "error" => T.string,
       "details" => T.array(T.hash({
         "field" => T.string,
@@ -324,8 +324,8 @@ class SecureAPI < SinatraRapiTapir
           "pages" => T.integer
         })
       }))
-      .error_out(401, T.hash({ "error" => T.string }), description: 'Unauthorized')
-      .error_out(403, T.hash({ "error" => T.string }), description: 'Insufficient permissions')
+      .error_response(401, T.hash({ "error" => T.string }), description: 'Unauthorized')
+      .error_response(403, T.hash({ "error" => T.string }), description: 'Insufficient permissions')
       .build
   ) do |inputs|
     require_scope!('admin')
@@ -480,7 +480,7 @@ endpoint = RapiTapir.post('/users')
   .in(RapiTapir.body({ name: :string, email: :string }))
   .out(RapiTapir.status_code(201))
   .out(RapiTapir.json_body({ id: :integer, name: :string, email: :string }))
-  .error_out(422, RapiTapir.json_body({ error: :string }))
+  .error_response(422, RapiTapir.json_body({ error: :string }))
   .description('Create a new user')
   .tag('users')
 
@@ -507,7 +507,7 @@ RapiTapir.get('/users/:id')
   .in(RapiTapir.header(:authorization, :string))
   .out(RapiTapir.status_code(200))
   .out(RapiTapir.json_body({ id: :integer, name: :string, email: :string }))
-  .error_out(404, RapiTapir.json_body({ error: :string }))
+  .error_response(404, RapiTapir.json_body({ error: :string }))
   .description('Get user by ID')
   .tag('users')
 ```
@@ -607,14 +607,14 @@ list_users = RapiTapir.get('/users')
 get_user = RapiTapir.get('/users/:id')
   .in(RapiTapir.path_param(:id, :integer))
   .out(RapiTapir.json_body({ id: :integer, name: :string, email: :string }))
-  .error_out(404, RapiTapir.json_body({ error: :string }))
+  .error_response(404, RapiTapir.json_body({ error: :string }))
 
 # Create user
 create_user = RapiTapir.post('/users')
   .in(RapiTapir.body({ name: :string, email: :string }))
   .out(RapiTapir.status_code(201))
   .out(RapiTapir.json_body({ id: :integer, name: :string, email: :string }))
-  .error_out(422, RapiTapir.json_body({ 
+  .error_response(422, RapiTapir.json_body({ 
     error: :string, 
     details: [{ field: :string, message: :string }]
   }))
@@ -624,14 +624,14 @@ update_user = RapiTapir.put('/users/:id')
   .in(RapiTapir.path_param(:id, :integer))
   .in(RapiTapir.body({ name: :string, email: :string }))
   .out(RapiTapir.json_body({ id: :integer, name: :string, email: :string }))
-  .error_out(404, RapiTapir.json_body({ error: :string }))
-  .error_out(422, RapiTapir.json_body({ error: :string }))
+  .error_response(404, RapiTapir.json_body({ error: :string }))
+  .error_response(422, RapiTapir.json_body({ error: :string }))
 
 # Delete user
 delete_user = RapiTapir.delete('/users/:id')
   .in(RapiTapir.path_param(:id, :integer))
   .out(RapiTapir.status_code(204))
-  .error_out(404, RapiTapir.json_body({ error: :string }))
+  .error_response(404, RapiTapir.json_body({ error: :string }))
 ```
 
 ### Advanced Features
@@ -657,9 +657,9 @@ complex_endpoint = RapiTapir.post('/orders')
     total: :float,
     created_at: :datetime
   }))
-  .error_out(400, RapiTapir.json_body({ error: :string }))
-  .error_out(401, RapiTapir.json_body({ error: :string }))
-  .error_out(422, RapiTapir.json_body({ 
+  .error_response(400, RapiTapir.json_body({ error: :string }))
+  .error_response(401, RapiTapir.json_body({ error: :string }))
+  .error_response(422, RapiTapir.json_body({ 
     error: :string,
     validation_errors: [{ field: :string, message: :string }]
   }))
