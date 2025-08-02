@@ -343,8 +343,8 @@ module RapiTapir
 
           begin
             _, payload, signature = parse_jwt_parts(parts)
-            return nil unless verify_jwt_signature(parts, signature)
-            return nil unless verify_jwt_claims(payload)
+            return nil unless valid_jwt_signature?(parts, signature)
+            return nil unless valid_jwt_claims?(payload)
 
             payload
           rescue JSON::ParserError, ArgumentError
@@ -374,7 +374,7 @@ module RapiTapir
           base64_string
         end
 
-        def verify_jwt_signature(parts, signature)
+        def valid_jwt_signature?(parts, signature)
           expected_signature = Base64.urlsafe_encode64(
             OpenSSL::HMAC.digest('SHA256', @secret, "#{parts[0]}.#{parts[1]}")
           ).tr('=', '')
@@ -382,7 +382,7 @@ module RapiTapir
           signature == expected_signature
         end
 
-        def verify_jwt_claims(payload)
+        def valid_jwt_claims?(payload)
           return false if @verify_expiration && jwt_expired?(payload)
           return false if @verify_issuer && payload['iss'] != @verify_issuer
           return false if @verify_audience && payload['aud'] != @verify_audience

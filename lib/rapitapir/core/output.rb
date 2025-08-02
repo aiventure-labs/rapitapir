@@ -30,20 +30,20 @@ module RapiTapir
       def valid_type?(value)
         case type
         when :string then value.is_a?(String)
-        when :integer then validate_integer_type(value)
-        when :float then validate_float_type(value)
-        when :boolean then validate_boolean_type(value)
+        when :integer then integer_type?(value)
+        when :float then float_type?(value)
+        when :boolean then boolean_type?(value)
         when Hash then validate_hash_schema(value)
         when Class then value.is_a?(type)
         else true # Accept any for custom types and status codes
         end
       end
 
-      def validate_integer_type(value)
+      def integer_type?(value)
         value.is_a?(Integer) || value.is_a?(Float)
       end
 
-      def validate_float_type(value)
+      def float_type?(value)
         value.is_a?(Float) || value.is_a?(Integer)
       end
 
@@ -101,35 +101,35 @@ module RapiTapir
         return true unless type.is_a?(Hash) # If type is not a hash schema, accept any hash
 
         type.all? do |key, expected_type|
-          validate_field_type(value[key], expected_type)
+          valid_field_type?(value[key], expected_type)
         end
       end
 
-      def validate_field_type(field_value, expected_type)
+      def valid_field_type?(field_value, expected_type)
         case expected_type
         when :string then field_value.is_a?(String)
         when :integer then field_value.is_a?(Integer)
-        when :float then validate_numeric_type(field_value)
-        when :boolean then validate_boolean_type(field_value)
-        when :date then validate_date_type(field_value)
-        when :datetime then validate_datetime_type(field_value)
+        when :float then numeric_type?(field_value)
+        when :boolean then boolean_type?(field_value)
+        when :date then date_type?(field_value)
+        when :datetime then datetime_type?(field_value)
         else true
         end
       end
 
-      def validate_numeric_type(field_value)
+      def numeric_type?(field_value)
         field_value.is_a?(Float) || field_value.is_a?(Integer)
       end
 
-      def validate_boolean_type(field_value)
+      def boolean_type?(field_value)
         [true, false].include?(field_value)
       end
 
-      def validate_date_type(field_value)
+      def date_type?(field_value)
         field_value.is_a?(Date) || field_value.is_a?(String)
       end
 
-      def validate_datetime_type(field_value)
+      def datetime_type?(field_value)
         field_value.is_a?(DateTime) || field_value.is_a?(String)
       end
 

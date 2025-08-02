@@ -230,7 +230,7 @@ module RapiTapir
         path = endpoint.path
 
         params = build_method_parameters(endpoint, method_name)
-        has_params = has_method_parameters?(endpoint)
+        has_params = method_parameters?(endpoint)
 
         method_signature = build_method_signature(method_name, params, has_params, endpoint)
         method_body = build_method_body(method_signature, endpoint, has_params, http_method, path)
@@ -240,12 +240,12 @@ module RapiTapir
 
       def build_method_parameters(endpoint, method_name)
         params = []
-        has_params = has_method_parameters?(endpoint)
+        has_params = method_parameters?(endpoint)
         params << "request: #{method_name.capitalize}Request" if has_params
         params
       end
 
-      def has_method_parameters?(endpoint)
+      def method_parameters?(endpoint)
         path_parameters(endpoint).any? || query_parameters(endpoint).any? || request_body(endpoint)
       end
 

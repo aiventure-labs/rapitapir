@@ -47,8 +47,8 @@ module RapiTapir
         case target_type
         when :string then value.is_a?(String)
         when :integer then value.is_a?(Integer)
-        when :float then validate_numeric_value(value)
-        when :boolean then validate_boolean_value(value)
+        when :float then numeric_value?(value)
+        when :boolean then boolean_value?(value)
         else
           validate_complex_type_match(value, target_type)
         end
@@ -64,11 +64,11 @@ module RapiTapir
         end
       end
 
-      def validate_numeric_value(value)
+      def numeric_value?(value)
         value.is_a?(Float) || value.is_a?(Integer)
       end
 
-      def validate_boolean_value(value)
+      def boolean_value?(value)
         [true, false].include?(value)
       end
 
@@ -142,25 +142,25 @@ module RapiTapir
         return false unless value.is_a?(Hash)
 
         type.all? do |key, expected_type|
-          validate_hash_field_type(value[key], expected_type)
+          valid_hash_field_type?(value[key], expected_type)
         end
       end
 
-      def validate_hash_field_type(field_value, expected_type)
+      def valid_hash_field_type?(field_value, expected_type)
         case expected_type
         when :string then field_value.is_a?(String)
         when :integer then field_value.is_a?(Integer)
-        when :float then validate_numeric_field_value(field_value)
-        when :boolean then validate_boolean_field_value(field_value)
+        when :float then numeric_field_value?(field_value)
+        when :boolean then boolean_field_value?(field_value)
         else true
         end
       end
 
-      def validate_numeric_field_value(field_value)
+      def numeric_field_value?(field_value)
         field_value.is_a?(Float) || field_value.is_a?(Integer)
       end
 
-      def validate_boolean_field_value(field_value)
+      def boolean_field_value?(field_value)
         [true, false].include?(field_value)
       end
 

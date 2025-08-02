@@ -101,30 +101,37 @@ module RapiTapir
           description: @description || http_status_description
         }
 
-        if @type
-          spec[:content] = {
-            @content_type => {
-              schema: @type.to_json_schema
-            }
-          }
-
-          spec[:content][@content_type][:example] = @example if @example
-        end
-
-        if @headers.any?
-          spec[:headers] = @headers.transform_values do |header_spec|
-            case header_spec
-            when Hash
-              header_spec
-            when String
-              { description: header_spec }
-            else
-              { description: header_spec.to_s }
-            end
-          end
-        end
+        add_content_to_spec(spec) if @type
+        add_headers_to_spec(spec) if @headers.any?
 
         spec
+      end
+
+      def add_content_to_spec(spec)
+        spec[:content] = {
+          @content_type => {
+            schema: @type.to_json_schema
+          }
+        }
+
+        spec[:content][@content_type][:example] = @example if @example
+      end
+
+      def add_headers_to_spec(spec)
+        spec[:headers] = @headers.transform_values do |header_spec|
+          transform_header_spec(header_spec)
+        end
+      end
+
+      def transform_header_spec(header_spec)
+        case header_spec
+        when Hash
+          header_spec
+        when String
+          { description: header_spec }
+        else
+          { description: header_spec.to_s }
+        end
       end
 
       def validate(value)
@@ -256,20 +263,39 @@ module RapiTapir
           description: @description
         }
 
+        add_auth_specific_fields(spec)
+        spec
+      end
+
+      def add_auth_specific_fields(spec)
         case @type
         when :bearer
-          spec[:scheme] = 'bearer'
-          spec[:bearerFormat] = @options[:bearer_format] if @options[:bearer_format]
+          add_bearer_fields(spec)
         when :api_key
-          spec[:name] = @name || 'X-API-Key'
-          spec[:in] = (@location || :header).to_s
+          add_api_key_fields(spec)
         when :basic
-          spec[:scheme] = 'basic'
+          add_basic_fields(spec)
         when :oauth2
-          spec[:flows] = @flows || default_oauth2_flows
+          add_oauth2_fields(spec)
         end
+      end
 
-        spec
+      def add_bearer_fields(spec)
+        spec[:scheme] = 'bearer'
+        spec[:bearerFormat] = @options[:bearer_format] if @options[:bearer_format]
+      end
+
+      def add_api_key_fields(spec)
+        spec[:name] = @name || 'X-API-Key'
+        spec[:in] = (@location || :header).to_s
+      end
+
+      def add_basic_fields(spec)
+        spec[:scheme] = 'basic'
+      end
+
+      def add_oauth2_fields(spec)
+        spec[:flows] = @flows || default_oauth2_flows
       end
 
       def validate_request(request)

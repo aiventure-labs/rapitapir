@@ -286,6 +286,13 @@ module RapiTapir
           { type: 'number' }
         when RapiTapir::Types::Boolean, :boolean
           { type: 'boolean' }
+        else
+          generate_complex_type_schema(type)
+        end
+      end
+
+      def generate_complex_type_schema(type)
+        case type
         when RapiTapir::Types::Array
           generate_array_schema(type)
         when RapiTapir::Types::Hash

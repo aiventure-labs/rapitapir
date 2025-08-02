@@ -34,17 +34,24 @@ module RapiTapir
       def index(**options, &handler)
         handler ||= proc { [] }
 
-        endpoint = RapiTapir.get(@base_path)
-                            .summary(options[:summary] || "List all #{resource_name}")
-                            .description(options[:description] || "Retrieve a list of #{resource_name}")
-                            .query(:limit, RapiTapir::Types.optional(RapiTapir::Types.integer),
-                                   description: 'Maximum number of results')
-                            .query(:offset, RapiTapir::Types.optional(RapiTapir::Types.integer),
-                                   description: 'Number of results to skip')
-                            .ok(RapiTapir::Types.array(@schema))
-                            .build
-
+        endpoint = build_index_endpoint(options)
         @app.endpoint(endpoint, &handler)
+      end
+
+      def build_index_endpoint(options)
+        RapiTapir.get(@base_path)
+                 .summary(options[:summary] || "List all #{resource_name}")
+                 .description(options[:description] || "Retrieve a list of #{resource_name}")
+                 .then { |ep| add_pagination_params(ep) }
+                 .ok(RapiTapir::Types.array(@schema))
+                 .build
+      end
+
+      def add_pagination_params(endpoint)
+        endpoint.query(:limit, RapiTapir::Types.optional(RapiTapir::Types.integer),
+                       description: 'Maximum number of results')
+                .query(:offset, RapiTapir::Types.optional(RapiTapir::Types.integer),
+                       description: 'Number of results to skip')
       end
 
       # Get specific resource (GET /resources/:id)

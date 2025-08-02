@@ -30,14 +30,14 @@ module RapiTapir
       def validate_endpoint(endpoint, index)
         context = "Endpoint #{index + 1}"
 
-        return unless validate_endpoint_structure(endpoint, context)
+        return unless valid_endpoint_structure?(endpoint, context)
 
         validate_endpoint_basics(endpoint, context)
         validate_endpoint_content(endpoint, context)
         validate_endpoint_consistency(endpoint, context)
       end
 
-      def validate_endpoint_structure(endpoint, context)
+      def valid_endpoint_structure?(endpoint, context)
         unless endpoint.respond_to?(:method) && endpoint.respond_to?(:path)
           @errors << "#{context}: Missing method or path"
           return false
@@ -354,12 +354,12 @@ module RapiTapir
       end
 
       def validate_output_property(endpoint)
-        return if has_valid_outputs?(endpoint)
+        return if valid_outputs?(endpoint)
 
         @errors << "#{endpoint.path}: missing output definition"
       end
 
-      def has_valid_outputs?(endpoint)
+      def valid_outputs?(endpoint)
         endpoint.respond_to?(:outputs) && endpoint.outputs&.any?
       end
 

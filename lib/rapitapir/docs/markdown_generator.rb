@@ -411,6 +411,13 @@ module RapiTapir
           'number'
         when RapiTapir::Types::Boolean, :boolean
           'boolean'
+        else
+          format_advanced_type(type)
+        end
+      end
+
+      def format_advanced_type(type)
+        case type
         when RapiTapir::Types::Date, :date
           'date'
         when RapiTapir::Types::DateTime, :datetime

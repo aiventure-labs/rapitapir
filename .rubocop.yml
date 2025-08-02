@@ -8,6 +8,7 @@ AllCops:
     - 'tmp/**/*'
     - 'bin/*'
     - '.bundle/**/*'
+    - 'examples/**/*'
 
 # Allow large blocks in specs and examples
 Metrics/BlockLength:
@@ -21,22 +22,20 @@ Metrics/ClassLength:
 Metrics/MethodLength:
   Enabled: false
 
-# Allow top-level include/extend in examples
+# Allow top-level include/extend in specs
 Style/MixinUsage:
   Exclude:
-    - 'examples/**/*'
     - 'spec/**/*'
 
-# Documentation is not required for examples/demo files
+# Documentation is not required for demo files
 Style/Documentation:
   Exclude:
-    - 'examples/**/*'
     - 'spec/**/*'
 
-# Allow class variables in examples/demos
+# Class variables are acceptable in specs for testing
 Style/ClassVars:
   Exclude:
-    - 'examples/**/*'
+    - 'spec/**/*'
 
 # Line length is reasonable for API definitions
 Layout/LineLength:

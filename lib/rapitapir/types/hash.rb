@@ -124,19 +124,27 @@ module RapiTapir
 
       def apply_constraints_to_schema(schema)
         super
+        apply_field_types_to_schema(schema)
+        apply_additional_properties_constraint(schema)
+      end
 
-        if field_types.any?
-          schema[:properties] = {}
-          required_fields = []
+      def apply_field_types_to_schema(schema)
+        return unless field_types.any?
 
-          field_types.each do |field_name, field_type|
-            schema[:properties][field_name] = field_type.to_json_schema
-            required_fields << field_name unless field_type.optional?
-          end
+        schema[:properties] = build_properties_schema
+        required_fields = collect_required_fields
+        schema[:required] = required_fields unless required_fields.empty?
+      end
 
-          schema[:required] = required_fields unless required_fields.empty?
-        end
+      def build_properties_schema
+        field_types.transform_values(&:to_json_schema)
+      end
 
+      def collect_required_fields
+        field_types.reject { |_, field_type| field_type.optional? }.keys
+      end
+
+      def apply_additional_properties_constraint(schema)
         schema[:additionalProperties] = constraints[:additional_properties]
       end
 

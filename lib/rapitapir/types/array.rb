@@ -118,9 +118,21 @@ module RapiTapir
 
       def apply_constraints_to_schema(schema)
         super
+        apply_array_specific_constraints(schema)
+      end
+
+      def apply_array_specific_constraints(schema)
         schema[:items] = item_type.to_json_schema
+        apply_size_constraints(schema)
+        apply_uniqueness_constraint(schema)
+      end
+
+      def apply_size_constraints(schema)
         schema[:minItems] = constraints[:min_items] if constraints[:min_items]
         schema[:maxItems] = constraints[:max_items] if constraints[:max_items]
+      end
+
+      def apply_uniqueness_constraint(schema)
         schema[:uniqueItems] = constraints[:unique_items] if constraints[:unique_items]
       end
 

@@ -43,14 +43,11 @@ module RapiTapir
         end
 
         def log_request(**options)
+          fields = build_request_log_fields(options)
+          status = options.fetch(:status)
           method = options.fetch(:method)
           path = options.fetch(:path)
-          status = options.fetch(:status)
-          duration = options.fetch(:duration)
-          request_id = options[:request_id]
-          extra_fields = options.except(:method, :path, :status, :duration, :request_id)
 
-          fields = build_request_log_fields(method, path, status, duration, request_id, extra_fields)
           level = determine_log_level_from_status(status)
           message = build_request_log_message(method, path, status, fields[:duration_ms])
 
@@ -59,15 +56,35 @@ module RapiTapir
 
         private
 
-        def build_request_log_fields(method, path, status, duration, request_id, extra_fields)
-          {
-            event_type: 'http_request',
-            method: method.to_s.upcase,
+        def build_request_log_fields(options)
+          method = options.fetch(:method)
+          path = options.fetch(:path)
+          status = options.fetch(:status)
+          duration = options.fetch(:duration)
+          request_id = options[:request_id]
+          extra_fields = options.except(:method, :path, :status, :duration, :request_id)
+
+          request_data = {
+            method: method,
             path: path,
             status: status,
-            duration_ms: (duration * 1000).round(2),
-            request_id: request_id || generate_request_id
-          }.merge(extra_fields)
+            duration: duration,
+            request_id: request_id,
+            extra_fields: extra_fields
+          }
+
+          create_log_fields(request_data)
+        end
+
+        def create_log_fields(data)
+          {
+            event_type: 'http_request',
+            method: data[:method].to_s.upcase,
+            path: data[:path],
+            status: data[:status],
+            duration_ms: (data[:duration] * 1000).round(2),
+            request_id: data[:request_id] || generate_request_id
+          }.merge(data[:extra_fields])
         end
 
         def determine_log_level_from_status(status)

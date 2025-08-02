@@ -131,6 +131,13 @@ module RapiTapir
           'float'
         when :boolean
           'bool'
+        else
+          convert_complex_python_type(type)
+        end
+      end
+
+      def convert_complex_python_type(type)
+        case type
         when :date, :datetime
           'datetime'
         when Array

@@ -121,9 +121,17 @@ module RapiTapir
       end
 
       def apply_range_constraints_to_schema(schema)
+        apply_minimum_constraints(schema)
+        apply_maximum_constraints(schema)
+      end
+
+      def apply_minimum_constraints(schema)
         schema[:minimum] = constraints[:minimum] if constraints[:minimum]
-        schema[:maximum] = constraints[:maximum] if constraints[:maximum]
         schema[:exclusiveMinimum] = constraints[:exclusive_minimum] if constraints[:exclusive_minimum]
+      end
+
+      def apply_maximum_constraints(schema)
+        schema[:maximum] = constraints[:maximum] if constraints[:maximum]
         schema[:exclusiveMaximum] = constraints[:exclusive_maximum] if constraints[:exclusive_maximum]
       end
 

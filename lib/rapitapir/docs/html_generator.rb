@@ -368,12 +368,10 @@ module RapiTapir
       def generate_endpoint_html(endpoint)
         method = endpoint.method.to_s.upcase
         path = endpoint.path
-        anchor = generate_anchor(method, path)
-        method_class = "method-#{method.downcase}"
-
+        endpoint_data = prepare_endpoint_data(method, path, endpoint)
         sections = build_endpoint_sections(endpoint)
 
-        build_endpoint_html_structure(method, path, anchor, method_class, sections, endpoint)
+        generate_endpoint_html_template(endpoint_data, sections)
       end
 
       def build_endpoint_sections(endpoint)
@@ -421,7 +419,23 @@ module RapiTapir
         generate_try_it_section(endpoint)
       end
 
-      def build_endpoint_html_structure(method, path, anchor, method_class, sections, endpoint)
+      def prepare_endpoint_data(method, path, endpoint)
+        {
+          method: method,
+          path: path,
+          anchor: generate_anchor(method, path),
+          method_class: "method-#{method.downcase}",
+          endpoint: endpoint
+        }
+      end
+
+      def generate_endpoint_html_template(endpoint_data, sections)
+        method = endpoint_data[:method]
+        path = endpoint_data[:path]
+        anchor = endpoint_data[:anchor]
+        method_class = endpoint_data[:method_class]
+        endpoint = endpoint_data[:endpoint]
+
         <<~HTML
           <div class="endpoint" id="#{anchor}">
             <div class="endpoint-header">

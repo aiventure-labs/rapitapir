@@ -241,7 +241,7 @@ module RapiTapir
           resolve_symbol_type(type_def)
         when Class
           resolve_class_type(type_def)
-        when Schema, ->(obj) { obj.respond_to?(:validate) }
+        when Schema, ->(obj) { obj.respond_to?(:validate) } # rubocop:disable Lint/DuplicateBranch
           # Handle Schema objects and any object that can validate
           type_def
         else
