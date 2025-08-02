@@ -43,6 +43,7 @@ module RapiTapir
 
       private
 
+      # rubocop:disable Metrics/AbcSize
       def register_sinatra_route(endpoint_info)
         method_name = endpoint_info[:endpoint].method.to_s.downcase.to_sym
         path_pattern = convert_path_to_sinatra(endpoint_info[:endpoint].path)
@@ -50,22 +51,38 @@ module RapiTapir
         adapter = self
 
         @app.send(method_name, path_pattern) do
-          handle_sinatra_request(adapter, endpoint_id, request, params)
+          result = adapter.handle_sinatra_request(endpoint_id, request, params)
+          if result.is_a?(Array) && result.length == 3
+            status result[0]
+            headers result[1]
+            body result[2]
+          else
+            result
+          end
+        end
+      end
+      # rubocop:enable Metrics/AbcSize
+
+      public
+
+      def handle_sinatra_request(endpoint_id, request, params)
+        endpoint_data = @endpoints[endpoint_id]
+
+        begin
+          processed_inputs = extract_sinatra_inputs(request, params, endpoint_data[:endpoint])
+          result = @app.instance_exec(processed_inputs, &endpoint_data[:handler])
+          send_successful_response(endpoint_data, result)
+        rescue ArgumentError => e
+          error_response(400, e.message)
+        rescue StandardError => e
+          error_response(500, 'Internal Server Error', e.message)
         end
       end
 
-      def handle_sinatra_request(adapter, endpoint_id, request, params)
-        endpoint_data = adapter.endpoints[endpoint_id]
-
-        begin
-          processed_inputs = adapter.extract_sinatra_inputs(request, params, endpoint_data[:endpoint])
-          result = execute_endpoint_handler(endpoint_data, processed_inputs)
-          send_successful_response(adapter, endpoint_data, result)
-        rescue ArgumentError => e
-          halt 400, { error: e.message }.to_json
-        rescue StandardError => e
-          halt 500, { error: 'Internal Server Error', message: e.message }.to_json
-        end
+      def error_response(status_code, error, message = nil)
+        error_data = { error: error }
+        error_data[:message] = message if message
+        [status_code, { 'Content-Type' => 'application/json' }, [error_data.to_json]]
       end
 
       def execute_endpoint_handler(endpoint_data, processed_inputs)
@@ -85,13 +102,21 @@ module RapiTapir
         end
       end
 
-      def send_successful_response(adapter, endpoint_data, result)
-        content_type adapter.determine_content_type(endpoint_data[:endpoint])
-        status adapter.determine_status_code(endpoint_data[:endpoint])
-        adapter.serialize_response(result, endpoint_data[:endpoint])
-      end
+      def send_successful_response(endpoint_data, result)
+        endpoint = endpoint_data[:endpoint]
 
-      public
+        # Find status code from outputs
+        status_output = endpoint.outputs.find { |o| o.kind == :status }
+        status_code = status_output ? status_output.type : 200
+
+        # Default headers
+        headers = { 'Content-Type' => 'application/json' }
+
+        # Add any additional headers from outputs if they exist
+        # Note: This is for future compatibility when header outputs are supported
+
+        [status_code, headers, [result.to_json]]
+      end
 
       def convert_path_to_sinatra(path)
         # Convert "/users/:id" to "/users/:id" (Sinatra format is the same)

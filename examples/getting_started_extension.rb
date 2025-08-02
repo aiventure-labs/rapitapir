@@ -65,6 +65,14 @@ BOOK_SCHEMA = RapiTapir::Types.hash({
                                       'published' => RapiTapir::Types.boolean
                                     })
 
+# Schema for creating books (without ID)
+BOOK_CREATE_SCHEMA = RapiTapir::Types.hash({
+                                             'title' => RapiTapir::Types.string,
+                                             'author' => RapiTapir::Types.string,
+                                             'isbn' => RapiTapir::Types.string,
+                                             'published' => RapiTapir::Types.boolean
+                                           })
+
 # Your API application - incredibly simple!
 if SINATRA_AVAILABLE
   class BookstoreAPI < Sinatra::Base
@@ -79,7 +87,7 @@ if SINATRA_AVAILABLE
       )
 
       development_defaults! # Sets up CORS, rate limiting, docs, etc.
-      public_paths('/health', '/books') # No auth required for these
+      add_public_paths('/health', '/books') # No auth required for these
     end
 
     # Health check - super simple
@@ -90,35 +98,80 @@ if SINATRA_AVAILABLE
         .build
     ) { { status: 'healthy' } }
 
-    # Full RESTful books resource - one block!
-    api_resource '/books', schema: BOOK_SCHEMA do
-      # Custom endpoint: published books only (define BEFORE crud to avoid route conflicts)
-      custom(:get, 'published',
-             summary: 'Get published books',
-             configure: ->(endpoint) { endpoint.ok(RapiTapir::Types.array(BOOK_SCHEMA)) }) do
-        BookStore.all.select { |book| book[:published] }
-      end
+        # Full RESTful books resource - individual endpoints for better control
+    
+    # List all books
+    endpoint(
+      RapiTapir.get('/books')
+        .summary('List all books')
+        .ok(RapiTapir::Types.array(BOOK_SCHEMA))
+        .build
+    ) { BookStore.all }
 
-      crud(except: [:destroy]) do # All CRUD except delete
-        index { BookStore.all }
+    # Get published books only (MUST come before /books/:id)
+    endpoint(
+      RapiTapir.get('/books/published')
+        .summary('Get published books')
+        .ok(RapiTapir::Types.array(BOOK_SCHEMA))
+        .build
+    ) { BookStore.all.select { |book| book[:published] } }
 
-        show do |inputs|
-          book = BookStore.find(inputs[:id])
-          halt 404, { error: 'Book not found' }.to_json unless book
-          book
-        end
+    # Get book by ID
+    endpoint(
+      RapiTapir.get('/books/:id')
+        .path_param(:id, RapiTapir::Types.integer)
+        .summary('Get book by ID')
+        .ok(BOOK_SCHEMA)
+        .not_found(RapiTapir::Types.hash({ 'error' => RapiTapir::Types.string }))
+        .build
+    ) do |inputs|
+      book = BookStore.find(inputs[:id])
+      raise ArgumentError, 'Book not found' unless book
+      book
+    end
 
-        create do |inputs|
-          BookStore.create(inputs[:body].transform_keys(&:to_sym))
-        end
+    # Create new book  
+    endpoint(
+      RapiTapir.post('/books')
+        .summary('Create new book')
+        .json_body(BOOK_CREATE_SCHEMA)
+        .created(BOOK_SCHEMA)
+        .build
+    ) do |inputs|
+      attrs = inputs[:body].transform_keys(&:to_sym)
+      attrs[:published] = true if attrs[:published].nil? # Default to published
+      BookStore.create(attrs)
+    end
 
-        update do |inputs|
-          book = BookStore.find(inputs[:id])
-          halt 404, { error: 'Book not found' }.to_json unless book
+    # Update book
+    endpoint(
+      RapiTapir.put('/books/:id')
+        .path_param(:id, RapiTapir::Types.integer)
+        .json_body(BOOK_CREATE_SCHEMA)
+        .summary('Update book')
+        .ok(BOOK_SCHEMA)
+        .not_found(RapiTapir::Types.hash({ 'error' => RapiTapir::Types.string }))
+        .build
+    ) do |inputs|
+      book = BookStore.find(inputs[:id])
+      raise ArgumentError, 'Book not found' unless book
+      attrs = inputs[:body].transform_keys(&:to_sym)
+      BookStore.update(inputs[:id], attrs)
+    end
 
-          BookStore.update(inputs[:id], inputs[:body].transform_keys(&:to_sym))
-        end
-      end
+    # Delete book
+    endpoint(
+      RapiTapir.delete('/books/:id')
+        .path_param(:id, RapiTapir::Types.integer)
+        .summary('Delete book')
+        .no_content
+        .not_found(RapiTapir::Types.hash({ 'error' => RapiTapir::Types.string }))
+        .build
+    ) do |inputs|
+      book = BookStore.find(inputs[:id])
+      raise ArgumentError, 'Book not found' unless book
+      BookStore.delete(inputs[:id])
+      '' # Empty content for 204
     end
 
     configure :development do
