@@ -18,3 +18,9 @@ group :development, :test do
 end
 
 gem 'rackup', '~> 2.2'
+
+# OpenTelemetry for observability (Honeycomb.io integration)
+gem 'opentelemetry-sdk', '~> 1.3'
+gem 'opentelemetry-exporter-otlp', '~> 0.26'
+gem 'opentelemetry-instrumentation-all', '~> 0.57'
+gem 'opentelemetry-processor-baggage', '~> 0.3'
