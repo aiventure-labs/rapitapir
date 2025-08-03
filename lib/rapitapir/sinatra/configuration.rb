@@ -6,7 +6,7 @@ module RapiTapir
     # Follows Single Responsibility Principle - manages configuration only
     class Configuration
       attr_accessor :docs_path, :openapi_path, :health_check_enabled, :health_check_path
-      attr_reader :api_info, :servers, :public_paths
+      attr_reader :api_info, :servers, :public_paths, :auth_schemes
 
       def initialize
         @api_info = {
@@ -16,6 +16,7 @@ module RapiTapir
         }
         @servers = []
         @public_paths = []
+        @auth_schemes = {}
         @docs_path = '/docs'
         @openapi_path = '/openapi.json'
         @health_check_enabled = false
@@ -38,6 +39,15 @@ module RapiTapir
       # Add paths that don't require authentication
       def add_public_paths(*paths)
         @public_paths.concat(paths.flatten.map(&:to_s))
+      end
+
+      # Authentication scheme management
+      def add_auth_scheme(name, scheme)
+        @auth_schemes[name] = scheme
+      end
+
+      def get_auth_scheme(name)
+        @auth_schemes[name]
       end
 
       # Check if documentation is enabled

@@ -9,6 +9,7 @@ AllCops:
     - 'bin/*'
     - '.bundle/**/*'
     - 'examples/**/*'
+    - 'spec/**/*'
 
 # Allow large blocks in specs and examples
 Metrics/BlockLength:

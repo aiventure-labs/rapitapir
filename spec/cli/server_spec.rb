@@ -3,6 +3,7 @@
 require 'spec_helper'
 require 'net/http'
 require 'tempfile'
+require 'webmock/rspec'
 
 RSpec.describe RapiTapir::CLI::Server do
   include RapiTapir::DSL
@@ -64,6 +65,9 @@ RSpec.describe RapiTapir::CLI::Server do
 
     # Integration test that actually starts the server briefly
     it 'serves documentation when started', slow: true do
+      # Allow real HTTP connections for this integration test
+      WebMock.allow_net_connect!
+      
       server_pid = nil
 
       begin
@@ -88,6 +92,8 @@ RSpec.describe RapiTapir::CLI::Server do
         # If connection fails, that's expected in some environments
         puts "Server test skipped: #{e.message}"
       ensure
+        # Re-disable network connections
+        WebMock.disable_net_connect!
         if server_pid
           begin
             Process.kill('TERM', server_pid)

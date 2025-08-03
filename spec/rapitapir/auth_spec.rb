@@ -34,7 +34,7 @@ RSpec.describe RapiTapir::Auth do
     it 'creates an OAuth2 scheme' do
       scheme = described_class.oauth2(:my_oauth, client_id: 'client123')
 
-      expect(scheme).to be_a(RapiTapir::Auth::Schemes::OAuth2)
+      expect(scheme).to be_a(RapiTapir::Auth::OAuth2::GenericScheme)
       expect(scheme.name).to eq(:my_oauth)
     end
   end
@@ -45,6 +45,37 @@ RSpec.describe RapiTapir::Auth do
 
       expect(scheme).to be_a(RapiTapir::Auth::Schemes::JWT)
       expect(scheme.name).to eq(:my_jwt)
+    end
+  end
+
+  describe '.auth0_oauth2' do
+    it 'creates an Auth0 OAuth2 scheme' do
+      scheme = described_class.auth0_oauth2(
+        :my_auth0,
+        domain: 'test.auth0.com',
+        audience: 'test-api'
+      )
+
+      expect(scheme).to be_a(RapiTapir::Auth::OAuth2::Auth0Scheme)
+      expect(scheme.name).to eq(:my_auth0)
+      expect(scheme.domain).to eq('test.auth0.com')
+      expect(scheme.audience).to eq('test-api')
+    end
+  end
+
+  describe '.oauth2_introspection' do
+    it 'creates a generic OAuth2 scheme' do
+      scheme = described_class.oauth2_introspection(
+        :my_generic,
+        introspection_endpoint: 'https://oauth.example.com/introspect',
+        client_id: 'client123',
+        client_secret: 'secret123'
+      )
+
+      expect(scheme).to be_a(RapiTapir::Auth::OAuth2::GenericScheme)
+      expect(scheme.name).to eq(:my_generic)
+      expect(scheme.introspection_endpoint).to eq('https://oauth.example.com/introspect')
+      expect(scheme.client_id).to eq('client123')
     end
   end
 

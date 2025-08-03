@@ -7,6 +7,7 @@ require_relative '../openapi/schema_generator'
 require_relative 'configuration'
 require_relative 'resource_builder'
 require_relative 'swagger_ui_generator'
+require_relative 'oauth2_helpers'
 require_relative '../dsl/http_verbs'
 
 module RapiTapir
@@ -19,6 +20,7 @@ module RapiTapir
         app.helpers Helpers
         app.extend ClassMethods
         app.extend DSL::HTTPVerbs # Automatically include enhanced HTTP verb DSL
+        app.extend OAuth2Helpers # Include OAuth2 authentication helpers
         app.set :rapitapir_config, Configuration.new
         app.set :rapitapir_endpoints, []
         app.set :rapitapir_adapter, nil

@@ -5,6 +5,7 @@ require_relative 'auth/errors'
 require_relative 'auth/context'
 require_relative 'auth/schemes'
 require_relative 'auth/middleware'
+require_relative 'auth/oauth2'
 
 module RapiTapir
   # Authentication and authorization module for RapiTapir
@@ -49,7 +50,20 @@ module RapiTapir
       end
 
       def oauth2(name = :oauth2, config = {})
-        Schemes::OAuth2.new(name, config)
+        OAuth2::GenericScheme.new(name, config)
+      end
+
+      def oauth2_auth0(name = :oauth2_auth0, config = {})
+        OAuth2::Auth0Scheme.new(name, config)
+      end
+
+      # Alias methods for consistency with Sinatra helpers
+      def auth0_oauth2(name = :oauth2, config = {})
+        OAuth2::Auth0Scheme.new(name, config)
+      end
+
+      def oauth2_introspection(name = :oauth2, config = {})
+        OAuth2::GenericScheme.new(name, config)
       end
 
       def jwt(name = :jwt, config = {})
