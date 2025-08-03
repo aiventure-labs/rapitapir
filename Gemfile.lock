@@ -10,6 +10,7 @@ GEM
       rexml
     diff-lcs (1.6.2)
     docile (1.4.1)
+    dotenv (2.8.1)
     hashdiff (1.2.0)
     json (2.13.2)
     jwt (2.10.2)
@@ -73,6 +74,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  dotenv (~> 2.8)
   json (~> 2.6)
   jwt (~> 2.7)
   puma (~> 6.0)

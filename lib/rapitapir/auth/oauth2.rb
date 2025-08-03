@@ -129,7 +129,7 @@ module RapiTapir
         end
 
         def get_jwks_from_auth0
-          jwks_uri = URI("#{domain_url}/.well-known/jwks.json")
+          jwks_uri = URI("#{base_domain_url}/.well-known/jwks.json")
           
           http = Net::HTTP.new(jwks_uri.host, jwks_uri.port)
           http.use_ssl = true
@@ -143,7 +143,13 @@ module RapiTapir
         end
 
         def domain_url
-          @domain_url ||= @domain.start_with?('https://') ? @domain : "https://#{@domain}"
+          url = @domain.start_with?('https://') ? @domain : "https://#{@domain}"
+          # Auth0 issuer always includes trailing slash for JWT validation
+          @domain_url ||= url.end_with?('/') ? url : "#{url}/"
+        end
+
+        def base_domain_url
+          @base_domain_url ||= @domain.start_with?('https://') ? @domain : "https://#{@domain}"
         end
 
         def extract_user_from_token(payload)

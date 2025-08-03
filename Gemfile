@@ -6,6 +6,7 @@ gem 'json', '~> 2.6'
 gem 'rack', '~> 3.0'
 gem 'webrick', '~> 1.8' # For CLI server functionality
 gem 'jwt', '~> 2.7' # For OAuth2 JWT validation
+gem 'dotenv', '~> 2.8' # For environment variable management
 
 group :development, :test do
   gem 'puma', '~> 6.0'
