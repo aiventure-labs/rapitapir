@@ -11,6 +11,8 @@ vendor/
 *.gem
 .rspec_status
 .env
+*.log
+*.pid
 
 # Generated files (should not be committed)
 cli-generated-*

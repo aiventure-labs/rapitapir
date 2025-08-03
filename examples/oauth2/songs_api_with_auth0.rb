@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require 'rapitapir'
-require 'rapitapir/sinatra/extension'
+require 'sinatra'
+require_relative '../../lib/rapitapir'
 require 'dotenv/load' # For loading environment variables
 
 # Example Sinatra API with Auth0 OAuth2 integration
@@ -19,7 +19,7 @@ class SongsAPIWithAuth0 < SinatraRapiTapir
     development_defaults!
     
     # Enable documentation
-    docs_enabled!
+    enable_docs
   end
 
   # Configure Auth0 OAuth2 authentication
@@ -31,6 +31,31 @@ class SongsAPIWithAuth0 < SinatraRapiTapir
     audience: ENV['AUTH0_AUDIENCE'],
     algorithm: 'RS256' # Auth0 default
   )
+  
+  puts "🔒 Configured Auth0 OAuth2: #{ENV['AUTH0_DOMAIN']}"
+
+  # Manually include OAuth2 helper methods to ensure they're available
+  helpers RapiTapir::Sinatra::OAuth2HelperMethods
+
+  # Debug: Check what methods are available
+  puts "🔍 Available methods: #{self.methods.grep(/oauth/).join(', ')}"
+
+  # Protect endpoints that require authentication
+  before '/songs' do
+    # Only protect POST requests (creation)
+    if request.post?
+      authorize_oauth2!(required_scopes: ['write:tasks'])
+    end
+  end
+
+  before '/songs/*' do
+    # Protect PUT and DELETE requests (update/delete operations)
+    if request.put?
+      authorize_oauth2!(required_scopes: ['write:tasks'])
+    elsif request.delete?
+      authorize_oauth2!(required_scopes: ['admin:tasks'])
+    end
+  end
 
   # Song model (simple in-memory storage for demo)
   class Song
@@ -56,7 +81,7 @@ class SongsAPIWithAuth0 < SinatraRapiTapir
     Song.new(1, 'My Way', 'https://www.last.fm/music/Frank+Sinatra/_/My+Way'),
     Song.new(2, 'Strangers in the Night', 'https://www.last.fm/music/Frank+Sinatra/_/Strangers+in+the+Night'),
     Song.new(3, 'Fly Me to the Moon', 'https://www.last.fm/music/Frank+Sinatra/_/Fly+Me+to+the+Moon')
-  ].freeze
+  ]
 
   # Define schemas using RapiTapir's type system
   SONG_SCHEMA = T.hash({
@@ -83,7 +108,7 @@ class SongsAPIWithAuth0 < SinatraRapiTapir
       .summary('List all songs')
       .description('Retrieve a list of all Frank Sinatra songs')
       .ok(T.array(SONG_SCHEMA))
-      .tag('songs')
+      .tags('songs')
       .build
   ) do
     SONGS.to_json
@@ -97,7 +122,7 @@ class SongsAPIWithAuth0 < SinatraRapiTapir
       .path_param(:id, T.integer(minimum: 1))
       .ok(SONG_SCHEMA)
       .error_response(404, ERROR_SCHEMA, description: 'Song not found')
-      .tag('songs')
+      .tags('songs')
       .build
   ) do |inputs|
     song = SONGS.find { |s| s.id == inputs[:id] }
@@ -119,26 +144,26 @@ class SongsAPIWithAuth0 < SinatraRapiTapir
     POST('/songs')
       .summary('Create a new song')
       .description('Create a new song entry (requires authentication)')
-      .with_auth0(scopes: ['create:songs'])
       .body(CREATE_SONG_SCHEMA)
       .created(SONG_SCHEMA)
       .error_response(400, ERROR_SCHEMA, description: 'Invalid input')
       .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
       .error_response(403, ERROR_SCHEMA, description: 'Insufficient permissions')
-      .tag('songs')
+      .tags('songs')
       .build
   ) do |inputs|
-    # Authenticate and authorize
-    authorize_oauth2!(required_scopes: ['create:songs'])
+    # Authentication handled by before filter
+    
+    # Extract body data from inputs
+    body_data = inputs[:body]
     
     # Create new song
     new_id = SONGS.map(&:id).max + 1
-    new_song = Song.new(new_id, inputs[:name], inputs[:url])
+    new_song = Song.new(new_id, body_data['name'], body_data['url'])
     
-    # In a real app, you'd save to database
-    # For demo, we'll just return the new song
+    # Add to our in-memory store
+    SONGS << new_song
     
-    status 201
     new_song.to_json
   end
 
@@ -147,7 +172,6 @@ class SongsAPIWithAuth0 < SinatraRapiTapir
     PUT('/songs/:id')
       .summary('Update a song')
       .description('Update an existing song (requires authentication)')
-      .with_auth0(scopes: ['update:songs'])
       .path_param(:id, T.integer(minimum: 1))
       .body(CREATE_SONG_SCHEMA)
       .ok(SONG_SCHEMA)
@@ -155,11 +179,10 @@ class SongsAPIWithAuth0 < SinatraRapiTapir
       .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
       .error_response(403, ERROR_SCHEMA, description: 'Insufficient permissions')
       .error_response(404, ERROR_SCHEMA, description: 'Song not found')
-      .tag('songs')
+      .tags('songs')
       .build
   ) do |inputs|
-    # Authenticate and authorize
-    authorize_oauth2!(required_scopes: ['update:songs'])
+    # Authentication handled by before filter
     
     song = SONGS.find { |s| s.id == inputs[:id] }
     
@@ -170,9 +193,12 @@ class SongsAPIWithAuth0 < SinatraRapiTapir
       }.to_json
     end
 
+    # Extract body data from inputs
+    body_data = inputs[:body]
+    
     # Update song properties
-    song.name = inputs[:name] if inputs[:name]
-    song.url = inputs[:url] if inputs[:url]
+    song.name = body_data['name'] if body_data['name']
+    song.url = body_data['url'] if body_data['url']
     
     song.to_json
   end
@@ -182,25 +208,15 @@ class SongsAPIWithAuth0 < SinatraRapiTapir
     DELETE('/songs/:id')
       .summary('Delete a song')
       .description('Delete a song (requires admin permissions)')
-      .with_auth0(scopes: ['delete:songs', 'admin'])
       .path_param(:id, T.integer(minimum: 1))
       .ok(SONG_SCHEMA)
       .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
       .error_response(403, ERROR_SCHEMA, description: 'Admin permissions required')
       .error_response(404, ERROR_SCHEMA, description: 'Song not found')
-      .tag('songs')
+      .tags('songs')
       .build
   ) do |inputs|
-    # Authenticate and authorize with stricter requirements
-    authorize_oauth2!(required_scopes: ['delete:songs'])
-    
-    # Additional check for admin scope
-    unless has_scope?('admin')
-      halt 403, {
-        error: 'insufficient_scope',
-        error_description: 'Admin permissions required for deletion'
-      }.to_json
-    end
+    # Authentication handled by before filter
     
     song = SONGS.find { |s| s.id == inputs[:id] }
     
@@ -212,38 +228,18 @@ class SongsAPIWithAuth0 < SinatraRapiTapir
     end
 
     # In a real app, you'd delete from database
-    # For demo, we'll just return the song
+    # For demo, we'll remove from array and return the song
+    SONGS.delete(song)
     song.to_json
   end
 
   # GET /me - Get current user info (requires authentication)
-  endpoint(
-    GET('/me')
-      .summary('Get current user information')
-      .description('Get information about the authenticated user')
-      .with_auth0
-      .ok(T.hash({
-        'user' => T.hash({
-          'id' => T.string,
-          'email' => T.optional(T.string),
-          'name' => T.optional(T.string),
-          'picture' => T.optional(T.string)
-        }),
-        'scopes' => T.array(T.string),
-        'token_info' => T.hash({
-          'issuer' => T.string,
-          'subject' => T.string,
-          'audience' => T.string,
-          'expires_at' => T.string
-        })
-      }))
-      .error_response(401, ERROR_SCHEMA, description: 'Authentication required')
-      .tag('user')
-      .build
-  ) do
+  # Using regular Sinatra route since RapiTapir endpoints have different context
+  get '/me' do
     # Authenticate user
     context = authorize_oauth2!
     
+    content_type :json
     {
       user: context.user,
       scopes: context.scopes,
@@ -258,7 +254,6 @@ class SongsAPIWithAuth0 < SinatraRapiTapir
 
   # Error handlers
   error RapiTapir::Auth::InvalidTokenError do
-    status 401
     {
       error: 'invalid_token',
       error_description: env['sinatra.error'].message
@@ -266,7 +261,6 @@ class SongsAPIWithAuth0 < SinatraRapiTapir
   end
 
   error RapiTapir::Auth::AuthenticationError do
-    status 500
     {
       error: 'authentication_failed',
       error_description: env['sinatra.error'].message
