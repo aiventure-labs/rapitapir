@@ -6,7 +6,7 @@ Gem::Specification.new do |spec|
   spec.name = 'rapitapir'
   spec.version = RapiTapir::VERSION
   spec.authors = ['Riccardo Merolla']
-  spec.email = ['riccardo.merolla@example.com']
+  spec.email = ['riccardo.merolla@gmail.com']
 
   spec.summary = 'Type-safe HTTP API development for Ruby'
   spec.description = <<~DESC
@@ -15,7 +15,7 @@ Gem::Specification.new do |spec|
     client code generation, and seamless integration with Sinatra, Rails, and Rack applications.
   DESC
 
-  spec.homepage = 'https://riccardomerolla.github.io/ruby-tapir/'
+  spec.homepage = 'https://riccardomerolla.github.io/rapitapir/'
   spec.license = 'MIT'
   spec.required_ruby_version = '>= 3.1.0'
 
@@ -23,7 +23,7 @@ Gem::Specification.new do |spec|
   spec.metadata['homepage_uri'] = spec.homepage
   spec.metadata['source_code_uri'] = 'https://github.com/riccardomerolla/rapitapir'
   spec.metadata['changelog_uri'] = 'https://github.com/riccardomerolla/rapitapir/blob/main/CHANGELOG.md'
-  spec.metadata['documentation_uri'] = 'https://riccardomerolla.github.io/ruby-tapir/docs'
+  spec.metadata['documentation_uri'] = 'https://riccardomerolla.github.io/rapitapir/docs'
   spec.metadata['bug_tracker_uri'] = 'https://github.com/riccardomerolla/rapitapir/issues'
 
   # Specify which files should be added to the gem when it is released.
