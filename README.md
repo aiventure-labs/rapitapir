@@ -1,12 +1,4 @@
-# RapiTapir## 🆕 What's New
-
-- **✨ - **📏 Type Shortcuts**: Global `T.string`, `T.integer`, etc. (automatically available!)
-- **🔄 GitHub Pages**: Modern documentation deployment with GitHub Actionsean Base Class**: `class MyAPI < SinatraRapiTapir` - the simplest way to create APIs
-- **🎯 Enhanced HTTP DSL**: Built-in GET, POST, PUT, DELETE methods with fluent chaining  
-- **🔧 Zero Boilerplate**: Automatic extension registration and feature setup
-- 📏 **Type Shortcuts**: Clean syntax with global `T` constant (automatic - no setup needed!)
-- **📚 GitHub Pages Ready**: Modern documentation deployment with GitHub Actions
-- **🧪 Comprehensive Tests**: 470 tests passing with 70% coverage modern Ruby library for building type-safe HTTP APIs with automatic OpenAPI documentation**
+# RapiTapir
 
 [![Tests](https://img.shields.io/badge/tests-470%20passing-brightgreen)](spec/)
 [![Coverage](https://img.shields.io/badge/coverage-70.13%25-green)](coverage/)
