@@ -11,6 +11,11 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
 jobs:
   test:
     name: 🧪 Pre-publish Tests
@@ -64,12 +69,12 @@ jobs:
         gem push rapitapir-*.gem
         
     - name: 🏷️ Create GitHub release
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
-        release_name: RapiTapir ${{ github.ref_name }}
+        tag_name: ${{ github.ref_name }}
+        name: RapiTapir ${{ github.ref_name }}
         body: |
           ## 🦙 RapiTapir ${{ github.ref_name }}
           
@@ -94,6 +99,8 @@ jobs:
           See our [Contributing Guide](https://github.com/riccardomerolla/rapitapir/blob/main/CONTRIBUTING.md) for how to get involved!
         draft: false
         prerelease: false
+        files: |
+          rapitapir-*.gem
 
   notify:
     name: 📢 Notify Community
