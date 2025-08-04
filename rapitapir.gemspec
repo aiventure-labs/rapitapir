@@ -41,16 +41,18 @@ Gem::Specification.new do |spec|
 
   # Runtime dependencies
   spec.add_dependency 'json', '~> 2.0'
-  spec.add_dependency 'rack', '~> 2.0', '>= 2.0'
+  spec.add_dependency 'rack', '>= 2.0', '< 4.0'
+  spec.add_dependency 'webrick', '~> 1.7'
 
   # Optional framework dependencies
-  spec.add_dependency 'sinatra', '>= 2.0', '< 4.0'
+  spec.add_dependency 'sinatra', '>= 2.0', '< 5.0'
 
   # Development dependencies
-  spec.add_development_dependency 'rack-test', '~> 2.0'
-  spec.add_development_dependency 'rspec', '~> 3.12'
+  spec.add_development_dependency 'puma', '~> 6.0'
+  spec.add_development_dependency 'rack-test', '~> 2.1'
+  spec.add_development_dependency 'rspec', '~> 3.13'
   spec.add_development_dependency 'simplecov', '~> 0.22'
-  spec.add_development_dependency 'webrick', '~> 1.8'
+  spec.add_development_dependency 'webmock', '~> 3.19'
 
   # Documentation
   spec.add_development_dependency 'redcarpet', '~> 3.6'
