@@ -83,7 +83,7 @@ This release introduces the **SinatraRapiTapir** base class, providing the clean
 - Health checks and monitoring integration
 
 ### Technical Details
-- **Ruby Compatibility**: Supports Ruby 3.0+
+- **Ruby Compatibility**: Supports Ruby 3.1+
 - **Framework Support**: Sinatra 2.0+, with Rack 2.0+ compatibility
 - **Test Coverage**: 470 tests passing (100% success rate) with 70.13% coverage
 - **Documentation**: Complete API docs, tutorials, and contribution guidelines  

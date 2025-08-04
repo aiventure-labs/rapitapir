@@ -6,7 +6,7 @@ This example demonstrates how to integrate Honeycomb.io observability with a Rub
 
 1. **Honeycomb.io Account**: Sign up at [honeycomb.io](https://honeycomb.io)
 2. **API Key**: Get your API key from Honeycomb settings
-3. **Ruby 3.0+**: Ensure you have Ruby installed
+3. **Ruby 3.1+**: Ensure you have Ruby installed
 4. **Bundler**: For managing dependencies
 
 ## Setup

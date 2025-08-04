@@ -10,7 +10,7 @@
 
 [![Tests](https://img.shields.io/badge/tests-470%20passing-brightgreen)](spec/)
 [![Coverage](https://img.shields.io/badge/coverage-70.13%25-green)](coverage/)
-[![Ruby](https://img.shields.io/badge/ruby-3.0%2B-red)](Gemfile)
+[![Ruby](https://img.shields.io/badge/ruby-3.1%2B-red)](Gemfile)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 **RapiTapir 🦙** combines the expressiveness of Ruby with the safety of strong typing to create APIs that are both powerful and reliable. Define your endpoints once with our fluent DSL, and get automatic validation, documentation, and client generation.
