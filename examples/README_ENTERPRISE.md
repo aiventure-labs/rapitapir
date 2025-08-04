@@ -59,7 +59,7 @@ Authorization: Bearer readonly-token-789
 
 ### Start the Server
 ```bash
-cd /Users/riccardo/git/github/riccardomerolla/ruby-tapir
+cd /Users/riccardo/git/github/riccardomerolla/rapitapir
 bundle exec ruby examples/run_enterprise_api.rb
 ```
 

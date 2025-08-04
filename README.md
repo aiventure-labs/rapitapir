@@ -447,7 +447,7 @@ We love contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for 
 ### Development Setup
 
 ```bash
-git clone https://github.com/riccardomerolla/ruby-tapir.git
+git clone https://github.com/riccardomerolla/rapitapir.git
 cd ruby-tapir
 bundle install
 bundle exec rspec
@@ -466,8 +466,8 @@ RapiTapir is released under the [MIT License](LICENSE).
 
 ## 🙋‍♂️ Support
 
-- **🐛 Bug Reports**: [GitHub Issues](https://github.com/riccardomerolla/ruby-tapir/issues)
-- **💡 Feature Requests**: [GitHub Discussions](https://github.com/riccardomerolla/ruby-tapir/discussions)
+- **🐛 Bug Reports**: [GitHub Issues](https://github.com/riccardomerolla/rapitapir/issues)
+- **💡 Feature Requests**: [GitHub Discussions](https://github.com/riccardomerolla/rapitapir/discussions)
 - **📧 Email**: riccardo.merolla@example.com
 - **💬 Community**: Join our [Discord](https://discord.gg/rapitapir)
 

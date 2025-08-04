@@ -21,10 +21,10 @@ Gem::Specification.new do |spec|
 
   spec.metadata['allowed_push_host'] = 'https://rubygems.org'
   spec.metadata['homepage_uri'] = spec.homepage
-  spec.metadata['source_code_uri'] = 'https://github.com/riccardomerolla/ruby-tapir'
-  spec.metadata['changelog_uri'] = 'https://github.com/riccardomerolla/ruby-tapir/blob/main/CHANGELOG.md'
+  spec.metadata['source_code_uri'] = 'https://github.com/riccardomerolla/rapitapir'
+  spec.metadata['changelog_uri'] = 'https://github.com/riccardomerolla/rapitapir/blob/main/CHANGELOG.md'
   spec.metadata['documentation_uri'] = 'https://riccardomerolla.github.io/ruby-tapir/docs'
-  spec.metadata['bug_tracker_uri'] = 'https://github.com/riccardomerolla/ruby-tapir/issues'
+  spec.metadata['bug_tracker_uri'] = 'https://github.com/riccardomerolla/rapitapir/issues'
 
   # Specify which files should be added to the gem when it is released.
   spec.files = Dir.chdir(__dir__) do
