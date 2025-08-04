@@ -87,7 +87,7 @@ end
 #     .ok(:json, { id: :integer, name: :string })
 #     .build
 #
-# @see https://github.com/riccardomerolla/ruby-tapir
+# @see https://github.com/riccardomerolla/rapitapir
 module RapiTapir
   # Will be extended with FluentDSL later
   @endpoints = []

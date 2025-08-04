@@ -85,13 +85,13 @@ jobs:
           
           ### 📖 Documentation
           
-          - [Getting Started Guide](https://github.com/riccardomerolla/ruby-tapir#-quick-start)
-          - [API Documentation](https://github.com/riccardomerolla/ruby-tapir/blob/main/docs/)
-          - [Examples](https://github.com/riccardomerolla/ruby-tapir/tree/main/examples)
+          - [Getting Started Guide](https://github.com/riccardomerolla/rapitapir#-quick-start)
+          - [API Documentation](https://github.com/riccardomerolla/rapitapir/blob/main/docs/)
+          - [Examples](https://github.com/riccardomerolla/rapitapir/tree/main/examples)
           
           ### 🤝 Contributing
           
-          See our [Contributing Guide](https://github.com/riccardomerolla/ruby-tapir/blob/main/CONTRIBUTING.md) for how to get involved!
+          See our [Contributing Guide](https://github.com/riccardomerolla/rapitapir/blob/main/CONTRIBUTING.md) for how to get involved!
         draft: false
         prerelease: false
 

@@ -206,12 +206,12 @@ jobs:
           ### 🔗 Useful Links
           
           - [📖 Documentation](https://riccardomerolla.github.io/ruby-tapir)
-          - [🚀 Getting Started](https://github.com/riccardomerolla/ruby-tapir#-quick-start)
-          - [📋 Examples](https://github.com/riccardomerolla/ruby-tapir/tree/main/examples)
-          - [🤝 Contributing](https://github.com/riccardomerolla/ruby-tapir/blob/main/CONTRIBUTING.md)
+          - [🚀 Getting Started](https://github.com/riccardomerolla/rapitapir#-quick-start)
+          - [📋 Examples](https://github.com/riccardomerolla/rapitapir/tree/main/examples)
+          - [🤝 Contributing](https://github.com/riccardomerolla/rapitapir/blob/main/CONTRIBUTING.md)
           
           ### ✨ What's Next?
           
-          Check out our [roadmap](https://github.com/riccardomerolla/ruby-tapir/issues) and consider contributing!
+          Check out our [roadmap](https://github.com/riccardomerolla/rapitapir/issues) and consider contributing!
         draft: false
         prerelease: ${{ github.event.inputs.pre_release == 'true' }}
