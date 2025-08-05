@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 require_relative '../rails_controller'
-require_relative '../../configuration'
 require_relative '../../dsl/http_verbs'
 require_relative '../../types'
 require_relative 'resource_builder'
+require_relative 'configuration'
 
 module RapiTapir
   module Server
@@ -52,7 +52,7 @@ module RapiTapir
           #     development_defaults!
           #   end
           def rapitapir(&block)
-            @rapitapir_config = RapiTapir::Configuration.new
+            @rapitapir_config = Configuration.new
             @rapitapir_config.instance_eval(&block) if block_given?
             setup_default_features
           end
@@ -78,9 +78,9 @@ module RapiTapir
             # Register endpoint with the Rails controller mixin
             rapitapir_endpoint(action_name, endpoint_definition, &block)
             
-            # Auto-generate Rails controller action
+            # Auto-generate Rails controller action that passes the correct action name
             define_method(action_name) do
-              process_rapitapir_endpoint
+              process_rapitapir_endpoint(action_name)
             end
           end
 
@@ -156,31 +156,28 @@ module RapiTapir
           # @param method [Symbol] The HTTP method
           # @return [Symbol] The Rails action name
           def derive_action_name(path, method)
-            # Convert REST patterns to Rails action names
-            case method.to_s.downcase
-            when 'get'
-              if path.include?(':id') || path.include?('{id}')
-                :show
-              else
-                :index
+            # For custom endpoints, always derive from path to avoid conflicts
+            path_segments = path.split('/').reject(&:empty?)
+            
+            if path_segments.empty?
+              return method.to_s.downcase.to_sym
+            end
+            
+            # Get the main path segment (not parameters)
+            main_segment = nil
+            path_segments.each do |segment|
+              unless segment.start_with?(':') || segment.start_with?('{')
+                main_segment = segment
+                break
               end
-            when 'post'
-              :create
-            when 'put', 'patch'
-              :update
-            when 'delete'
-              :destroy
+            end
+            
+            if main_segment
+              # Create action name from method + segment to ensure uniqueness
+              "#{method.to_s.downcase}_#{main_segment}".to_sym
             else
-              # For custom endpoints, derive from path
-              path_segments = path.split('/').reject(&:empty?)
-              last_segment = path_segments.last&.gsub(/[{}:]/, '')
-              
-              if last_segment && !last_segment.match?(/\A\w+\z/)
-                # If last segment is a parameter, use the previous one
-                path_segments[-2]&.to_sym || :custom
-              else
-                last_segment&.to_sym || :custom
-              end
+              # Fallback to method name
+              method.to_s.downcase.to_sym
             end
           end
         end

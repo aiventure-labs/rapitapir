@@ -8,14 +8,27 @@ module RapiTapir
         private
 
         def render_rapitapir_response(result, endpoint)
+          # Extract custom status code if provided
+          status_code = 200
+          response_data = result
+          
+          if result.is_a?(Hash) && result.key?(:_status)
+            status_code = result[:_status]
+            response_data = result.reject { |k, v| k == :_status }
+          elsif result.is_a?(Hash) && result.key?('_status')
+            status_code = result['_status']
+            response_data = result.reject { |k, v| k == '_status' }
+          else
+            status_code = determine_rails_status_code(endpoint)
+          end
+
           output = endpoint.outputs.find { |o| o.kind == :json } || endpoint.outputs.first
-          status_code = determine_rails_status_code(endpoint)
 
           if output&.kind == :xml
-            render xml: result, status: status_code
+            render xml: response_data, status: status_code
           else
             # Default to JSON for nil output, :json kind, or unknown kinds
-            render json: result, status: status_code
+            render json: response_data, status: status_code
           end
         end
 
