@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
-# Example Rails controller using RapiTapir
+# LEGACY Example Rails controller using RapiTapir (verbose approach)
+# 
+# ⚠️  This example shows the OLD way of integrating RapiTapir with Rails.
+# 📖 For the NEW, enhanced approach, see enhanced_users_controller.rb
 #
 # To use this in a Rails app:
 # 1. Add this file to app/controllers/
