@@ -111,7 +111,5 @@ module RapiTapir
   end
 end
 
-# Extend Rails routing DSL when Rails is available
-if defined?(Rails)
-  Rails.application.routes.extend(RapiTapir::Server::Rails::Routes)
-end
+# Note: Rails routes extension is handled in the rails_integration.rb file
+# to ensure proper timing with Rails application initialization

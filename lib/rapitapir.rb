@@ -43,10 +43,12 @@ rescue LoadError
   # Sinatra not available
 end
 
+# Rails integration (load unconditionally since Rails apps will define Rails)
 begin
-  require_relative 'rapitapir/server/rails_adapter' if defined?(Rails)
-rescue LoadError
-  # Rails not available
+  require_relative 'rapitapir/server/rails_integration'
+rescue LoadError => e
+  # Rails integration files not available
+  warn "Rails integration not available: #{e.message}" if $DEBUG
 end
 
 # OpenAPI and client generation (optional)

@@ -1,22 +1,96 @@
-# RapiTapir Rails Integration
+# Using RapiTapir in Real Rails Applications
 
-This document provides a complete guide to using RapiTapir with Ruby on Rails, featuring the enhanced developer experience that matches Sinatra's elegance.
-
-## 🆕 Enhanced Rails Integration
-
-RapiTapir now provides a **clean base class** for Rails controllers that delivers the same excellent developer experience as our Sinatra integration.
+This guide demonstrates how to integrate RapiTapir into real-world Rails 8+ applications for type-safe, documented APIs.
 
 ## 🚀 Quick Start
 
-### 1. Installation
-
-Add to your Gemfile:
+### 1. Add RapiTapir to your Gemfile
 
 ```ruby
-gem 'rapitapir'
+gem 'rapitapir', '~> 1.0'
 ```
 
-### 2. Create Enhanced Controllers
+### 2. Update your ApplicationController
+
+```ruby
+class ApplicationController < RapiTapir::Server::Rails::ControllerBase
+  rapitapir do
+    development_defaults! if Rails.env.development?
+    
+    # Global error responses
+    error_out(json_body(error: T.string), 401)
+    error_out(json_body(error: T.string), 403) 
+    error_out(json_body(error: T.string), 404)
+    error_out(json_body(error: T.string, errors: T.array(T.string).optional), 422)
+  end
+end
+```
+
+### 3. Create API Controllers
+
+```ruby
+class Api::V1::UsersController < ApplicationController
+  rapitapir do
+    user_type = T.hash(
+      id: T.integer,
+      name: T.string,
+      email: T.string,
+      created_at: T.string
+    )
+    
+    GET('/api/v1/users')
+      .in(query(:page, T.integer.default(1)))
+      .out(json_body(users: T.array(user_type)))
+      .summary("List users")
+      .tag("Users")
+    
+    POST('/api/v1/users')
+      .in(json_body(name: T.string, email: T.string))
+      .out(json_body(user: user_type), 201)
+      .summary("Create user")
+      .tag("Users")
+  end
+  
+  def list_users
+    users = User.page(inputs[:page])
+    { users: users.map(&method(:serialize_user)) }
+  end
+  
+  def create_user
+    user = User.create!(inputs.slice(:name, :email))
+    render json: { user: serialize_user(user) }, status: 201
+  end
+  
+  private
+  
+  def serialize_user(user)
+    {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      created_at: user.created_at.iso8601
+    }
+  end
+end
+```
+
+### 4. Update Routes
+
+```ruby
+Rails.application.routes.draw do
+  namespace :api do
+    namespace :v1 do
+      rapitapir_routes_for 'Api::V1::UsersController'
+    end
+  end
+  
+  # Documentation (development only)
+  if Rails.env.development?
+    get '/docs', to: 'documentation#swagger_ui'
+    get '/openapi.json', to: 'documentation#openapi_spec'
+  end
+end
+```
 
 Use the new `ControllerBase` class for the cleanest syntax:
 
