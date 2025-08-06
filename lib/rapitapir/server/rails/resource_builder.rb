@@ -60,7 +60,7 @@ module RapiTapir
           endpoint_def = @controller_class.GET("#{@base_path}/:id")
                                           .summary(options[:summary] || "Get #{resource_name}")
                                           .description(options[:description] || "Retrieve a specific #{resource_name} by ID")
-                                          .path_param(:id, RapiTapir::Types.integer, description: "#{resource_name.capitalize} ID")
+                                          .path_param(:id, :integer, description: "#{resource_name.capitalize} ID")
                                           .ok(@schema)
                                           .not_found(error_schema, description: "#{resource_name.capitalize} not found")
                                           .build
@@ -113,7 +113,7 @@ module RapiTapir
           endpoint_def = @controller_class.DELETE("#{@base_path}/:id")
                                           .summary(options[:summary] || "Delete #{resource_name}")
                                           .description(options[:description] || "Delete a #{resource_name}")
-                                          .path_param(:id, RapiTapir::Types.integer, description: "#{resource_name.capitalize} ID")
+                                          .path_param(:id, :integer, description: "#{resource_name.capitalize} ID")
                                           .no_content
                                           .not_found(error_schema, description: "#{resource_name.capitalize} not found")
                                           .build

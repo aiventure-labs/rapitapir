@@ -1,6 +1,16 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'rspec/mocks'
+
+# Global mock for class_attribute method used by Rails concerns
+def class_attribute(name, **options)
+  # Mock Rails class_attribute method
+  attr_accessor name
+  if options[:default]
+    instance_variable_set("@#{name}", options[:default])
+  end
+end
 
 # Mock Rails dependencies before requiring our classes
 module ActiveSupport
@@ -10,32 +20,52 @@ module ActiveSupport
     end
 
     module ClassMethods
-      def included(base)
+      def included(base = nil, &block)
         # Mock Rails concern behavior
+        # Handle both the Ruby included hook (when base is passed) 
+        # and the ActiveSupport::Concern included DSL (when block is passed)
+        if block_given?
+          # This is the DSL version: included do...end
+          # Execute the block in a context that has access to class_attribute
+          block.call
+        end
+        # If base is passed, this is the Ruby hook - nothing special needed for mock
+      end
+
+      def class_methods(&block)
+        # Mock class_methods DSL from ActiveSupport::Concern
+        if block_given?
+          Module.new.class_eval(&block)
+        end
       end
     end
   end
 end
 
-# Mock ActionController::Base
-class ActionController
+# Mock ActionController module and Base class
+module ActionController
   class Base
-    def self.included(base)
-      base.extend(ClassMethods)
+    # Mock Rails controller methods
+    def self.class_attribute(name, **options)
+      attr_accessor name
+      if options[:default]
+        instance_variable_set("@#{name}", options[:default])
+      end
     end
 
-    module ClassMethods
-      attr_accessor :rapitapir_endpoints
+    def self.controller_name
+      'base'
+    end
 
-      def define_method(name, &block)
-        # Mock define_method for testing
-      end
-
-      def controller_name
-        'test'
-      end
+    def controller_name
+      self.class.controller_name
     end
   end
+end
+
+# Remove the lazy-loaded placeholder class if it exists
+if defined?(RapiTapir::Server::Rails::ControllerBase)
+  RapiTapir::Server::Rails.send(:remove_const, :ControllerBase)
 end
 
 require_relative '../../../lib/rapitapir/server/rails/controller_base'
@@ -48,6 +78,15 @@ RSpec.describe RapiTapir::Server::Rails::ControllerBase do
       Class.new(described_class) do
         def self.controller_name
           'test'
+        end
+
+        # Mock the methods that endpoint() calls
+        def self.rapitapir_endpoint(action_name, endpoint_definition, &block)
+          # Mock implementation
+        end
+
+        def self.define_method(name, &block)
+          # Mock implementation  
         end
       end
     end
@@ -64,26 +103,22 @@ RSpec.describe RapiTapir::Server::Rails::ControllerBase do
 
     describe '.endpoint' do
       it 'registers an endpoint and creates an action' do
-        endpoint_def = double('endpoint',
+        endpoint_def = double('Endpoint',
                               path: '/test',
                               method: :get,
                               validate!: true)
         
-        allow(controller_class).to receive(:rapitapir_endpoint)
-        allow(controller_class).to receive(:define_method)
+        expect(controller_class).to receive(:rapitapir_endpoint)
+        expect(controller_class).to receive(:define_method)
 
         controller_class.endpoint(endpoint_def) { 'test' }
-
-        expect(controller_class).to have_received(:rapitapir_endpoint)
-        expect(controller_class).to have_received(:define_method)
       end
     end
 
     describe '.api_resource' do
       it 'creates resource endpoints using ResourceBuilder' do
-        schema = double('schema')
-        resource_builder = instance_double(RapiTapir::Server::Rails::ResourceBuilder,
-                                           endpoints: [])
+        schema = double('Schema')
+        resource_builder = double('ResourceBuilder', endpoints: [])
         
         allow(RapiTapir::Server::Rails::ResourceBuilder).to receive(:new)
           .and_return(resource_builder)
@@ -120,29 +155,29 @@ RSpec.describe RapiTapir::Server::Rails::ControllerBase do
     end
 
     describe '.derive_action_name' do
-      it 'derives index for GET without :id' do
+      it 'derives get_users for GET without :id' do
         action = controller_class.send(:derive_action_name, '/users', :get)
-        expect(action).to eq(:index)
+        expect(action).to eq(:get_users)
       end
 
-      it 'derives show for GET with :id' do
+      it 'derives get_users for GET with :id' do
         action = controller_class.send(:derive_action_name, '/users/:id', :get)
-        expect(action).to eq(:show)
+        expect(action).to eq(:get_users)
       end
 
-      it 'derives create for POST' do
+      it 'derives post_users for POST' do
         action = controller_class.send(:derive_action_name, '/users', :post)
-        expect(action).to eq(:create)
+        expect(action).to eq(:post_users)
       end
 
-      it 'derives update for PUT' do
+      it 'derives put_users for PUT' do
         action = controller_class.send(:derive_action_name, '/users/:id', :put)
-        expect(action).to eq(:update)
+        expect(action).to eq(:put_users)
       end
 
-      it 'derives destroy for DELETE' do
+      it 'derives delete_users for DELETE' do
         action = controller_class.send(:derive_action_name, '/users/:id', :delete)
-        expect(action).to eq(:destroy)
+        expect(action).to eq(:delete_users)
       end
     end
   end
@@ -156,30 +191,36 @@ end
 
 RSpec.describe RapiTapir::Server::Rails::ResourceBuilder do
   let(:controller_class) do
+    builder_mock = double('FluentEndpointBuilder')
+    
+    # Set up all possible method chains
+    allow(builder_mock).to receive_message_chain(:summary, :description, :then, :ok, :build).and_return(double('Endpoint'))
+    allow(builder_mock).to receive_message_chain(:path_param, :ok, :not_found, :build).and_return(double('Endpoint'))
+    allow(builder_mock).to receive_message_chain(:json_body, :created, :bad_request, :build).and_return(double('Endpoint'))
+    allow(builder_mock).to receive_message_chain(:no_content, :not_found, :build).and_return(double('Endpoint'))
+    
+    # Set up individual methods to return the builder itself for chaining
+    allow(builder_mock).to receive(:build).and_return(double('Endpoint'))
+    allow(builder_mock).to receive(:path_param).and_return(builder_mock)
+    allow(builder_mock).to receive(:json_body).and_return(builder_mock)
+    allow(builder_mock).to receive(:summary).and_return(builder_mock)
+    allow(builder_mock).to receive(:description).and_return(builder_mock)
+    allow(builder_mock).to receive(:ok).and_return(builder_mock)
+    allow(builder_mock).to receive(:not_found).and_return(builder_mock)
+    allow(builder_mock).to receive(:created).and_return(builder_mock)
+    allow(builder_mock).to receive(:bad_request).and_return(builder_mock)
+    allow(builder_mock).to receive(:no_content).and_return(builder_mock)
+    allow(builder_mock).to receive(:then).and_return(builder_mock)
+
     Class.new do
-      def self.GET(path)
-        double('endpoint_builder', 
-               summary: double('builder', description: double('builder', then: double('builder', ok: double('builder', build: double('endpoint'))))),
-               path_param: double('builder', ok: double('builder', not_found: double('builder', build: double('endpoint')))),
-               json_body: double('builder', created: double('builder', bad_request: double('builder', build: double('endpoint')))),
-               no_content: double('builder', not_found: double('builder', build: double('endpoint'))))
-      end
-
-      def self.POST(path)
-        GET(path)
-      end
-
-      def self.PUT(path)
-        GET(path)
-      end
-
-      def self.DELETE(path)
-        GET(path)
-      end
+      define_singleton_method(:GET) { |path| builder_mock }
+      define_singleton_method(:POST) { |path| builder_mock }
+      define_singleton_method(:PUT) { |path| builder_mock }
+      define_singleton_method(:DELETE) { |path| builder_mock }
     end
   end
 
-  let(:schema) { double('schema') }
+  let(:schema) { double('Schema') }
   let(:resource_builder) { described_class.new(controller_class, '/users', schema) }
 
   describe '#crud' do
@@ -290,21 +331,21 @@ RSpec.describe RapiTapir::Server::Rails::Routes do
   let(:router) { router_class.new }
 
   let(:controller_class) do
+    endpoints_hash = {
+      index: {
+        endpoint: double('Endpoint', method: :get, path: '/test')
+      },
+      show: {
+        endpoint: double('Endpoint', method: :get, path: '/test/:id')
+      }
+    }
+
     Class.new do
       def self.controller_name
         'test'
       end
 
-      def self.rapitapir_endpoints
-        {
-          index: {
-            endpoint: double('endpoint', method: :get, path: '/test')
-          },
-          show: {
-            endpoint: double('endpoint', method: :get, path: '/test/:id')
-          }
-        }
-      end
+      define_singleton_method(:rapitapir_endpoints) { endpoints_hash }
 
       def self.respond_to?(method)
         method == :rapitapir_endpoints

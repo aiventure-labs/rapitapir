@@ -1,7 +1,7 @@
 # RapiTapir
 
-[![Tests](https://img.shields.io/badge/tests-470%20passing-brightgreen)](spec/)
-[![Coverage](https://img.shields.io/badge/coverage-70.13%25-green)](coverage/)
+[![Tests](https://img.shields.io/badge/tests-620%20passing-brightgreen)](spec/)
+[![Coverage](https://img.shields.io/badge/coverage-68.68%25-green)](coverage/)
 [![Ruby](https://img.shields.io/badge/ruby-3.1%2B-red)](Gemfile)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -14,7 +14,7 @@
 - **🔧 Zero Boilerplate**: Automatic extension registration and feature setup
 - **� Type Shortcuts**: Use `T.string` instead of `RapiTapir::Types.string` for cleaner code
 - **�📚 GitHub Pages Ready**: Modern documentation deployment with GitHub Actions
-- **🧪 Comprehensive Tests**: 470 tests passing with 70% coverage
+- **🧪 Comprehensive Tests**: 620 tests passing with 68.68% coverage
 
 ## ✨ Why RapiTapir?
 

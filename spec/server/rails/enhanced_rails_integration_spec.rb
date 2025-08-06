@@ -1,51 +1,32 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'rspec/mocks'
 
 RSpec.describe 'Enhanced Rails Integration Components' do
   describe 'ResourceBuilder' do
     let(:controller_class) do
+      # Create all doubles in the RSpec context first
+      endpoint_double = double('endpoint')
+      get_builder = double('fluent_builder')
+      allow(get_builder).to receive_message_chain(:summary, :description, :path_param, :ok, :not_found, :build).and_return(endpoint_double)
+      allow(get_builder).to receive_message_chain(:summary, :description, :then, :ok, :build).and_return(endpoint_double)
+      allow(get_builder).to receive(:query).and_return(get_builder)
+      
+      post_builder = double('fluent_builder')  
+      allow(post_builder).to receive_message_chain(:summary, :description, :json_body, :created, :bad_request, :build).and_return(endpoint_double)
+      
+      put_builder = double('fluent_builder')
+      allow(put_builder).to receive_message_chain(:summary, :description, :path_param, :json_body, :ok, :not_found, :bad_request, :build).and_return(endpoint_double)
+      
+      delete_builder = double('fluent_builder')
+      allow(delete_builder).to receive_message_chain(:summary, :description, :path_param, :no_content, :not_found, :build).and_return(endpoint_double)
+
       Class.new do
-        def self.GET(path)
-          double('fluent_builder',
-                 summary: double('builder',
-                                 description: double('builder',
-                                                     then: double('builder',
-                                                                  ok: double('builder',
-                                                                             build: double('endpoint'))))))
-        end
-
-        def self.POST(path)
-          double('fluent_builder',
-                 summary: double('builder',
-                                 description: double('builder',
-                                                     json_body: double('builder',
-                                                                       created: double('builder',
-                                                                                       bad_request: double('builder',
-                                                                                                           build: double('endpoint')))))))
-        end
-
-        def self.PUT(path)
-          double('fluent_builder',
-                 summary: double('builder',
-                                 description: double('builder',
-                                                     path_param: double('builder',
-                                                                        json_body: double('builder',
-                                                                                          ok: double('builder',
-                                                                                                     not_found: double('builder',
-                                                                                                                       bad_request: double('builder',
-                                                                                                                                           build: double('endpoint')))))))))
-        end
-
-        def self.DELETE(path)
-          double('fluent_builder',
-                 summary: double('builder',
-                                 description: double('builder',
-                                                     path_param: double('builder',
-                                                                        no_content: double('builder',
-                                                                                           not_found: double('builder',
-                                                                                                             build: double('endpoint')))))))
-        end
+        define_singleton_method(:GET) { |path| get_builder }
+        define_singleton_method(:POST) { |path| post_builder }
+        define_singleton_method(:PUT) { |path| put_builder }
+        define_singleton_method(:DELETE) { |path| delete_builder }
       end
     end
 
@@ -135,11 +116,13 @@ RSpec.describe 'Enhanced Rails Integration Components' do
 
     describe '#custom' do
       it 'creates custom endpoints' do
+        # Create the double chain outside the class context
+        endpoint_double = double('endpoint')
+        builder_chain = double('builder')
+        allow(builder_chain).to receive_message_chain(:summary, :description, :build).and_return(endpoint_double)
+        
         allow(controller_class).to receive(:public_send).with('GET', '/users/active')
-          .and_return(double('builder',
-                             summary: double('builder',
-                                             description: double('builder',
-                                                                 build: double('endpoint')))))
+          .and_return(builder_chain)
 
         expect {
           resource_builder.custom(:get, 'active') { [] }
@@ -203,24 +186,25 @@ RSpec.describe 'Enhanced Rails Integration Components' do
     let(:router) { router_class.new }
 
     let(:controller_class) do
+      # Create endpoints outside the class definition
+      endpoints_hash = {
+        index: {
+          endpoint: double('endpoint', method: :get, path: '/test')
+        },
+        show: {
+          endpoint: double('endpoint', method: :get, path: '/test/:id')
+        },
+        create: {
+          endpoint: double('endpoint', method: :post, path: '/test')
+        }
+      }
+
       Class.new do
         def self.controller_name
           'test'
         end
 
-        def self.rapitapir_endpoints
-          {
-            index: {
-              endpoint: double('endpoint', method: :get, path: '/test')
-            },
-            show: {
-              endpoint: double('endpoint', method: :get, path: '/test/:id')
-            },
-            create: {
-              endpoint: double('endpoint', method: :post, path: '/test')
-            }
-          }
-        end
+        define_singleton_method(:rapitapir_endpoints) { endpoints_hash }
 
         def self.respond_to?(method)
           method == :rapitapir_endpoints
