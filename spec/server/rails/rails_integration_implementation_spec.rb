@@ -190,17 +190,4 @@ RSpec.describe 'Rails Integration Implementation Status' do
       expect(T.boolean).to be_a(RapiTapir::Types::Boolean)
     end
   end
-
-  describe 'Implementation completeness' do
-    it 'all required files exist' do
-      base_path = '/Users/riccardo/git/github/riccardomerolla/ruby-tapir'
-      
-      expect(File.exist?("#{base_path}/lib/rapitapir/server/rails/controller_base.rb")).to be(true)
-      expect(File.exist?("#{base_path}/lib/rapitapir/server/rails/resource_builder.rb")).to be(true)
-      expect(File.exist?("#{base_path}/lib/rapitapir/server/rails/routes.rb")).to be(true)
-      expect(File.exist?("#{base_path}/examples/rails/enhanced_users_controller.rb")).to be(true)
-      expect(File.exist?("#{base_path}/examples/rails/README.md")).to be(true)
-      expect(File.exist?("#{base_path}/examples/rails/config/routes.rb")).to be(true)
-    end
-  end
 end
