@@ -1,0 +1,215 @@
+# AWS Lambda deployment configuration for RapiTapir
+# This template.yaml file defines the AWS resources needed to deploy
+# a SinatraRapiTapir API as a serverless Lambda function
+
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'RapiTapir Book API deployed on AWS Lambda with API Gateway'
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: ruby3.2
+    Environment:
+      Variables:
+        RACK_ENV: production
+        RAPITAPIR_ENV: serverless
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Environment name
+  
+  DomainName:
+    Type: String
+    Default: ''
+    Description: Custom domain name (optional)
+
+Resources:
+  # Lambda function
+  BookAPIFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'rapitapir-book-api-${Environment}'
+      CodeUri: ./
+      Handler: aws_lambda_example.lambda_handler
+      Description: 'RapiTapir Book API serverless function'
+      
+      # API Gateway Event
+      Events:
+        BookAPIGateway:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            RestApiId: !Ref BookAPIGateway
+        
+        BookAPIGatewayRoot:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+            RestApiId: !Ref BookAPIGateway
+      
+      # Permissions
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource: !GetAtt BooksTable.Arn
+      
+      Environment:
+        Variables:
+          BOOKS_TABLE_NAME: !Ref BooksTable
+          ENVIRONMENT: !Ref Environment
+  
+  # API Gateway
+  BookAPIGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub 'rapitapir-book-api-${Environment}'
+      StageName: !Ref Environment
+      Description: 'API Gateway for RapiTapir Book API'
+      
+      # CORS Configuration
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,HEAD,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+        MaxAge: "'600'"
+      
+      # Gateway Responses for better error handling
+      GatewayResponses:
+        DEFAULT_4XX:
+          ResponseTemplates:
+            application/json: '{"error": "Client Error", "message": "$context.error.message"}'
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+        DEFAULT_5XX:
+          ResponseTemplates:
+            application/json: '{"error": "Server Error", "message": "$context.error.message"}'
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+      
+      # Request/Response transformations
+      DefinitionBody:
+        swagger: '2.0'
+        info:
+          title: 'RapiTapir Book API'
+          version: '1.0.0'
+        paths:
+          /{proxy+}:
+            x-amazon-apigateway-any-method:
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BookAPIFunction.Arn}/invocations'
+                passthroughBehavior: when_no_match
+          /:
+            x-amazon-apigateway-any-method:
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${BookAPIFunction.Arn}/invocations'
+                passthroughBehavior: when_no_match
+
+  # DynamoDB Table for persistent storage (optional)
+  BooksTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'rapitapir-books-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: RapiTapir-BookAPI
+
+  # CloudWatch Log Group
+  BookAPILogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/rapitapir-book-api-${Environment}'
+      RetentionInDays: 14
+
+  # Custom Domain (optional)
+  CustomDomain:
+    Type: AWS::ApiGateway::DomainName
+    Condition: HasDomainName
+    Properties:
+      DomainName: !Ref DomainName
+      SecurityPolicy: TLS_1_2
+      CertificateArn: !Ref SSLCertificate
+
+  # Route53 Record for custom domain
+  DomainRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: HasDomainName
+    Properties:
+      HostedZoneId: !Ref HostedZone
+      Name: !Ref DomainName
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt CustomDomain.DistributionDomainName
+        HostedZoneId: !GetAtt CustomDomain.DistributionHostedZoneId
+
+Conditions:
+  HasDomainName: !Not [!Equals [!Ref DomainName, '']]
+
+Outputs:
+  # API Gateway URL
+  BookAPIGatewayUrl:
+    Description: 'API Gateway endpoint URL for Book API'
+    Value: !Sub 'https://${BookAPIGateway}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/'
+    Export:
+      Name: !Sub '${AWS::StackName}-api-url'
+  
+  # Lambda Function ARN
+  BookAPIFunctionArn:
+    Description: 'Book API Lambda Function ARN'
+    Value: !GetAtt BookAPIFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-function-arn'
+  
+  # DynamoDB Table
+  BooksTableName:
+    Description: 'DynamoDB table name for books'
+    Value: !Ref BooksTable
+    Export:
+      Name: !Sub '${AWS::StackName}-table-name'
+  
+  # Custom Domain URL (if configured)
+  CustomDomainUrl:
+    Condition: HasDomainName
+    Description: 'Custom domain URL for the API'
+    Value: !Sub 'https://${DomainName}/'
+    Export:
+      Name: !Sub '${AWS::StackName}-custom-domain-url'

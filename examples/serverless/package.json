@@ -1,0 +1,32 @@
+{
+  "name": "rapitapir-serverless-examples",
+  "version": "1.0.0",
+  "description": "Serverless deployment examples for RapiTapir APIs",
+  "main": "index.js",
+  "scripts": {
+    "deploy:aws": "sam build && sam deploy",
+    "deploy:gcp": "gcloud functions deploy rapitapir-api --runtime ruby32 --trigger-http --source .",
+    "deploy:azure": "func azure functionapp publish rapitapir-function-app",
+    "deploy:vercel": "vercel --prod",
+    "local:aws": "sam local start-api",
+    "local:gcp": "functions-framework-ruby --target=rapitapir_book_api",
+    "local:azure": "func start",
+    "local:vercel": "vercel dev",
+    "test": "bundle exec rspec",
+    "test:integration": "bundle exec rspec spec/integration/"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "keywords": [
+    "rapitapir",
+    "serverless",
+    "api",
+    "ruby",
+    "aws-lambda",
+    "google-cloud-functions",
+    "azure-functions",
+    "vercel"
+  ],
+  "author": "RapiTapir Team",
+  "license": "MIT"
+}

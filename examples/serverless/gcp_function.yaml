@@ -1,0 +1,23 @@
+name: rapitapir-book-api
+runtime: ruby32
+entry_point: rapitapir_book_api
+
+# Environment variables
+env_variables:
+  RACK_ENV: production
+  RAPITAPIR_ENV: serverless
+  GCP_PROJECT: your-project-id
+
+# Function configuration
+available_memory_mb: 512
+timeout: 60s
+max_instances: 100
+
+# VPC configuration (optional)
+# vpc_connector: projects/PROJECT_ID/locations/REGION/connectors/CONNECTOR_NAME
+
+# Security
+ingress_settings: ALLOW_ALL  # Change to ALLOW_INTERNAL_ONLY for internal APIs
+
+# Source code deployment
+source_archive_url: gs://your-bucket/source.zip

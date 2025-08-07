@@ -844,6 +844,94 @@ class MyRackApp
 end
 ```
 
+## ☁️ Serverless Deployment
+
+RapiTapir APIs can be deployed as serverless functions across all major cloud providers with zero configuration changes. The same SinatraRapiTapir code runs seamlessly on AWS Lambda, Google Cloud Functions, Azure Functions, and Vercel.
+
+### 🚀 AWS Lambda
+
+```ruby
+require 'rapitapir'
+
+class ServerlessAPI < SinatraRapiTapir
+  rapitapir do
+    info(title: 'Serverless API', version: '1.0.0')
+    development_defaults!
+  end
+
+  endpoint(GET('/hello').query(:name, T.string).ok(T.hash({"message" => T.string})).build) do |inputs|
+    { message: "Hello from Lambda, #{inputs[:name]}!" }
+  end
+end
+
+# Lambda handler
+def lambda_handler(event:, context:)
+  rack_env = build_rack_env_from_api_gateway(event, context)
+  app = ServerlessAPI.new
+  status, headers, body = app.call(rack_env)
+  build_api_gateway_response(status, headers, body)
+end
+```
+
+**Deploy with AWS SAM**:
+```bash
+sam build && sam deploy
+```
+
+### ☁️ Google Cloud Functions
+
+```ruby
+require 'functions_framework'
+
+FunctionsFramework.http('my_api') do |request|
+  rack_env = build_rack_env_from_cloud_functions(request)
+  app = ServerlessAPI.new
+  app.call(rack_env)
+end
+```
+
+**Deploy**:
+```bash
+gcloud functions deploy my-api --runtime ruby32 --trigger-http
+```
+
+### 🌐 Vercel Edge Functions
+
+```ruby
+def handler(request:, response:)
+  rack_env = build_rack_env_from_vercel(request)
+  app = ServerlessAPI.new
+  status, headers, body = app.call(rack_env)
+  
+  response.status = status
+  headers.each { |k, v| response[k] = v }
+  response.write(body.join)
+end
+```
+
+**Deploy**:
+```bash
+vercel --prod
+```
+
+### Key Benefits
+
+- **🚀 Zero Cold Start Impact**: Optimized for fast function startup
+- **💰 Cost Effective**: Pay only for actual requests
+- **🌍 Global Scale**: Deploy to edge locations worldwide  
+- **🔒 Built-in Security**: Leverage cloud provider security
+- **📊 Native Monitoring**: Integrate with cloud monitoring
+
+### Complete Examples
+
+See [examples/serverless/](examples/serverless/) for production-ready examples including:
+
+- **AWS Lambda + API Gateway**: Full SAM template with DynamoDB
+- **Google Cloud Functions**: With Firestore integration
+- **Azure Functions**: With Cosmos DB and Service Bus
+- **Vercel Edge**: With global edge caching
+- **Multi-cloud deployment**: GitHub Actions workflows
+
 ## 🛡️ Production Features
 
 ### 🔐 Authentication & Authorization
@@ -1294,6 +1382,7 @@ Explore our comprehensive examples directory:
 
 - **[Hello World](examples/hello_world.rb)** - 30-second minimal example
 - **[Enterprise API](examples/enterprise_rapitapir_api.rb)** - Production-ready with all features
+- **[Serverless Deployment](examples/serverless/)** - AWS Lambda, Google Cloud Functions, Azure Functions, Vercel
 - **[OAuth2 + Auth0](examples/oauth2/)** - Complete authentication examples
 - **[AI-Powered APIs](examples/auto_derivation_ruby_friendly.rb)** - LLM and RAG integration
 - **[Observability Setup](examples/observability/)** - Monitoring and health checks

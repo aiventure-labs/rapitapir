@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "name": "rapitapir-vercel-api",
+  "builds": [
+    {
+      "src": "vercel_example.rb",
+      "use": "@vercel/ruby"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/vercel_example.rb"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/vercel_example.rb"
+    }
+  ],
+  "env": {
+    "RACK_ENV": "production",
+    "RAPITAPIR_ENV": "serverless"
+  },
+  "regions": ["all"],
+  "functions": {
+    "vercel_example.rb": {
+      "memory": 512,
+      "maxDuration": 30
+    }
+  }
+}

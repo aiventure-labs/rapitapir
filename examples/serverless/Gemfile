@@ -1,0 +1,43 @@
+# Gemfile for serverless deployments
+source 'https://rubygems.org'
+
+# Core RapiTapir dependency
+gem 'rapitapir', path: '../..' # Use local version for examples
+
+# Serverless runtime dependencies
+gem 'sinatra', '~> 3.0'
+gem 'rack', '~> 2.2'
+gem 'json', '~> 2.6'
+
+# Platform-specific gems
+group :aws do
+  gem 'aws-sdk-dynamodb', '~> 1.0'
+  gem 'aws-sdk-cloudwatch', '~> 1.0'
+  gem 'aws-sdk-s3', '~> 1.0'
+end
+
+group :gcp do
+  gem 'functions_framework', '~> 1.0'
+  gem 'google-cloud-firestore', '~> 2.0'
+  gem 'google-cloud-logging', '~> 2.0'
+end
+
+group :azure do
+  gem 'azure-storage-blob', '~> 2.0'
+  gem 'azure-cosmos', '~> 0.1'
+end
+
+group :development, :test do
+  gem 'rspec', '~> 3.11'
+  gem 'rack-test', '~> 2.0'
+  gem 'webmock', '~> 3.18'
+  gem 'vcr', '~> 6.1'
+  gem 'pry', '~> 0.14'
+end
+
+group :production do
+  gem 'newrelic_rpm', '~> 8.0' # For monitoring (optional)
+end
+
+# Ruby version for serverless runtimes
+ruby '3.2.0'
