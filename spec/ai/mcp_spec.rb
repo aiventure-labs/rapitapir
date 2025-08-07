@@ -7,9 +7,6 @@ require_relative '../../lib/rapitapir/core/endpoint'
 RSpec.describe RapiTapir::AI::MCP do
   include RapiTapir::DSL
 
-  # Type alias for convenience
-  T = RapiTapir::Types
-
   describe 'Exporter' do
     let(:endpoints) do
       [

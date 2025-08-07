@@ -7,9 +7,6 @@ require_relative '../../lib/rapitapir/core/endpoint'
 RSpec.describe RapiTapir::AI::RAG do
   include RapiTapir::DSL
 
-  # Type alias for convenience
-  T = RapiTapir::Types
-
   describe 'LLM Providers' do
     describe RapiTapir::AI::RAG::OpenAIProvider do
       let(:provider) { described_class.new(api_key: 'mock') }
