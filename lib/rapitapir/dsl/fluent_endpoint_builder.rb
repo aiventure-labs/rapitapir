@@ -311,6 +311,37 @@ module RapiTapir
           **options
         )
       end
+
+      public
+
+      # AI/MCP Extensions
+      def mcp_export
+        copy_with(metadata: @metadata.merge(mcp_export: true))
+      end
+
+      def mcp_export?
+        @metadata[:mcp_export] == true
+      end
+
+      def rag_inference(llm:, retrieval:, context_fields: [], config: {})
+        copy_with(metadata: @metadata.merge(
+          rag_inference: true,
+          rag_config: {
+            llm: llm,
+            retrieval: retrieval,
+            context_fields: context_fields,
+            config: config
+          }
+        ))
+      end
+
+      def rag_inference?
+        @metadata[:rag_inference] == true
+      end
+
+      def rag_config
+        @metadata[:rag_config]
+      end
     end
   end
 end

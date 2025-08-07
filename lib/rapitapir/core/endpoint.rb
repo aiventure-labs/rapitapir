@@ -14,6 +14,11 @@ module RapiTapir
     #     inputs: [path_param(:id, :integer)],
     #     outputs: [json_output(user_schema)]
     #   )
+    #     method: :get,
+    #     path: '/users/{id}',
+    #     inputs: [path_param(:id, :integer)],
+    #     outputs: [json_output(user_schema)]
+    #   )
     class Endpoint
       HTTP_METHODS = %i[get post put patch delete options head].freeze
 
@@ -75,6 +80,37 @@ module RapiTapir
                        kwargs.fetch(:flag, true)
                      end
         with_metadata(deprecated: flag_value)
+      end
+
+      # Mark this endpoint for MCP export
+      def mcp_export
+        with_metadata(mcp_export: true)
+      end
+
+      # Returns true if this endpoint is marked for MCP export
+      def mcp_export?
+        metadata[:mcp_export] == true
+      end
+
+      # Configure RAG inference for this endpoint
+      def rag_inference(llm:, retrieval:, context_fields: [], config: {})
+        rag_config = {
+          llm: llm,
+          retrieval: retrieval,
+          context_fields: context_fields,
+          config: config
+        }
+        with_metadata(rag_inference: rag_config)
+      end
+
+      # Returns true if this endpoint has RAG inference configured
+      def rag_inference?
+        metadata.key?(:rag_inference)
+      end
+
+      # Get RAG configuration for this endpoint
+      def rag_config
+        metadata[:rag_inference]
       end
 
       # Validate input/output types for a given input/output hash

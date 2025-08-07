@@ -2,6 +2,7 @@
 
 require 'optparse'
 require 'fileutils'
+require 'json'
 
 module RapiTapir
   module CLI
@@ -38,10 +39,14 @@ module RapiTapir
         case command
         when 'generate'
           run_generate(@args)
+        when 'export'
+          run_export(@args)
         when 'serve'
           run_serve(@args)
         when 'validate'
           run_validate(@args)
+        when 'ai'
+          run_ai(@args)
         when 'version'
           puts "RapiTapir version #{RapiTapir::VERSION}"
         when 'help', nil
@@ -153,7 +158,7 @@ module RapiTapir
         type = args.shift
         unless type
           puts 'Error: Generate command requires a type'
-          puts 'Available types: openapi, client, docs'
+          puts 'Available types: openapi, client, docs, mcp'
           exit 1
         end
 
@@ -166,9 +171,11 @@ module RapiTapir
         when 'docs'
           docs_type = args.shift || 'html'
           generate_docs(docs_type)
+        when 'mcp'
+          generate_mcp
         else
           puts "Error: Unknown generation type: #{type}"
-          puts 'Available types: openapi, client, docs'
+          puts 'Available types: openapi, client, docs, mcp'
           exit 1
         end
       end
@@ -202,6 +209,24 @@ module RapiTapir
         else
           puts '✗ Validation failed:'
           validator.errors.each { |error| puts "  - #{error}" }
+          exit 1
+        end
+      end
+
+      def run_export(args)
+        type = args.shift
+        unless type
+          puts 'Error: Export command requires a type'
+          puts 'Available types: mcp'
+          exit 1
+        end
+
+        case type
+        when 'mcp'
+          export_mcp
+        else
+          puts "Error: Unknown export type: #{type}"
+          puts 'Available types: mcp'
           exit 1
         end
       end
@@ -412,6 +437,33 @@ module RapiTapir
         end
       end
 
+      def generate_mcp
+        validate_mcp_options
+
+        endpoints = load_endpoints(@options[:input])
+        require_relative '../ai/mcp'
+        exporter = RapiTapir::AI::MCP::Exporter.new(endpoints)
+        content = JSON.pretty_generate(exporter.as_mcp_context)
+        save_mcp_output(content)
+      end
+
+      def export_mcp
+        generate_mcp
+      end
+
+      def validate_mcp_options
+        unless @options[:input]
+          puts 'Error: --endpoints is required'
+          exit 1
+        end
+      end
+
+      def save_mcp_output(content)
+        output_file = @options[:output] || 'mcp-context.json'
+        File.write(output_file, content)
+        puts "MCP context exported to #{output_file}"
+      end
+
       def load_endpoints(file_path)
         raise "Input file not found: #{file_path}" unless File.exist?(file_path)
 
@@ -529,6 +581,155 @@ module RapiTapir
         end
 
         endpoints
+      end
+
+      def run_ai(args)
+        subcommand = args.shift
+        
+        case subcommand
+        when 'rag'
+          run_ai_rag(args)
+        when 'query'
+          run_ai_query(args)
+        when 'help', nil
+          puts ai_help
+        else
+          puts "Unknown AI subcommand: #{subcommand}"
+          puts ai_help
+          exit 1
+        end
+      end
+
+      def run_ai_rag(args)
+        command = args.shift
+        
+        case command
+        when 'test'
+          run_rag_test(args)
+        when 'setup'
+          run_rag_setup(args)
+        else
+          puts "RAG subcommands: test, setup"
+          exit 1
+        end
+      end
+
+      def run_rag_test(args)
+        unless @options[:input]
+          puts 'Error: --endpoints is required'
+          exit 1
+        end
+        
+        endpoints = load_endpoints(@options[:input])
+        
+        # Find RAG-enabled endpoints
+        rag_endpoints = endpoints.select(&:rag_inference?)
+        
+        if rag_endpoints.empty?
+          puts "No RAG-enabled endpoints found in #{@options[:input]}"
+          puts "Add .rag_inference to your endpoints to enable RAG capabilities"
+          exit 1
+        end
+
+        require_relative '../ai/rag'
+        
+        puts "Testing RAG functionality..."
+        puts "Found #{rag_endpoints.size} RAG-enabled endpoint(s):"
+        
+        rag_endpoints.each do |endpoint|
+          puts "  #{endpoint.method} #{endpoint.path}"
+          config = endpoint.rag_config
+          
+          # Create pipeline and test
+          pipeline = RapiTapir::AI::RAG::Pipeline.new(
+            llm: config[:llm] || :openai,
+            retrieval: config[:retrieval] || :memory,
+            config: config[:config] || {}
+          )
+          
+          test_query = args.first || "What can this API do?"
+          result = pipeline.process(test_query)
+          
+          puts "    Query: #{test_query}"
+          puts "    Answer: #{result[:answer][0..100]}#{result[:answer].length > 100 ? '...' : ''}"
+          puts "    Sources: #{result[:sources].size} document(s)"
+          puts
+        end
+      end
+
+      def run_rag_setup(args)
+        puts "Setting up RAG configuration..."
+        
+        config_template = {
+          rag: {
+            llm: {
+              provider: 'openai',
+              api_key: 'your-openai-api-key'
+            },
+            retrieval: {
+              backend: 'memory',
+              documents_path: './docs/**/*.md'
+            }
+          }
+        }
+        
+        config_file = 'rapitapir_ai.json'
+        
+        if File.exist?(config_file)
+          puts "Configuration file #{config_file} already exists"
+          exit 1
+        end
+        
+        File.write(config_file, JSON.pretty_generate(config_template))
+        puts "Created #{config_file}"
+        puts "Please update the configuration with your API keys and document paths"
+      end
+
+      def run_ai_query(args)
+        query = args.join(' ')
+        
+        if query.empty?
+          puts "Usage: rapitapir ai query <your question>"
+          exit 1
+        end
+        
+        unless @options[:input]
+          puts 'Error: --endpoints is required'
+          exit 1
+        end
+        
+        endpoints = load_endpoints(@options[:input])
+        
+        # Export MCP context for the query
+        require_relative '../ai/mcp'
+        exporter = RapiTapir::AI::MCP::Exporter.new(endpoints)
+        context = exporter.as_mcp_context
+        
+        puts "API Context for AI Agents:"
+        puts "========================="
+        puts
+        puts "Query: #{query}"
+        puts
+        puts "Available Endpoints:"
+        if context && context[:endpoints]
+          context[:endpoints].each do |ep|
+            puts "  #{ep[:method]} #{ep[:path]} - #{ep[:summary]}"
+          end
+        else
+          puts "  No endpoints found"
+        end
+        puts
+        puts "This context can be used by AI agents to understand your API structure."
+      end
+
+      def ai_help
+        <<~HELP
+          AI Commands:
+            rapitapir ai rag test [query]     - Test RAG functionality on your API
+            rapitapir ai rag setup           - Create RAG configuration template
+            rapitapir ai query <question>     - Get AI-ready context for a query
+            rapitapir ai help                 - Show this help
+        HELP
       end
     end
   end
