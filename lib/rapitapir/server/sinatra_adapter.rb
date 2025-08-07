@@ -68,6 +68,18 @@ module RapiTapir
           processed_inputs = extract_sinatra_inputs(request, params, endpoint_data[:endpoint])
           result = @app.instance_exec(processed_inputs, &endpoint_data[:handler])
           send_successful_response(endpoint_data, result)
+        rescue RapiTapir::Types::CoercionError => e
+          detailed_error_response(400, 'Validation Error', e.reason, {
+                                    field: extract_field_from_error(e),
+                                    value: e.value,
+                                    expected_type: e.type
+                                  })
+        rescue RapiTapir::Types::ValidationError => e
+          detailed_error_response(400, 'Validation Error', e.message, {
+                                    errors: e.errors,
+                                    value: e.value,
+                                    expected_type: e.type.to_s
+                                  })
         rescue ArgumentError => e
           error_response(400, e.message)
         rescue StandardError => e
@@ -79,6 +91,22 @@ module RapiTapir
         error_data = { error: error }
         error_data[:message] = message if message
         [status_code, { 'Content-Type' => 'application/json' }, [error_data.to_json]]
+      end
+
+      def detailed_error_response(status_code, error, message, details = {})
+        error_data = {
+          error: error,
+          message: message
+        }
+        error_data.merge!(details) if details.any?
+        [status_code, { 'Content-Type' => 'application/json' }, [error_data.to_json]]
+      end
+
+      def extract_field_from_error(error)
+        # Try to extract field name from error message
+        # Match both "Field 'field_name':" and "Required field 'field_name'"
+        match = error.reason.match(/(?:Field|Required field) '([^']+)'/)
+        match[1] if match
       end
 
       def execute_endpoint_handler(endpoint_data, processed_inputs)

@@ -39,6 +39,16 @@ module RapiTapir
 
         field_types.each do |field_name, field_type|
           field_value = extract_field_value(value, field_name)
+
+          # Check for missing required fields
+          if field_value.nil? && !field_type.optional?
+            errors << "Required field '#{field_name}' is missing"
+            next
+          end
+
+          # Skip validation for optional missing fields
+          next if field_value.nil? && field_type.optional?
+
           field_result = field_type.validate(field_value)
           next if field_result[:valid]
 
@@ -94,7 +104,21 @@ module RapiTapir
       def coerce_defined_fields(value, coerced)
         field_types.each do |field_name, field_type|
           field_value = find_field_value(value, field_name)
-          coerced[field_name] = field_type.coerce(field_value) if field_value || !field_type.optional?
+
+          # Check for missing required fields
+          if field_value.nil? && !field_type.optional?
+            raise CoercionError.new(nil, field_type.class.name, "Required field '#{field_name}' is missing from hash")
+          end
+
+          # Only coerce if we have a value or field is optional
+          next unless field_value || !field_type.optional?
+
+          begin
+            coerced[field_name] = field_type.coerce(field_value)
+          rescue CoercionError => e
+            # Re-raise with field context
+            raise CoercionError.new(e.value, e.type, "Field '#{field_name}': #{e.reason}")
+          end
         end
       end
 
