@@ -124,6 +124,10 @@ module RapiTapir
       Hash.new(field_types, **options)
     end
 
+    def self.open_hash(field_types = {}, **options)
+      Hash.new(field_types, additional_properties: true, **options)
+    end
+
     def self.optional(type)
       Optional.new(type)
     end

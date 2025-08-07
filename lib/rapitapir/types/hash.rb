@@ -9,7 +9,7 @@ module RapiTapir
     class Hash < Base
       attr_reader :field_types
 
-      def initialize(field_types = {}, additional_properties: true, **options)
+      def initialize(field_types = {}, additional_properties: false, **options)
         @field_types = field_types.freeze
         super(
           additional_properties: additional_properties,
@@ -92,6 +92,9 @@ module RapiTapir
       def coerce_hash_value(value)
         coerced = {}
 
+        # Check for unexpected fields if additional properties are not allowed
+        validate_no_unexpected_fields(value) unless constraints[:additional_properties]
+
         # Coerce defined fields
         coerce_defined_fields(value, coerced)
 
@@ -99,6 +102,15 @@ module RapiTapir
         coerce_additional_properties(value, coerced) if constraints[:additional_properties]
 
         coerced
+      end
+
+      def validate_no_unexpected_fields(value)
+        expected_keys = field_types.keys.map { |k| [k, k.to_s, k.to_sym] }.flatten.uniq
+        unexpected_keys = value.keys - expected_keys
+        return if unexpected_keys.empty?
+
+        unexpected_list = unexpected_keys.map(&:inspect).join(', ')
+        raise CoercionError.new(value, 'Hash', "Unexpected fields in hash: #{unexpected_list}. Only these fields are allowed: #{field_types.keys.join(', ')}")
       end
 
       def coerce_defined_fields(value, coerced)
