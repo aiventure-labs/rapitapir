@@ -159,6 +159,9 @@ module RapiTapir
         copy_with(errors: @errors + [error])
       end
 
+      # Alias for compatibility with Core::Endpoint
+      alias error_out error_response
+
       def bad_request(type_def = nil, **options)
         error_response(400, type_def, **options)
       end
@@ -341,6 +344,25 @@ module RapiTapir
 
       def rag_config
         @metadata[:rag_config]
+      end
+
+      # LLM Instruction Generation
+      def llm_instruction(purpose:, fields: :all, **options)
+        copy_with(metadata: @metadata.merge(
+          llm_instruction: {
+            purpose: purpose,
+            fields: fields,
+            options: options
+          }
+        ))
+      end
+
+      def llm_instruction?
+        @metadata.key?(:llm_instruction)
+      end
+
+      def llm_instruction_config
+        @metadata[:llm_instruction]
       end
     end
   end

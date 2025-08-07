@@ -25,29 +25,27 @@ module RapiTapir
         private
 
         def handle_rag_request(env, endpoint)
-          begin
-            # Extract request data
-            request_data = extract_request_data(env)
-            
-            # Get the query from the request (assuming it's in the body)
-            query = request_data[:question] || request_data[:query] || request_data.values.first
-            
-            # Create RAG pipeline from endpoint configuration
-            rag_config = endpoint.rag_config
-            pipeline = create_rag_pipeline(rag_config)
-            
-            # Process the query through RAG pipeline
-            result = pipeline.process(
-              query,
-              context_fields: rag_config[:context_fields],
-              user_context: extract_user_context(env, rag_config[:context_fields])
-            )
-            
-            # Return RAG response
-            build_rag_response(result)
-          rescue StandardError => e
-            build_error_response(e)
-          end
+          # Extract request data
+          request_data = extract_request_data(env)
+
+          # Get the query from the request (assuming it's in the body)
+          query = request_data[:question] || request_data[:query] || request_data.values.first
+
+          # Create RAG pipeline from endpoint configuration
+          rag_config = endpoint.rag_config
+          pipeline = create_rag_pipeline(rag_config)
+
+          # Process the query through RAG pipeline
+          result = pipeline.process(
+            query,
+            context_fields: rag_config[:context_fields],
+            user_context: extract_user_context(env, rag_config[:context_fields])
+          )
+
+          # Return RAG response
+          build_rag_response(result)
+        rescue StandardError => e
+          build_error_response(e)
         end
 
         def extract_request_data(env)
@@ -66,18 +64,18 @@ module RapiTapir
         def extract_user_context(env, context_fields)
           # Extract user context from headers, session, etc.
           context = {}
-          
+
           context_fields.each do |field|
             case field
             when :user_id
-              context[:user_id] = env['HTTP_X_USER_ID'] || env['HTTP_AUTHORIZATION']&.split(' ')&.last
+              context[:user_id] = env['HTTP_X_USER_ID'] || env['HTTP_AUTHORIZATION']&.split&.last
             when :session_id
               context[:session_id] = env['HTTP_X_SESSION_ID']
             when :tenant_id
               context[:tenant_id] = env['HTTP_X_TENANT_ID']
             end
           end
-          
+
           context
         end
 

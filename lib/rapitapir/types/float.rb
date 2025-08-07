@@ -39,9 +39,7 @@ module RapiTapir
       def validate_minimum_constraints(float_value)
         errors = []
 
-        if constraints[:minimum] && float_value < constraints[:minimum]
-          errors << "Value #{float_value} is below minimum #{constraints[:minimum]}"
-        end
+        errors << "Value #{float_value} is below minimum #{constraints[:minimum]}" if constraints[:minimum] && float_value < constraints[:minimum]
 
         if constraints[:exclusive_minimum] && float_value <= constraints[:exclusive_minimum]
           errors << "Value #{float_value} must be greater than #{constraints[:exclusive_minimum]}"
@@ -53,9 +51,7 @@ module RapiTapir
       def validate_maximum_constraints(float_value)
         errors = []
 
-        if constraints[:maximum] && float_value > constraints[:maximum]
-          errors << "Value #{float_value} exceeds maximum #{constraints[:maximum]}"
-        end
+        errors << "Value #{float_value} exceeds maximum #{constraints[:maximum]}" if constraints[:maximum] && float_value > constraints[:maximum]
 
         if constraints[:exclusive_maximum] && float_value >= constraints[:exclusive_maximum]
           errors << "Value #{float_value} must be less than #{constraints[:exclusive_maximum]}"

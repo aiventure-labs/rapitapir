@@ -1,647 +1,957 @@
 # RapiTapir Observability Guide
 
-This guide covers the comprehensive observability features introduced in RapiTapir Phase 2.1, including metrics collection, distributed tracing, structured logging, and health checks.
+This comprehensive guide covers RapiTapir's observability features including metrics collection, distributed tracing, structured logging, and health checks for production-ready APIs.
 
 ## Table of Contents
 
+- [Overview](#overview)
 - [Quick Start](#quick-start)
 - [Configuration](#configuration)
 - [Metrics](#metrics)
 - [Distributed Tracing](#distributed-tracing)
 - [Structured Logging](#structured-logging)
 - [Health Checks](#health-checks)
-- [Middleware Integration](#middleware-integration)
-- [Examples](#examples)
+- [Integration Examples](#integration-examples)
+- [Production Setup](#production-setup)
+
+## Overview
+
+RapiTapir provides comprehensive observability features out of the box:
+
+- **Metrics**: Prometheus-compatible metrics with custom labels and dashboards
+- **Tracing**: OpenTelemetry distributed tracing with automatic instrumentation
+- **Logging**: Structured JSON logging with request correlation
+- **Health Checks**: Built-in health monitoring with custom checks
+- **Performance Monitoring**: Request duration, throughput, and error rate tracking
 
 ## Quick Start
 
 ```ruby
-require 'rapitapir'
-
-# Configure observability
-RapiTapir.configure do |config|
-  # Enable Prometheus metrics
-  config.metrics.enable_prometheus
-  
-  # Enable OpenTelemetry tracing
-  config.tracing.enable_opentelemetry
-  
-  # Enable structured logging
-  config.logging.enable_structured
-  
-  # Enable health checks
-  config.health_check.enable
-end
-
-# Create an endpoint with observability
-endpoint = RapiTapir.endpoint
-  .get
-  .in("/users")
-  .out_json({ users: [{ id: :uuid, name: :string }] })
-  .with_metrics("user_list")
-  .with_tracing
-  .with_logging(level: :info)
-  .handle do |request|
-    # Your endpoint logic here
-    { users: [] }
+class ObservableAPI < SinatraRapiTapir
+  rapitapir do
+    info(title: 'Observable API', version: '1.0.0')
+    
+    # Enable observability features
+    enable_metrics(
+      provider: :prometheus,
+      namespace: 'my_api',
+      labels: { service: 'user_service', environment: 'production' }
+    )
+    
+    enable_tracing(
+      provider: :opentelemetry,
+      service_name: 'user-api',
+      service_version: '1.0.0'
+    )
+    
+    enable_structured_logging(
+      level: :info,
+      include_request_body: false,
+      include_response_body: false
+    )
+    
+    enable_health_checks(endpoint: '/health')
+    
+    production_defaults!
   end
+
+  # Basic endpoint with automatic observability
+  endpoint(
+    GET('/users')
+      .summary('List users with observability')
+      .query(:limit, T.optional(T.integer(minimum: 1, maximum: 100)), description: 'Page size')
+      .tags('Users', 'Observability')
+      .ok(T.hash({
+        "users" => T.array(T.hash({
+          "id" => T.uuid,
+          "name" => T.string,
+          "email" => T.email,
+          "created_at" => T.datetime
+        })),
+        "total" => T.integer,
+        "page_info" => T.hash({
+          "limit" => T.integer,
+          "has_next" => T.boolean
+        })
+      }))
+      .build
+  ) do |inputs|
+    # Automatic metrics and tracing are enabled
+    users = User.limit(inputs[:limit] || 50)
+    
+    {
+      users: users.map(&:to_h),
+      total: User.count,
+      page_info: {
+        limit: inputs[:limit] || 50,
+        has_next: users.length == (inputs[:limit] || 50)
+      }
+    }
+  end
+
+  # Enhanced endpoint with custom observability
+  endpoint(
+    POST('/orders')
+      .summary('Create order with enhanced observability')
+      .body(T.hash({
+        "user_id" => T.uuid,
+        "items" => T.array(T.hash({
+          "product_id" => T.uuid,
+          "quantity" => T.integer(minimum: 1),
+          "price" => T.float(minimum: 0)
+        })),
+        "payment_method" => T.string(enum: %w[card paypal bank_transfer])
+      }))
+      .tags('Orders', 'Observability')
+      .created(T.hash({
+        "id" => T.uuid,
+        "status" => T.string,
+        "total" => T.float,
+        "created_at" => T.datetime
+      }))
+      .with_metrics('order_creation', labels: { operation: 'create' })
+      .with_tracing('create_order')
+      .with_structured_logging(
+        include_fields: %w[user_id total payment_method],
+        exclude_fields: %w[payment_details]
+      )
+      .build
+  ) do |inputs|
+    order_data = inputs[:body]
+    
+    # Add custom metrics
+    increment_counter('orders_attempted_total', labels: { 
+      payment_method: order_data['payment_method']
+    })
+    
+    # Add tracing attributes
+    set_trace_attributes({
+      'order.user_id' => order_data['user_id'],
+      'order.item_count' => order_data['items'].length,
+      'order.payment_method' => order_data['payment_method']
+    })
+    
+    # Create nested spans for different operations
+    user = trace_span('fetch_user') do |span|
+      span.set_attribute('user.id', order_data['user_id'])
+      User.find(order_data['user_id'])
+    end
+    
+    total = trace_span('calculate_total') do |span|
+      calculated_total = order_data['items'].sum { |item| 
+        item['quantity'] * item['price'] 
+      }
+      span.set_attribute('order.calculated_total', calculated_total)
+      calculated_total
+    end
+    
+    order = trace_span('process_payment') do |span|
+      span.set_attribute('payment.method', order_data['payment_method'])
+      span.set_attribute('payment.amount', total)
+      
+      payment_result = PaymentService.process(
+        amount: total,
+        method: order_data['payment_method'],
+        user: user
+      )
+      
+      span.set_attribute('payment.transaction_id', payment_result[:transaction_id])
+      span.add_event('payment_processed', {
+        'payment.status' => payment_result[:status],
+        'payment.provider' => payment_result[:provider]
+      })
+      
+      Order.create!(
+        user: user,
+        items: order_data['items'],
+        total: total,
+        payment_transaction_id: payment_result[:transaction_id]
+      )
+    end
+    
+    # Record custom metrics
+    histogram('order_total_amount', total, labels: { 
+      payment_method: order_data['payment_method']
+    })
+    
+    # Log structured data
+    log_info('Order created successfully', {
+      order_id: order.id,
+      user_id: user.id,
+      total: total,
+      payment_method: order_data['payment_method']
+    })
+    
+    status 201
+    order.to_h
+  end
+end
 ```
 
 ## Configuration
 
-### Metrics Configuration
+### Global Configuration
 
 ```ruby
-RapiTapir.configure do |config|
-  config.metrics.enable_prometheus(
-    namespace: 'my_api',           # Metrics namespace (default: 'rapitapir')
-    labels: {                      # Custom labels for all metrics
-      service: 'user_service',
-      version: '1.0.0',
-      environment: 'production'
-    }
-  )
-end
-```
-
-### Tracing Configuration
-
-```ruby
-RapiTapir.configure do |config|
-  config.tracing.enable_opentelemetry(
-    service_name: 'my-api-service',    # Service name for tracing
-    service_version: '1.0.0'           # Service version
-  )
-end
-```
-
-### Logging Configuration
-
-```ruby
-RapiTapir.configure do |config|
-  config.logging.enable_structured(
-    level: :info,                      # Log level (:debug, :info, :warn, :error, :fatal)
-    fields: [                          # Fields to include in structured logs
-      :timestamp, :level, :message, :request_id,
-      :method, :path, :status, :duration,
-      :user_id, :tenant_id            # Custom fields
-    ]
-  )
-end
-```
-
-### Health Check Configuration
-
-```ruby
-RapiTapir.configure do |config|
-  config.health_check.enable(endpoint: '/health')
-  
-  # Add custom health checks
-  config.health_check.add_check(:database) do
-    # Database health check logic
-    { status: :healthy, message: 'Database connection OK' }
+class MyAPI < SinatraRapiTapir
+  rapitapir do
+    # Comprehensive observability setup
+    enable_observability do |obs|
+      # Metrics configuration
+      obs.metrics do |metrics|
+        metrics.provider = :prometheus
+        metrics.namespace = 'myapi'
+        metrics.endpoint = '/metrics'
+        metrics.labels = {
+          service: 'user-service',
+          version: '2.0.0',
+          environment: ENV['RACK_ENV'] || 'development'
+        }
+        metrics.include_default_metrics = true
+        metrics.include_request_metrics = true
+        metrics.include_response_metrics = true
+      end
+      
+      # Tracing configuration
+      obs.tracing do |tracing|
+        tracing.provider = :opentelemetry
+        tracing.service_name = 'user-api'
+        tracing.service_version = '2.0.0'
+        tracing.environment = ENV['RACK_ENV']
+        tracing.sample_rate = ENV['RACK_ENV'] == 'production' ? 0.1 : 1.0
+        tracing.include_request_attributes = true
+        tracing.include_response_attributes = true
+        tracing.include_database_spans = true
+      end
+      
+      # Logging configuration
+      obs.logging do |logging|
+        logging.level = ENV['LOG_LEVEL'] || 'info'
+        logging.format = :json
+        logging.include_request_id = true
+        logging.include_user_id = true
+        logging.include_trace_id = true
+        logging.exclude_paths = ['/health', '/metrics']
+        logging.sanitize_headers = %w[authorization x-api-key]
+        logging.max_body_size = 1024
+      end
+      
+      # Health checks configuration
+      obs.health_checks do |health|
+        health.endpoint = '/health'
+        health.detailed_endpoint = '/health/detailed'
+        health.include_system_info = true
+        health.include_dependency_checks = true
+      end
+    end
   end
-  
-  config.health_check.add_check(:redis) do
-    # Redis health check logic
-    { status: :healthy, message: 'Redis connection OK' }
+end
+```
+
+### Environment-Specific Configuration
+
+```ruby
+class ProductionAPI < SinatraRapiTapir
+  rapitapir do
+    case ENV['RACK_ENV']
+    when 'production'
+      enable_observability do |obs|
+        obs.metrics.sample_rate = 1.0
+        obs.tracing.sample_rate = 0.1  # Sample 10% in production
+        obs.logging.level = 'warn'
+        obs.logging.include_request_body = false
+        obs.logging.include_response_body = false
+      end
+      
+    when 'staging'
+      enable_observability do |obs|
+        obs.metrics.sample_rate = 1.0
+        obs.tracing.sample_rate = 0.5  # Sample 50% in staging
+        obs.logging.level = 'info'
+        obs.logging.include_request_body = true
+        obs.logging.include_response_body = false
+      end
+      
+    when 'development'
+      enable_observability do |obs|
+        obs.metrics.sample_rate = 1.0
+        obs.tracing.sample_rate = 1.0  # Sample 100% in development
+        obs.logging.level = 'debug'
+        obs.logging.include_request_body = true
+        obs.logging.include_response_body = true
+      end
+    end
   end
 end
 ```
 
 ## Metrics
 
-RapiTapir automatically collects the following metrics:
+### Built-in Metrics
 
-### Default HTTP Metrics
+RapiTapir automatically collects these metrics:
 
-- `{namespace}_http_requests_total` - Total number of HTTP requests
-- `{namespace}_http_request_duration_seconds` - HTTP request duration histogram
-- `{namespace}_http_errors_total` - Total number of HTTP errors
-- `{namespace}_http_active_requests` - Number of active HTTP requests
+- `http_requests_total` - Total HTTP requests by method, path, status
+- `http_request_duration_seconds` - Request duration histogram
+- `http_request_size_bytes` - Request size histogram
+- `http_response_size_bytes` - Response size histogram
+- `rapitapir_endpoints_total` - Total defined endpoints
+- `rapitapir_validations_total` - Total validation operations
+- `rapitapir_validation_errors_total` - Total validation errors
 
-### Custom Metrics
-
-You can record custom metrics in your endpoint handlers:
+### Custom Metrics in Endpoints
 
 ```ruby
-endpoint = RapiTapir.endpoint
-  .post
-  .in("/orders")
-  .with_metrics("order_creation")
-  .handle do |request|
-    # Custom counter
-    RapiTapir::Observability::Metrics.registry
-      .counter(:custom_events_total, labels: [:event_type])
-      .increment(labels: { event_type: 'order_created' })
-    
-    # Custom histogram
-    duration = measure_time do
-      # Some operation
-    end
-    
-    RapiTapir::Observability::Metrics.registry
-      .histogram(:operation_duration_seconds, labels: [:operation])
-      .observe(duration, labels: { operation: 'order_processing' })
-    
-    # Your logic here
+endpoint(
+  GET('/analytics/dashboard')
+    .summary('Analytics dashboard with custom metrics')
+    .query(:timeframe, T.string(enum: %w[hour day week month]), description: 'Analytics timeframe')
+    .tags('Analytics')
+    .ok(T.hash({
+      "metrics" => T.hash({}),
+      "generated_at" => T.datetime
+    }))
+    .build
+) do |inputs|
+  timeframe = inputs[:timeframe] || 'day'
+  
+  # Increment custom counters
+  increment_counter('dashboard_views_total', labels: { 
+    timeframe: timeframe,
+    user_id: current_user&.id || 'anonymous'
+  })
+  
+  # Record custom gauge
+  set_gauge('active_users_count', User.active.count)
+  
+  # Record histogram
+  analytics_data = measure_histogram('analytics_query_duration', 
+    labels: { timeframe: timeframe }
+  ) do
+    AnalyticsService.get_dashboard_data(timeframe: timeframe)
   end
+  
+  # Record summary
+  record_summary('dashboard_data_points', analytics_data[:data_points].count)
+  
+  {
+    metrics: analytics_data,
+    generated_at: Time.now
+  }
+end
 ```
 
 ### Accessing Metrics
 
-Metrics are exposed at `/metrics` endpoint in Prometheus format:
+Metrics are automatically exposed at `/metrics` endpoint:
 
 ```bash
-curl http://localhost:9292/metrics
+# Get all metrics
+curl http://localhost:4567/metrics
+
+# Example output:
+# http_requests_total{method="GET",path="/users",status="200"} 42
+# http_request_duration_seconds_bucket{method="GET",path="/users",le="0.1"} 38
+# http_request_duration_seconds_bucket{method="GET",path="/users",le="0.5"} 42
+# dashboard_views_total{timeframe="day",user_id="123"} 15
 ```
 
 ## Distributed Tracing
 
-RapiTapir integrates with OpenTelemetry for distributed tracing:
-
 ### Automatic Tracing
 
-Every HTTP request is automatically traced with:
-- Span name: `HTTP {METHOD} {PATH}`
-- HTTP method, URL, status code, duration
-- Request and response size
-- Error information if applicable
+Every request gets automatic tracing with:
 
-### Custom Tracing
+- Span name: `HTTP {METHOD} {path_template}`
+- Automatic attributes: method, URL, status, duration, user agent
+- Request/response size tracking
+- Error tracking with stack traces
 
-Add custom spans and attributes in your endpoints:
+### Custom Tracing in Endpoints
 
 ```ruby
-endpoint = RapiTapir.endpoint
-  .post
-  .in("/orders")
-  .with_tracing("POST /orders")
-  .handle do |request|
-    # Add custom attributes to current span
-    RapiTapir::Observability::Tracing.set_attribute('user.id', request.user_id)
-    RapiTapir::Observability::Tracing.set_attribute('order.total', request.body[:total])
-    
-    # Create nested spans
-    RapiTapir::Observability::Tracing.start_span("validate_order") do |span|
-      span.set_attribute('validation.type', 'business_rules')
-      validate_order(request.body)
-    end
-    
-    RapiTapir::Observability::Tracing.start_span("process_payment") do |span|
-      payment_result = process_payment(request.body[:payment])
-      span.set_attribute('payment.provider', payment_result[:provider])
-      span.set_attribute('payment.transaction_id', payment_result[:transaction_id])
-    end
-    
-    # Add events to span
-    RapiTapir::Observability::Tracing.add_event(
-      'order.created',
-      attributes: { 'order.id' => order_id }
-    )
-    
-    # Record exceptions
-    begin
-      risky_operation()
-    rescue => e
-      RapiTapir::Observability::Tracing.record_exception(e)
-      raise
-    end
-    
-    # Your logic here
+endpoint(
+  POST('/orders/:id/process')
+    .path_param(:id, T.uuid, description: 'Order ID')
+    .body(T.hash({
+      "processing_options" => T.hash({
+        "priority" => T.string(enum: %w[low normal high urgent]),
+        "async" => T.boolean
+      })
+    }))
+    .tags('Orders')
+    .ok(T.hash({
+      "order_id" => T.uuid,
+      "status" => T.string,
+      "processing_time_ms" => T.float
+    }))
+    .build
+) do |inputs|
+  order_id = inputs[:id]
+  options = inputs[:body]['processing_options']
+  start_time = Time.now
+  
+  # Set span attributes
+  set_trace_attributes({
+    'order.id' => order_id,
+    'order.priority' => options['priority'],
+    'order.async' => options['async']
+  })
+  
+  # Create nested spans
+  order = trace_span('fetch_order', attributes: { 'order.id' => order_id }) do |span|
+    order = Order.find(order_id)
+    span.set_attribute('order.status', order.status)
+    span.set_attribute('order.total', order.total)
+    order
   end
+  
+  validation_result = trace_span('validate_processing') do |span|
+    result = OrderValidator.can_process?(order, options)
+    span.set_attribute('validation.result', result[:valid])
+    span.set_attribute('validation.errors', result[:errors].join(', ')) if result[:errors]
+    
+    unless result[:valid]
+      span.record_exception(ValidationError.new(result[:errors].join(', ')))
+      span.set_status(:error, 'Validation failed')
+    end
+    
+    result
+  end
+  
+  halt 422, { error: 'Validation failed', details: validation_result[:errors] }.to_json unless validation_result[:valid]
+  
+  processed_order = trace_span('process_order') do |span|
+    span.set_attribute('processing.priority', options['priority'])
+    span.set_attribute('processing.async', options['async'])
+    
+    if options['async']
+      # Enqueue background job
+      job_id = OrderProcessingJob.perform_async(order_id, options)
+      span.set_attribute('job.id', job_id)
+      span.add_event('job_enqueued', { 'job.id' => job_id })
+      
+      order.update!(status: 'processing', processing_job_id: job_id)
+    else
+      # Process synchronously
+      OrderProcessor.process!(order, options)
+      order.reload
+    end
+    
+    span.set_attribute('order.new_status', order.status)
+    order
+  end
+  
+  processing_time = ((Time.now - start_time) * 1000).round(2)
+  
+  # Add final event
+  add_trace_event('order_processing_completed', {
+    'order.id' => order_id,
+    'processing.duration_ms' => processing_time,
+    'processing.mode' => options['async'] ? 'async' : 'sync'
+  })
+  
+  {
+    order_id: order_id,
+    status: processed_order.status,
+    processing_time_ms: processing_time
+  }
+end
+```
+
+### Cross-Service Tracing
+
+```ruby
+endpoint(
+  GET('/users/:id/recommendations')
+    .path_param(:id, T.uuid, description: 'User ID')
+    .query(:category, T.optional(T.string), description: 'Recommendation category')
+    .tags('Users', 'Recommendations')
+    .ok(T.hash({
+      "recommendations" => T.array(T.hash({
+        "id" => T.uuid,
+        "title" => T.string,
+        "score" => T.float
+      }))
+    }))
+    .build
+) do |inputs|
+  user_id = inputs[:id]
+  
+  # External service call with tracing
+  recommendations = trace_span('fetch_recommendations') do |span|
+    span.set_attribute('user.id', user_id)
+    span.set_attribute('service.name', 'recommendation-service')
+    
+    # Propagate trace context to external service
+    headers = {
+      'Content-Type' => 'application/json',
+      'X-Trace-Id' => current_trace_id,
+      'X-Span-Id' => current_span_id
+    }
+    
+    begin
+      response = HTTP.timeout(5)
+                     .headers(headers)
+                     .get("#{ENV['RECOMMENDATION_SERVICE_URL']}/users/#{user_id}/recommendations")
+      
+      span.set_attribute('http.status_code', response.status)
+      span.set_attribute('http.response_size', response.body.bytesize)
+      
+      if response.status.success?
+        recommendations = JSON.parse(response.body)
+        span.set_attribute('recommendations.count', recommendations.length)
+        recommendations
+      else
+        span.set_status(:error, "HTTP #{response.status}")
+        span.record_exception(StandardError.new("Recommendation service error: #{response.status}"))
+        []
+      end
+      
+    rescue => e
+      span.record_exception(e)
+      span.set_status(:error, e.message)
+      []
+    end
+  end
+  
+  { recommendations: recommendations }
+end
 ```
 
 ## Structured Logging
 
-RapiTapir provides comprehensive structured logging:
-
 ### Automatic Request Logging
 
-Every HTTP request is automatically logged with:
-- Request method, path, status code
-- Request duration
-- Request ID for correlation
-- User agent, IP address
-- Custom fields you configure
+Every request automatically logs:
 
-### Custom Logging
-
-Add structured logging in your endpoints:
-
-```ruby
-endpoint = RapiTapir.endpoint
-  .post
-  .in("/users")
-  .with_logging(level: :info, fields: [:user_id, :operation])
-  .handle do |request|
-    user_data = request.body
-    
-    # Structured info logging
-    RapiTapir::Observability::Logging.info(
-      "Creating user",
-      user_email: user_data[:email],
-      user_age: user_data[:age],
-      operation: 'user_creation'
-    )
-    
-    # Log with different levels
-    RapiTapir::Observability::Logging.debug(
-      "Validation passed",
-      validation_time_ms: 5.2
-    )
-    
-    RapiTapir::Observability::Logging.warn(
-      "Slow database response",
-      db_response_time_ms: 1200
-    )
-    
-    # Log errors with context
-    begin
-      create_user(user_data)
-    rescue => e
-      RapiTapir::Observability::Logging.log_error(
-        e,
-        user_email: user_data[:email],
-        operation: 'user_creation',
-        request_id: request.id
-      )
-      raise
-    end
-    
-    # Your logic here
-  end
+```json
+{
+  "timestamp": "2024-01-15T10:30:45.123Z",
+  "level": "info",
+  "message": "HTTP Request",
+  "request_id": "req_1234567890abcdef",
+  "trace_id": "trace_abcdef1234567890",
+  "span_id": "span_fedcba0987654321",
+  "method": "POST",
+  "path": "/users",
+  "user_agent": "curl/7.68.0",
+  "remote_ip": "192.168.1.100",
+  "status": 201,
+  "duration_ms": 234.56,
+  "request_size_bytes": 156,
+  "response_size_bytes": 89
+}
 ```
 
-### Log Formats
-
-Choose from multiple log formats:
+### Custom Logging in Endpoints
 
 ```ruby
-# JSON format (default for structured logging)
-{"timestamp":"2024-01-01T12:00:00Z","level":"INFO","message":"User created","user_id":"123"}
+endpoint(
+  PUT('/users/:id/profile')
+    .path_param(:id, T.uuid, description: 'User ID')
+    .body(T.hash({
+      "name" => T.optional(T.string),
+      "bio" => T.optional(T.string),
+      "preferences" => T.optional(T.hash({}))
+    }))
+    .tags('Users')
+    .ok(T.hash({
+      "id" => T.uuid,
+      "name" => T.string,
+      "updated_at" => T.datetime
+    }))
+    .build
+) do |inputs|
+  user_id = inputs[:id]
+  updates = inputs[:body]
+  
+  # Structured info logging
+  log_info('Profile update started', {
+    user_id: user_id,
+    fields_to_update: updates.keys,
+    request_size: updates.to_json.bytesize
+  })
+  
+  begin
+    user = User.find(user_id)
+    
+    # Log user context
+    log_debug('User found', {
+      user_id: user.id,
+      user_email: user.email,
+      last_updated: user.updated_at
+    })
+    
+    # Validate and apply updates
+    original_values = {}
+    updates.each do |field, value|
+      original_values[field] = user.send(field)
+      user.send("#{field}=", value)
+    end
+    
+    if user.valid?
+      user.save!
+      
+      # Log successful update
+      log_info('Profile updated successfully', {
+        user_id: user_id,
+        updated_fields: updates.keys,
+        original_values: original_values,
+        new_values: updates
+      })
+      
+      user.to_h
+    else
+      # Log validation errors
+      log_warn('Profile update validation failed', {
+        user_id: user_id,
+        validation_errors: user.errors.full_messages,
+        attempted_updates: updates
+      })
+      
+      halt 422, {
+        error: 'Validation failed',
+        details: user.errors.full_messages
+      }.to_json
+    end
+    
+  rescue ActiveRecord::RecordNotFound => e
+    log_warn('User not found for profile update', {
+      user_id: user_id,
+      error: e.message
+    })
+    
+    halt 404, { error: 'User not found' }.to_json
+    
+  rescue => e
+    log_error('Profile update failed', {
+      user_id: user_id,
+      error_class: e.class.name,
+      error_message: e.message,
+      backtrace: e.backtrace.first(10)
+    })
+    
+    halt 500, { error: 'Internal server error' }.to_json
+  end
+end
+```
 
-# Logfmt format
-timestamp=2024-01-01T12:00:00Z level=INFO message="User created" user_id=123
+### Correlation IDs
 
-# Text format
-2024-01-01 12:00:00 [INFO] User created user_id=123
+Request correlation is automatically handled:
+
+```ruby
+# Access correlation IDs in endpoints
+endpoint(
+  GET('/debug/request-info')
+    .summary('Get current request debugging info')
+    .tags('Debug')
+    .ok(T.hash({
+      "request_id" => T.string,
+      "trace_id" => T.string,
+      "span_id" => T.string,
+      "user_id" => T.optional(T.string)
+    }))
+    .build
+) do |inputs|
+  {
+    request_id: current_request_id,
+    trace_id: current_trace_id,
+    span_id: current_span_id,
+    user_id: current_user&.id
+  }
+end
 ```
 
 ## Health Checks
 
-RapiTapir provides comprehensive health check functionality:
-
-### Default Health Checks
-
-- `ruby_runtime` - Ruby runtime status
-- `memory_usage` - Memory and GC statistics
-- `thread_count` - Active thread count
-
-### Custom Health Checks
-
-Add custom health checks for your dependencies:
+### Built-in Health Checks
 
 ```ruby
-RapiTapir.configure do |config|
-  config.health_check.enable
-  
-  # Database health check
-  config.health_check.add_check(:database) do
-    begin
-      result = ActiveRecord::Base.connection.execute("SELECT 1")
-      { status: :healthy, message: "Database connection OK" }
-    rescue => e
-      { status: :unhealthy, message: "Database error: #{e.message}" }
-    end
-  end
-  
-  # Redis health check with timeout
-  config.health_check.add_check(:redis) do
-    begin
-      Timeout.timeout(5) do
-        Redis.current.ping
-        { status: :healthy, message: "Redis connection OK" }
+class HealthyAPI < SinatraRapiTapir
+  rapitapir do
+    enable_health_checks do |health|
+      health.endpoint = '/health'
+      health.detailed_endpoint = '/health/detailed'
+      
+      # Add custom health checks
+      health.add_check(:database) do
+        begin
+          ActiveRecord::Base.connection.execute('SELECT 1')
+          { status: :healthy, message: 'Database connection OK' }
+        rescue => e
+          { status: :unhealthy, message: "Database error: #{e.message}" }
+        end
       end
-    rescue Timeout::Error
-      { status: :unhealthy, message: "Redis timeout" }
-    rescue => e
-      { status: :unhealthy, message: "Redis error: #{e.message}" }
-    end
-  end
-  
-  # External API health check
-  config.health_check.add_check(:payment_api) do
-    begin
-      response = HTTP.timeout(10).get("https://api.stripe.com/v1/charges")
-      if response.status.success?
-        { status: :healthy, message: "Payment API reachable" }
-      else
-        { status: :unhealthy, message: "Payment API returned #{response.status}" }
+      
+      health.add_check(:redis) do
+        begin
+          Redis.current.ping
+          { status: :healthy, message: 'Redis connection OK' }
+        rescue => e
+          { status: :unhealthy, message: "Redis error: #{e.message}" }
+        end
       end
-    rescue => e
-      { status: :unhealthy, message: "Payment API unreachable: #{e.message}" }
+      
+      health.add_check(:external_api) do
+        begin
+          response = HTTP.timeout(5).get("#{ENV['EXTERNAL_API_URL']}/health")
+          if response.status.success?
+            { status: :healthy, message: 'External API responding' }
+          else
+            { status: :unhealthy, message: "External API returned #{response.status}" }
+          end
+        rescue => e
+          { status: :unhealthy, message: "External API error: #{e.message}" }
+        end
+      end
     end
   end
 end
 ```
 
-### Health Check Endpoints
-
-Health checks are available at multiple endpoints:
+Health check endpoints respond with:
 
 ```bash
-# Overall health status
-GET /health
+# Basic health check
+curl http://localhost:4567/health
+# Response: {"status":"healthy","timestamp":"2024-01-15T10:30:45Z"}
+
+# Detailed health check
+curl http://localhost:4567/health/detailed
+```
+
+```json
 {
   "status": "healthy",
-  "timestamp": "2024-01-01T12:00:00Z",
-  "service": "rapitapir",
-  "version": "0.1.0",
-  "checks": [
-    {
-      "name": "database",
+  "timestamp": "2024-01-15T10:30:45Z",
+  "checks": {
+    "database": {
       "status": "healthy",
       "message": "Database connection OK",
-      "duration_ms": 2.5
+      "duration_ms": 12.34
+    },
+    "redis": {
+      "status": "healthy", 
+      "message": "Redis connection OK",
+      "duration_ms": 5.67
+    },
+    "external_api": {
+      "status": "unhealthy",
+      "message": "External API error: Connection timeout",
+      "duration_ms": 5000.0
     }
-  ]
-}
-
-# Individual health check
-GET /health/check?name=database
-{
-  "name": "database",
-  "status": "healthy", 
-  "message": "Database connection OK",
-  "duration_ms": 2.5
-}
-
-# List available checks
-GET /health/checks
-{
-  "available_checks": [
-    {"name": "ruby_runtime", "url": "/health/check?name=ruby_runtime"},
-    {"name": "database", "url": "/health/check?name=database"}
-  ],
-  "total": 2
+  },
+  "system": {
+    "uptime_seconds": 86400,
+    "memory_usage_mb": 125.6,
+    "load_average": [0.1, 0.2, 0.15]
+  }
 }
 ```
 
-## Middleware Integration
+## Integration Examples
 
-### Rack Applications
-
-Use the observability middleware with any Rack application:
+### Kubernetes Integration
 
 ```ruby
-require 'rack'
-require 'rapitapir'
-
-# Configure observability
-RapiTapir.configure do |config|
-  config.metrics.enable_prometheus
-  config.tracing.enable_opentelemetry
-  config.logging.enable_structured
-  config.health_check.enable
-end
-
-# Build application with observability
-app = Rack::Builder.new do
-  # Add observability middleware (includes metrics, tracing, logging)
-  use RapiTapir::Observability::RackMiddleware
-  
-  # Your application
-  run MyApp.new
-end
-
-run app
-```
-
-### Sinatra Integration
-
-```ruby
-require 'sinatra'
-require 'rapitapir'
-
-# Configure observability
-RapiTapir.configure do |config|
-  config.metrics.enable_prometheus
-  config.tracing.enable_opentelemetry
-  config.logging.enable_structured
-  config.health_check.enable
-end
-
-class MyApp < Sinatra::Base
-  use RapiTapir::Observability::RackMiddleware
-  
-  get '/users' do
-    # Your route logic
-  end
-end
-```
-
-### Rails Integration
-
-```ruby
-# config/application.rb
-require 'rapitapir'
-
-class Application < Rails::Application
-  # Configure observability
-  config.before_configuration do
-    RapiTapir.configure do |config|
-      config.metrics.enable_prometheus(
-        namespace: 'rails_app',
-        labels: { environment: Rails.env }
-      )
-      config.tracing.enable_opentelemetry(
-        service_name: 'my-rails-app',
-        service_version: MyApp::VERSION
-      )
-      config.logging.enable_structured(level: :info)
-      config.health_check.enable
-    end
-  end
-  
-  # Add observability middleware
-  config.middleware.use RapiTapir::Observability::RackMiddleware
-end
-```
-
-## Examples
-
-### Basic E-commerce API
-
-```ruby
-require 'rapitapir'
-
-# Configure observability
-RapiTapir.configure do |config|
-  config.metrics.enable_prometheus(namespace: 'ecommerce')
-  config.tracing.enable_opentelemetry(service_name: 'ecommerce-api')
-  config.logging.enable_structured
-  config.health_check.enable
-end
-
-# Create order endpoint
-create_order = RapiTapir.endpoint
-  .post
-  .in("/orders")
-  .json_body({
-    customer_id: :uuid,
-    items: [{ product_id: :uuid, quantity: :integer, price: :float }]
-  })
-  .out_json({ id: :uuid, status: :string, total: :float })
-  .with_metrics("order_creation")
-  .with_tracing
-  .with_logging(fields: [:customer_id, :order_total, :item_count])
-  .handle do |request|
-    order_data = request.body
-    
-    # Add business context to tracing
-    RapiTapir::Observability::Tracing.set_attribute('customer.id', order_data[:customer_id])
-    RapiTapir::Observability::Tracing.set_attribute('order.item_count', order_data[:items].length)
-    
-    total = order_data[:items].sum { |item| item[:quantity] * item[:price] }
-    RapiTapir::Observability::Tracing.set_attribute('order.total', total)
-    
-    # Structured logging
-    RapiTapir::Observability::Logging.info(
-      "Processing order",
-      customer_id: order_data[:customer_id],
-      order_total: total,
-      item_count: order_data[:items].length
-    )
-    
-    # Process order with nested tracing
-    order_id = RapiTapir::Observability::Tracing.start_span("create_order_record") do
-      SecureRandom.uuid
-    end
-    
-    RapiTapir::Observability::Tracing.start_span("send_confirmation_email") do |span|
-      span.set_attribute('email.type', 'order_confirmation')
-      # Send confirmation email
-    end
-    
-    {
-      id: order_id,
-      status: 'confirmed',
-      total: total
-    }
-  end
-```
-
-### Advanced Monitoring Setup
-
-```ruby
-# Production observability configuration
-RapiTapir.configure do |config|
-  # Comprehensive metrics
-  config.metrics.enable_prometheus(
-    namespace: 'production_api',
-    labels: {
-      service: ENV['SERVICE_NAME'],
-      version: ENV['APP_VERSION'],
-      environment: ENV['RAILS_ENV'],
-      datacenter: ENV['DATACENTER']
-    }
-  )
-  
-  # Distributed tracing
-  config.tracing.enable_opentelemetry(
-    service_name: ENV['SERVICE_NAME'],
-    service_version: ENV['APP_VERSION']
-  )
-  
-  # Structured logging for log aggregation
-  config.logging.enable_structured(
-    level: ENV.fetch('LOG_LEVEL', 'info').to_sym,
-    fields: [
-      :timestamp, :level, :message, :request_id, :trace_id,
-      :method, :path, :status, :duration,
-      :user_id, :tenant_id, :session_id,
-      :source_ip, :user_agent
-    ]
-  )
-  
-  # Comprehensive health checks
-  config.health_check.enable(endpoint: '/health')
-  
-  # Database health check
-  config.health_check.add_check(:database) do
-    ActiveRecord::Base.connection.execute("SELECT 1")
-    { status: :healthy, message: "Primary database OK" }
-  rescue => e
-    { status: :unhealthy, message: "Database error: #{e.message}" }
-  end
-  
-  # Redis health check
-  config.health_check.add_check(:redis) do
-    Redis.current.ping
-    { status: :healthy, message: "Redis cache OK" }
-  rescue => e
-    { status: :unhealthy, message: "Redis error: #{e.message}" }
-  end
-  
-  # Message queue health check
-  config.health_check.add_check(:message_queue) do
-    # Check Sidekiq or similar
-    if defined?(Sidekiq)
-      stats = Sidekiq::Stats.new
-      queue_size = stats.enqueued
+class KubernetesAPI < SinatraRapiTapir
+  rapitapir do
+    enable_observability do |obs|
+      # Kubernetes-friendly configuration
+      obs.metrics.endpoint = '/metrics'
+      obs.health_checks.endpoint = '/health'
+      obs.health_checks.readiness_endpoint = '/ready'
+      obs.health_checks.liveness_endpoint = '/live'
       
-      if queue_size > 10000
-        { status: :warning, message: "High queue size: #{queue_size}" }
-      else
-        { status: :healthy, message: "Queue size: #{queue_size}" }
-      end
-    else
-      { status: :healthy, message: "No message queue configured" }
+      obs.logging.format = :json
+      obs.logging.include_kubernetes_metadata = true
     end
-  rescue => e
-    { status: :unhealthy, message: "Queue error: #{e.message}" }
   end
 end
 ```
 
-## Best Practices
+### Honeycomb Integration
 
-### 1. Metric Naming
+```ruby
+class HoneycombAPI < SinatraRapiTapir
+  rapitapir do
+    enable_tracing do |tracing|
+      tracing.provider = :opentelemetry
+      tracing.exporter = :honeycomb
+      tracing.honeycomb_api_key = ENV['HONEYCOMB_API_KEY']
+      tracing.honeycomb_dataset = 'user-api'
+      tracing.sample_rate = 0.1
+    end
+  end
+end
+```
 
-Use consistent metric naming:
-- Use underscores for separating words
-- Include units in metric names (e.g., `_seconds`, `_bytes`)
-- Use clear, descriptive names
+### DataDog Integration
 
-### 2. Trace Context
+```ruby
+class DataDogAPI < SinatraRapiTapir
+  rapitapir do
+    enable_observability do |obs|
+      obs.metrics do |metrics|
+        metrics.provider = :datadog
+        metrics.datadog_api_key = ENV['DATADOG_API_KEY']
+        metrics.tags = {
+          env: ENV['RACK_ENV'],
+          service: 'user-api',
+          version: ENV['APP_VERSION']
+        }
+      end
+      
+      obs.tracing do |tracing|
+        tracing.provider = :datadog
+        tracing.service_name = 'user-api'
+        tracing.environment = ENV['RACK_ENV']
+      end
+    end
+  end
+end
+```
 
-Add meaningful attributes to traces:
-- Business identifiers (user_id, order_id, etc.)
-- Request context (tenant_id, api_version)
-- Performance indicators (cache_hit, db_query_count)
+## Production Setup
 
-### 3. Structured Logging
+### Docker Configuration
 
-Design your log structure:
-- Use consistent field names across services
-- Include correlation IDs for request tracing
-- Log at appropriate levels (debug for development, info+ for production)
+```dockerfile
+# Dockerfile
+FROM ruby:3.2-alpine
 
-### 4. Health Check Design
+# Install dependencies
+RUN apk add --no-cache build-base
 
-Create meaningful health checks:
-- Test actual functionality, not just connectivity
-- Include response time thresholds
-- Use timeouts to prevent hanging checks
-- Return actionable status messages
+WORKDIR /app
+COPY Gemfile* ./
+RUN bundle install
 
-### 5. Error Handling
+COPY . .
 
-Implement comprehensive error observability:
-- Always record exceptions in traces
-- Log errors with sufficient context
-- Use error metrics to track error rates
-- Include error classification (validation, system, external)
+# Expose metrics and health check ports
+EXPOSE 4567 9090
 
-This observability implementation provides production-ready monitoring capabilities for RapiTapir applications, enabling comprehensive visibility into system performance, health, and behavior.
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:4567/health || exit 1
+
+CMD ["bundle", "exec", "ruby", "app.rb"]
+```
+
+### Docker Compose with Observability Stack
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "4567:4567"
+    environment:
+      - RACK_ENV=production
+      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+      - PROMETHEUS_PUSHGATEWAY=prometheus-pushgateway:9091
+    depends_on:
+      - jaeger
+      - prometheus
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+volumes:
+  grafana-data:
+```
+
+### Prometheus Configuration
+
+```yaml
+# prometheus.yml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'rapitapir-api'
+    static_configs:
+      - targets: ['api:4567']
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+```
+
+### Grafana Dashboard
+
+```json
+{
+  "dashboard": {
+    "title": "RapiTapir API Metrics",
+    "panels": [
+      {
+        "title": "Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{method}} {{path}}"
+          }
+        ]
+      },
+      {
+        "title": "Response Time",
+        "type": "graph", 
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          }
+        ]
+      },
+      {
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{status=~\"5..\"}[5m])",
+            "legendFormat": "5xx errors"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+---
+
+This guide provides comprehensive coverage of RapiTapir's observability features. For more examples, see the [observability examples](../examples/observability/) and the [production setup guide](../examples/production_ready_example.rb).

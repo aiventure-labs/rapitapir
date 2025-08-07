@@ -22,7 +22,6 @@ module RapiTapir
         # @param only [Array<Symbol>] Only include these fields
         # @param except [Array<Symbol>] Exclude these fields
         # @return [RapiTapir::Types::Hash]
-        # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
         def from_hash(hash, only: nil, except: nil)
           raise ArgumentError, "Expected Hash, got #{hash.class}" unless hash.is_a?(::Hash)
 
@@ -39,7 +38,6 @@ module RapiTapir
 
           create_hash_type(schema_hash)
         end
-        # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
 
         # Derive schema from JSON Schema object
         #
@@ -47,11 +45,8 @@ module RapiTapir
         # @param only [Array<Symbol>] Only include these fields
         # @param except [Array<Symbol>] Exclude these fields
         # @return [RapiTapir::Types::Hash]
-        # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
         def from_json_schema(json_schema, only: nil, except: nil)
-          unless json_schema.is_a?(::Hash) && json_schema['type'] == 'object'
-            raise ArgumentError, 'JSON Schema must be an object type'
-          end
+          raise ArgumentError, 'JSON Schema must be an object type' unless json_schema.is_a?(::Hash) && json_schema['type'] == 'object'
 
           properties = json_schema['properties'] || {}
           required_fields = Array(json_schema['required'])
@@ -69,7 +64,6 @@ module RapiTapir
 
           RapiTapir::Types.hash(schema_hash)
         end
-        # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
 
         # Derive schema from OpenStruct instance
         #
@@ -77,7 +71,7 @@ module RapiTapir
         # @param only [Array<Symbol>] Only include these fields
         # @param except [Array<Symbol>] Exclude these fields
         # @return [RapiTapir::Types::Hash]
-        # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity, Style/OpenStructUse
+        # rubocop:disable Style/OpenStructUse
         def from_open_struct(open_struct, only: nil, except: nil)
           raise ArgumentError, "Expected OpenStruct, got #{open_struct.class}" unless open_struct.is_a?(OpenStruct)
 
@@ -93,7 +87,7 @@ module RapiTapir
 
           create_hash_type(schema_hash)
         end
-        # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity, Style/OpenStructUse
+        # rubocop:enable Style/OpenStructUse
 
         # Derive schema from Protobuf message class
         #
@@ -101,11 +95,8 @@ module RapiTapir
         # @param only [Array<Symbol>] Only include these fields
         # @param except [Array<Symbol>] Exclude these fields
         # @return [RapiTapir::Types::Hash]
-        # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
         def from_protobuf(proto_class, only: nil, except: nil)
-          unless defined?(Google::Protobuf) && proto_class.respond_to?(:descriptor)
-            raise ArgumentError, 'Protobuf not available or invalid protobuf class'
-          end
+          raise ArgumentError, 'Protobuf not available or invalid protobuf class' unless defined?(Google::Protobuf) && proto_class.respond_to?(:descriptor)
 
           schema_hash = {}
           proto_class.descriptor.each do |field_descriptor|
@@ -121,12 +112,10 @@ module RapiTapir
 
           create_hash_type(schema_hash)
         end
-        # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
 
         private
 
         # Convert JSON Schema field type to RapiTapir type
-        # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity
         def convert_json_schema_type(field_schema, required: true)
           base_type = case field_schema['type']
                       when 'string'
@@ -163,7 +152,6 @@ module RapiTapir
 
           required ? base_type : create_optional_type(base_type)
         end
-        # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity
 
         # Convert protobuf field descriptor to RapiTapir type
         def convert_protobuf_type(field_descriptor)
@@ -189,7 +177,6 @@ module RapiTapir
         end
 
         # Infer RapiTapir type from Ruby value
-        # rubocop:disable Metrics/CyclomaticComplexity
         def infer_type_from_value(value)
           case value
           when ::Integer
@@ -212,7 +199,6 @@ module RapiTapir
             create_string_type
           end
         end
-        # rubocop:enable Metrics/CyclomaticComplexity
 
         # Helper methods to create types without using convenience methods
         def create_string_type

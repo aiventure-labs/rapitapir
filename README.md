@@ -1,270 +1,824 @@
 # RapiTapir
 
-[![Tests](https://img.shields.io/badge/tests-620%20passing-brightgreen)](spec/)
-[![Coverage](https://img.shields.io/badge/coverage-68.68%25-green)](coverage/)
+[![Tests](https://img.shields.io/badge/tests-643%20passing-brightgreen)](spec/)
+[![Coverage](https://img.shields.io/badge/coverage-67.67%25-green)](coverage/)
 [![Ruby](https://img.shields.io/badge/ruby-3.1%2B-red)](Gemfile)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![RuboCop](https://img.shields.io/badge/code%20style-rubocop-brightgreen)](https://github.com/rubocop/rubocop)
+[![AI Ready](https://img.shields.io/badge/AI-LLM%20%7C%20RAG%20%7C%20MCP-purple)](lib/rapitapir/ai/)
 
-**RapiTapir 🦙** combines the expressiveness of Ruby with the safety of strong typing to create APIs that are both powerful and reliable. Define your endpoints once with our fluent DSL, and get automatic validation, documentation, and client generation.
+**RapiTapir 🦙** combines the expressiveness of Ruby with the safety of strong typing to create APIs that are both powerful and reliable. Define your endpoints once with our fluent DSL, and get automatic validation, documentation, client generation, and AI-powered features.
 
-## 🆕 What's New
+## 🚀 Latest Features (v2.0)
 
-- **✨ Clean Base Class**: `class MyAPI < SinatraRapiTapir` - the simplest way to create APIs
-- **🎯 Enhanced HTTP DSL**: Built-in GET, POST, PUT, DELETE methods with fluent chaining  
-- **🔧 Zero Boilerplate**: Automatic extension registration and feature setup
-- **� Type Shortcuts**: Use `T.string` instead of `RapiTapir::Types.string` for cleaner code
-- **�📚 GitHub Pages Ready**: Modern documentation deployment with GitHub Actions
-- **🧪 Comprehensive Tests**: 620 tests passing with 68.68% coverage
+- **🤖 AI Integration**: Built-in LLM instruction generation, RAG pipelines, and MCP export
+- **✨ SinatraRapiTapir Base Class**: `class MyAPI < SinatraRapiTapir` - zero-boilerplate API creation
+- **🎯 Enhanced HTTP DSL**: Native GET, POST, PUT, DELETE methods with fluent chaining  
+- **🔧 Zero Configuration**: Automatic extension registration and intelligent defaults
+- **⚡ T Shortcut**: Use `T.string` instead of `RapiTapir::Types.string` everywhere
+- **📚 GitHub Pages Ready**: Modern documentation deployment with GitHub Actions
+- **🔍 CLI Toolkit**: Complete command-line interface for generation, validation, and serving
+- **🧪 Comprehensive Tests**: 643 tests passing with 67.67% coverage
 
 ## ✨ Why RapiTapir?
 
-- **🔒 Type Safety**: Strong typing for inputs and outputs with runtime validation
+- **🔒 Type Safety**: Strong typing with runtime validation and compile-time confidence
 - **📖 Auto Documentation**: OpenAPI 3.0 specs generated automatically from your code
 - **🚀 Framework Agnostic**: Works with Sinatra, Rails, and any Rack-based framework  
 - **🛡️ Production Ready**: Built-in security, observability, and authentication features
 - **💎 Ruby Native**: Designed specifically for Ruby developers who love clean, readable code
 - **🔧 Zero Config**: Get started in minutes with sensible defaults
-- **✨ Clean Syntax**: Elegant base class: `class MyAPI < SinatraRapiTapir`
-- **🎯 Enhanced DSL**: Built-in HTTP verb methods (GET, POST, PUT, etc.)
-- **� Type Shortcuts**: Clean type syntax with `T.string`, `T.integer`, etc.
-- **�🔄 GitHub Pages**: Modern documentation deployment with GitHub Actions
+- **🤖 AI Powered**: Built-in LLM instruction generation, RAG pipelines, and MCP export
+- **⚡ Enhanced DSL**: Clean syntax with `T.string`, HTTP verbs, and resource builders
+- **🔄 CLI Toolkit**: Complete command-line interface for all development tasks
 
 ## 🚀 Quick Start
 
-### Installation
-
-Add to your Gemfile:
+### Minimal Example (30 seconds)
 
 ```ruby
-gem 'rapitapir'
+require 'rapitapir'
+
+class HelloAPI < SinatraRapiTapir
+  # That's it! Zero configuration needed.
+  endpoint(
+    GET('/hello')
+      .query(:name, T.string, description: 'Your name')
+      .ok(T.hash({ "message" => T.string }))
+      .build
+  ) { |inputs| { message: "Hello, #{inputs[:name]}!" } }
+  
+  run! if __FILE__ == $0
+end
 ```
 
-### Basic Sinatra Example
+**Start server**: `ruby hello_api.rb`  
+**Try it**: `curl "http://localhost:4567/hello?name=World"`  
+**Docs**: `http://localhost:4567/docs`
+
+### Complete Example (5 minutes)
 
 ```ruby
-require 'rapitapir' # Only one require needed!
+require 'rapitapir'
 
 class BookAPI < SinatraRapiTapir
   # Configure API information
   rapitapir do
     info(
-      title: 'Book API',
-      description: 'A simple book management API',
-      version: '1.0.0'
+      title: 'Book Management API',
+      description: 'A comprehensive book management system with AI features',
+      version: '2.0.0'
     )
-    development_defaults! # Auto CORS, docs, health checks
+    development_defaults! # Auto CORS, docs, health checks, metrics
   end
 
-  # Define your data schema with T shortcut (globally available!)
+  # Define schemas using T shortcut (available everywhere!)
   BOOK_SCHEMA = T.hash({
     "id" => T.integer,
     "title" => T.string(min_length: 1, max_length: 255),
     "author" => T.string(min_length: 1),
     "published" => T.boolean,
-    "isbn" => T.optional(T.string),
-    "pages" => T.optional(T.integer(minimum: 1))
+    "isbn" => T.optional(T.string(pattern: /^\d{13}$/)),
+    "pages" => T.optional(T.integer(minimum: 1)),
+    "tags" => T.optional(T.array(T.string)),
+    "metadata" => T.optional(T.hash({
+      "genre" => T.string,
+      "rating" => T.float(minimum: 0, maximum: 5)
+    }))
   })
 
-  # Define endpoints with the elegant resource DSL and enhanced HTTP verbs
+  # RESTful resource with full CRUD
   api_resource '/books', schema: BOOK_SCHEMA do
     crud do
-      index { Book.all }
-      
-      show do |inputs|
-        Book.find(inputs[:id]) || halt(404, { error: 'Book not found' }.to_json)
+      index do
+        # Automatic pagination and filtering
+        books = Book.all
+        books = books.where(published: true) if params[:published] == 'true'
+        books.limit(params[:limit] || 50).map(&:to_h)
       end
+      
+      show { |inputs| Book.find(inputs[:id])&.to_h || halt(404) }
       
       create do |inputs|
-        Book.create(inputs[:body])
+        book = Book.create(inputs[:body])
+        status 201
+        book.to_h
       end
+      
+      update { |inputs| Book.update(inputs[:id], inputs[:body]).to_h }
+      destroy { |inputs| Book.delete(inputs[:id]); status 204 }
     end
     
-    # Custom endpoint using enhanced DSL
+    # Custom endpoints with full type safety
     custom :get, 'featured' do
-      Book.where(featured: true)
+      Book.where(featured: true).map(&:to_h)
+    end
+    
+    custom :post, ':id/reviews' do |inputs|
+      book = Book.find(inputs[:id])
+      review = book.add_review(inputs[:body])
+      status 201
+      review.to_h
     end
   end
 
-  # Alternative endpoint definition using enhanced HTTP verb DSL
+  # Advanced search with AI-powered features
   endpoint(
     GET('/books/search')
       .query(:q, T.string(min_length: 1), description: 'Search query')
       .query(:limit, T.optional(T.integer(minimum: 1, maximum: 100)), description: 'Results limit')
-      .summary('Search books')
-      .description('Search books by title or author')
-      .tags('Search')
-      .ok(T.array(BOOK_SCHEMA))
-      .bad_request(T.hash({ "error" => T.string }), description: 'Invalid search parameters')
+      .query(:ai_powered, T.optional(T.boolean), description: 'Use AI-enhanced search')
+      .summary('Search books with optional AI enhancement')
+      .description('Search books by title, author, or content with optional AI semantic search')
+      .tags('Search', 'AI')
+      .ok(T.hash({
+        "books" => T.array(BOOK_SCHEMA),
+        "total" => T.integer,
+        "ai_enhanced" => T.boolean,
+        "suggestions" => T.optional(T.array(T.string))
+      }))
+      .bad_request(T.hash({ "error" => T.string }))
+      .enable_rag # AI-powered retrieval augmented generation
+      .enable_mcp # Export to Model Context Protocol
       .build
   ) do |inputs|
     query = inputs[:q]
     limit = inputs[:limit] || 20
+    ai_powered = inputs[:ai_powered] || false
     
-    books = Book.search(query).limit(limit)
-    books.map(&:to_h)
+    if ai_powered
+      # Use AI-enhanced search
+      results = BookSearchService.ai_search(query, limit: limit)
+      suggestions = BookSearchService.get_suggestions(query)
+    else
+      results = Book.search(query).limit(limit)
+      suggestions = nil
+    end
+    
+    {
+      books: results.map(&:to_h),
+      total: results.count,
+      ai_enhanced: ai_powered,
+      suggestions: suggestions
+    }
   end
 
   run! if __FILE__ == $0
 end
 ```
 
-Start your server and visit:
-- **📖 Interactive Documentation**: `http://localhost:4567/docs`
-- **📋 OpenAPI Specification**: `http://localhost:4567/openapi.json`
+**Start and explore**:
+- **Server**: `ruby book_api.rb`
+- **Interactive Docs**: `http://localhost:4567/docs`
+- **OpenAPI Spec**: `http://localhost:4567/openapi.json`
+- **Health Check**: `http://localhost:4567/health`
+## 🏗️ Advanced Features
 
-That's it! You now have a fully documented, type-safe API with interactive documentation.
+### 🤖 AI-Powered APIs
+
+```ruby
+class AIBookAPI < SinatraRapiTapir
+  rapitapir do
+    info(title: 'AI-Powered Book API', version: '2.0.0')
+    development_defaults!
+  end
+
+  # Configure AI providers
+  configure do
+    set :openai_api_key, ENV['OPENAI_API_KEY']
+    set :rag_backend, :memory # or :elasticsearch, :postgresql
+  end
+
+  # AI-enhanced book recommendations
+  endpoint(
+    GET('/books/recommendations')
+      .query(:user_id, T.integer, description: 'User ID for personalization')
+      .query(:preferences, T.optional(T.string), description: 'User preferences text')
+      .summary('Get AI-powered book recommendations')
+      .description('Uses LLM to generate personalized book recommendations')
+      .tags('AI', 'Recommendations')
+      .ok(T.hash({
+        "recommendations" => T.array(BOOK_SCHEMA),
+        "reasoning" => T.string,
+        "confidence" => T.float(minimum: 0, maximum: 1)
+      }))
+      .enable_llm_instructions(purpose: :completion) # Generate LLM instructions
+      .enable_rag(
+        retrieval_backend: :memory,
+        llm_provider: :openai,
+        context_window: 4000
+      )
+      .enable_mcp # Export for AI agent consumption
+      .build
+  ) do |inputs|
+    user = User.find(inputs[:user_id])
+    preferences = inputs[:preferences] || user.inferred_preferences
+    
+    # RAG pipeline automatically injects relevant context
+    recommendations = AIRecommendationService.generate(
+      user: user,
+      preferences: preferences,
+      context: rag_context # Automatically provided by RAG middleware
+    )
+    
+    {
+      recommendations: recommendations[:books],
+      reasoning: recommendations[:explanation],
+      confidence: recommendations[:confidence_score]
+    }
+  end
+
+  # LLM instruction generation endpoint
+  endpoint(
+    GET('/ai/instructions')
+      .query(:endpoint_id, T.string, description: 'Endpoint ID to generate instructions for')
+      .query(:purpose, T.string(enum: %w[validation transformation analysis documentation testing completion]), 
+             description: 'Instruction purpose')
+      .summary('Generate LLM instructions for endpoints')
+      .ok(T.hash({
+        "instructions" => T.string,
+        "metadata" => T.hash({
+          "endpoint" => T.string,
+          "purpose" => T.string,
+          "generated_at" => T.datetime
+        })
+      }))
+      .build
+  ) do |inputs|
+    generator = RapiTapir::AI::LLMInstruction::Generator.new
+    endpoint = find_endpoint(inputs[:endpoint_id])
+    
+    instructions = generator.generate_instructions(
+      endpoint: endpoint,
+      purpose: inputs[:purpose].to_sym
+    )
+    
+    {
+      instructions: instructions,
+      metadata: {
+        endpoint: endpoint.summary || endpoint.path,
+        purpose: inputs[:purpose],
+        generated_at: Time.now
+      }
+    }
+  end
+
+  # Export Model Context Protocol (MCP) for AI agents
+  endpoint(
+    GET('/mcp/export')
+      .summary('Export API for AI agent consumption')
+      .description('Generates MCP-compatible JSON for AI agents and development tools')
+      .tags('AI', 'MCP', 'Developer Tools')
+      .ok(T.hash({
+        "service" => T.hash({
+          "name" => T.string,
+          "version" => T.string,
+          "description" => T.string
+        }),
+        "endpoints" => T.array(T.hash({
+          "id" => T.string,
+          "method" => T.string,
+          "path" => T.string,
+          "summary" => T.string,
+          "input_schema" => T.hash({}),
+          "output_schema" => T.hash({})
+        })),
+        "generated_at" => T.datetime
+      }))
+      .build
+  ) do
+    exporter = RapiTapir::AI::MCP::Exporter.new(rapitapir_endpoints)
+    JSON.parse(exporter.export_json(pretty: true))
+  end
+
+  run! if __FILE__ == $0
+end
+```
+
+### 🔐 OAuth2 + Auth0 Integration
+
+```ruby
+class SecureAPI < SinatraRapiTapir
+  rapitapir do
+    info(title: 'Secure API with Auth0', version: '2.0.0')
+    
+    # Configure Auth0 OAuth2
+    oauth2_auth0 :auth0,
+      domain: ENV['AUTH0_DOMAIN'],
+      audience: ENV['AUTH0_AUDIENCE'],
+      realm: 'API Access'
+    
+    production_defaults! # Security headers, rate limiting, etc.
+  end
+
+  # Public endpoints
+  endpoint(
+    GET('/public/status')
+      .summary('Public API status')
+      .ok(T.hash({
+        "status" => T.string,
+        "version" => T.string,
+        "authenticated" => T.boolean
+      }))
+      .build
+  ) do
+    {
+      status: 'operational',
+      version: '2.0.0',
+      authenticated: authenticated?
+    }
+  end
+
+  # Protected endpoints with scope requirements
+  endpoint(
+    GET('/users/profile')
+      .summary('Get current user profile')
+      .description('Requires valid Auth0 token with read:profile scope')
+      .bearer_auth(scopes: ['read:profile'])
+      .tags('Users', 'Profile')
+      .ok(T.hash({
+        "user" => T.hash({
+          "id" => T.string,
+          "email" => T.string,
+          "name" => T.string,
+          "roles" => T.array(T.string),
+          "permissions" => T.array(T.string)
+        }),
+        "metadata" => T.hash({
+          "last_login" => T.datetime,
+          "login_count" => T.integer
+        })
+      }))
+      .error_response(401, T.hash({ "error" => T.string }), description: 'Unauthorized')
+      .error_response(403, T.hash({ "error" => T.string }), description: 'Insufficient permissions')
+      .build
+  ) do |inputs|
+    # Current user automatically available from Auth0 context
+    user_info = current_auth_context[:user_info]
+    
+    {
+      user: {
+        id: user_info['sub'],
+        email: user_info['email'],
+        name: user_info['name'],
+        roles: user_info['roles'] || [],
+        permissions: current_auth_context[:permissions] || []
+      },
+      metadata: {
+        last_login: Time.parse(user_info['updated_at']),
+        login_count: user_info['logins_count'] || 0
+      }
+    }
+  end
+
+  # Admin-only endpoints
+  endpoint(
+    DELETE('/admin/users/:user_id')
+      .summary('Delete user (admin only)')
+      .path_param(:user_id, T.string, description: 'User ID to delete')
+      .bearer_auth(scopes: ['delete:users', 'admin'])
+      .tags('Admin', 'Users')
+      .ok(T.hash({ "message" => T.string, "deleted_user_id" => T.string }))
+      .error_response(401, T.hash({ "error" => T.string }))
+      .error_response(403, T.hash({ "error" => T.string }))
+      .error_response(404, T.hash({ "error" => T.string }))
+      .build
+  ) do |inputs|
+    # Verify admin scope
+    require_scope!('admin')
+    
+    user_id = inputs[:user_id]
+    deleted_user = UserService.delete(user_id)
+    
+    halt 404, { error: 'User not found' }.to_json unless deleted_user
+    
+    {
+      message: 'User successfully deleted',
+      deleted_user_id: user_id
+    }
+  end
+
+  # Scope-based middleware protection
+  protect_with_oauth2 scopes: ['api:access'] do
+    # All endpoints in this block require the api:access scope
+    
+    endpoint(
+      GET('/protected/data')
+        .summary('Get protected data')
+        .ok(T.array(T.hash({ "id" => T.integer, "data" => T.string })))
+        .build
+    ) { ProtectedData.all.map(&:to_h) }
+  end
+
+  run! if __FILE__ == $0
+end
+```
+
+### 📊 Production Observability (OpenTelemetry + Honeycomb)
+
+```ruby
+class MonitoredAPI < SinatraRapiTapir
+  rapitapir do
+    info(title: 'Production API with Full Observability', version: '2.0.0')
+    
+    # Configure comprehensive observability
+    enable_observability do |config|
+      # Health checks with custom checks
+      config.health_checks.enable(path: '/health')
+      config.health_checks.add_check('database') { DatabaseHealthCheck.new }
+      config.health_checks.add_check('redis') { RedisHealthCheck.new }
+      config.health_checks.add_check('external_api') { ExternalAPIHealthCheck.new }
+      
+      # OpenTelemetry tracing
+      config.tracing.enable_opentelemetry(
+        service_name: 'book-api',
+        service_version: '2.0.0',
+        environment: ENV['RAILS_ENV'] || 'development',
+        exporters: [:otlp, :honeycomb]
+      )
+      
+      # Prometheus metrics
+      config.metrics.enable_prometheus(
+        namespace: 'book_api',
+        default_labels: {
+          service: 'book-api',
+          version: '2.0.0',
+          environment: ENV['RAILS_ENV'] || 'development'
+        }
+      )
+      
+      # Structured logging
+      config.logging.enable_structured(
+        level: ENV['LOG_LEVEL'] || 'info',
+        format: :json,
+        additional_fields: {
+          service: 'book-api',
+          version: '2.0.0'
+        }
+      )
+    end
+    
+    production_defaults!
+  end
+
+  # Monitored endpoint with custom metrics and tracing
+  endpoint(
+    GET('/books/:id')
+      .path_param(:id, T.integer, description: 'Book ID')
+      .query(:include, T.optional(T.array(T.string)), description: 'Related data to include')
+      .summary('Get book with full observability')
+      .description('Demonstrates comprehensive monitoring, tracing, and metrics')
+      .tags('Books', 'Monitoring')
+      .ok(BOOK_SCHEMA)
+      .error_response(404, T.hash({ "error" => T.string, "book_id" => T.integer }))
+      .error_response(500, T.hash({ "error" => T.string, "trace_id" => T.string }))
+      .with_metrics('book_requests', labels: { operation: 'get_by_id' })
+      .with_tracing('fetch_book', tags: { book_operation: 'get' })
+      .build
+  ) do |inputs|
+    book_id = inputs[:id]
+    includes = inputs[:include] || []
+    
+    # Custom span for database operation
+    OpenTelemetry.tracer.in_span('database.book.find', attributes: { 'book.id' => book_id }) do |span|
+      start_time = Time.now
+      
+      begin
+        book = Book.find(book_id)
+        
+        # Record custom metrics
+        Prometheus.increment('book_lookups_total', labels: { found: 'true' })
+        Prometheus.observe('book_lookup_duration_seconds', Time.now - start_time)
+        
+        # Add trace attributes
+        span.set_attribute('book.title', book.title)
+        span.set_attribute('book.author', book.author)
+        span.set_attribute('includes.count', includes.length)
+        
+        halt 404, { error: 'Book not found', book_id: book_id }.to_json unless book
+        
+        # Handle includes with additional tracing
+        if includes.any?
+          OpenTelemetry.tracer.in_span('book.load_includes') do |include_span|
+            include_span.set_attribute('includes', includes.join(','))
+            book = book.with_includes(includes)
+          end
+        end
+        
+        # Log structured data
+        logger.info('Book retrieved successfully', {
+          book_id: book_id,
+          includes: includes,
+          duration_ms: ((Time.now - start_time) * 1000).round(2),
+          trace_id: span.context.trace_id.unpack1('H*')
+        })
+        
+        book.to_h
+        
+      rescue StandardError => e
+        # Record error metrics
+        Prometheus.increment('book_lookup_errors_total', labels: { error_type: e.class.name })
+        
+        # Add error to span
+        span.record_exception(e)
+        span.status = OpenTelemetry::Trace::Status.error('Book lookup failed')
+        
+        # Log error with context
+        logger.error('Book lookup failed', {
+          book_id: book_id,
+          error: e.message,
+          error_class: e.class.name,
+          trace_id: span.context.trace_id.unpack1('H*')
+        })
+        
+        halt 500, { 
+          error: 'Internal server error', 
+          trace_id: span.context.trace_id.unpack1('H*') 
+        }.to_json
+      end
+    end
+  end
+
+  # Performance monitoring endpoint
+  endpoint(
+    GET('/monitoring/performance')
+      .summary('Get API performance metrics')
+      .description('Returns real-time performance and health metrics')
+      .tags('Monitoring', 'Performance')
+      .bearer_auth(scopes: ['monitoring:read'])
+      .ok(T.hash({
+        "metrics" => T.hash({
+          "request_rate" => T.float,
+          "error_rate" => T.float,
+          "average_response_time" => T.float,
+          "p95_response_time" => T.float
+        }),
+        "health" => T.hash({
+          "overall_status" => T.string,
+          "checks" => T.hash({})
+        }),
+        "trace_sample" => T.optional(T.hash({
+          "trace_id" => T.string,
+          "span_count" => T.integer,
+          "duration_ms" => T.float
+        }))
+      }))
+      .build
+  ) do
+    {
+      metrics: {
+        request_rate: MetricsCollector.request_rate_per_second,
+        error_rate: MetricsCollector.error_rate_percentage,
+        average_response_time: MetricsCollector.average_response_time_ms,
+        p95_response_time: MetricsCollector.p95_response_time_ms
+      },
+      health: {
+        overall_status: HealthChecker.overall_status,
+        checks: HealthChecker.detailed_status
+      },
+      trace_sample: TracingCollector.recent_trace_sample
+    }
+  end
+
+  run! if __FILE__ == $0
+end
+```
+
+### 🛠️ CLI Development Toolkit
+
+RapiTapir includes a comprehensive CLI for all development tasks:
+
+```bash
+# Generate and validate
+rapitapir generate openapi --output api-spec.json
+rapitapir generate client typescript --output client/api.ts
+rapitapir generate docs markdown --output API.md
+rapitapir validate endpoints --file my_api.rb
+
+# AI-powered features
+rapitapir llm generate --endpoint-id "get_books" --purpose validation
+rapitapir llm export --format instructions --output ai-prompts/
+rapitapir mcp export --output mcp-context.json
+
+# Development server
+rapitapir serve --port 3000 --docs-path /documentation
+rapitapir docs --serve --port 8080
+
+# Project scaffolding
+rapitapir new my-api --template sinatra-ai
+rapitapir generate scaffold books --with-auth --with-ai
+```
 
 ## 🏗️ Core Features
 
-### Clean Base Class Syntax
+### ✨ SinatraRapiTapir Base Class
 
-Create APIs with the cleanest possible syntax:
+The cleanest way to create APIs with zero boilerplate:
 
 ```ruby
 require 'rapitapir'
 
 class MyAPI < SinatraRapiTapir
   rapitapir do
-    info(title: 'My API', version: '1.0.0')
-    development_defaults! # Auto CORS, docs, health checks
+    info(title: 'My API', version: '2.0.0')
+    development_defaults! # Auto CORS, docs, health checks, metrics
   end
 
-  # Enhanced HTTP verb DSL automatically available + T shortcut for types
+  # Enhanced HTTP verb DSL + T shortcut automatically available
   endpoint(
-    GET('/books')
-      .summary('List all books')
-      .ok(T.array(BOOK_SCHEMA))
-      .error_response(500, T.hash({ "error" => T.string }))
+    GET('/items')
+      .summary('List all items')
+      .query(:filter, T.optional(T.string), description: 'Filter criteria')
+      .ok(T.array(T.hash({ "id" => T.integer, "name" => T.string })))
       .build
-  ) { Book.all }
+  ) { |inputs| Item.filtered(inputs[:filter]).map(&:to_h) }
 end
 ```
 
-### Type-Safe API Design
+### 🔒 Type-Safe API Design
 
-Define your data schemas once and use them everywhere:
+Define schemas once, use everywhere with runtime validation:
 
 ```ruby
-# T shortcut is automatically available - no setup needed!
+# T shortcut available globally - no imports needed!
 USER_SCHEMA = T.hash({
   "id" => T.integer,
   "name" => T.string(min_length: 1, max_length: 100),
   "email" => T.email,
-  "age" => T.optional(T.integer(min: 0, max: 150)),
-  "profile" => T.optional(T.hash({
-    "bio" => T.string(max_length: 500),
-    "avatar_url" => T.string(format: :url)
-  }))
+  "age" => T.optional(T.integer(minimum: 0, maximum: 150)),
+  "preferences" => T.optional(T.hash({
+    "theme" => T.string(enum: %w[light dark auto]),
+    "notifications" => T.boolean,
+    "languages" => T.array(T.string)
+  })),
+  "metadata" => T.optional(T.hash({})) # Free-form metadata
+})
+
+# Auto-derive schemas from existing data
+INFERRED_SCHEMA = T.from_hash({
+  id: 1,
+  name: "John Doe",
+  active: true,
+  tags: ["admin", "power-user"]
 })
 ```
 
-### Fluent Endpoint Definition
+### 🚀 Enhanced HTTP Verb DSL
 
-Create endpoints with a clean, readable DSL:
+Fluent, chainable endpoint definitions:
 
 ```ruby
-# Using the enhanced HTTP verb DSL with T shortcut
+# All HTTP verbs available with full type safety
 endpoint(
-  GET('/users/:id')
-    .summary('Get user by ID')
-    .path_param(:id, T.integer(minimum: 1))
-    .query(:include, T.optional(T.array(T.string)), description: 'Related data to include')
-    .ok(USER_SCHEMA)
-    .error_response(404, T.hash({ "error" => T.string }), description: 'User not found')
-    .error_response(422, T.hash({ 
+  POST('/users')
+    .summary('Create a new user')
+    .description('Creates a user with validation and returns the created resource')
+    .tags('Users', 'CRUD')
+    .body(USER_SCHEMA, description: 'User data to create')
+    .header('X-Request-ID', T.optional(T.string), description: 'Request tracking ID')
+    .ok(USER_SCHEMA, description: 'Successfully created user')
+    .error_response(400, T.hash({
       "error" => T.string,
-      "details" => T.array(T.hash({
+      "validation_errors" => T.array(T.hash({
         "field" => T.string,
-        "message" => T.string
+        "message" => T.string,
+        "code" => T.string
       }))
-    }))
+    }), description: 'Validation failed')
+    .error_response(409, T.hash({ "error" => T.string }), description: 'User already exists')
     .build
 ) do |inputs|
-  user = User.find(inputs[:id])
-  halt 404, { error: 'User not found' }.to_json unless user
-  
-  # Handle optional includes
-  if inputs[:include]&.include?('profile')
-    user = user.with_profile
+  begin
+    user = UserService.create(inputs[:body])
+    status 201
+    user.to_h
+  rescue ValidationError => e
+    halt 400, { 
+      error: 'Validation failed', 
+      validation_errors: e.details 
+    }.to_json
+  rescue ConflictError => e
+    halt 409, { error: e.message }.to_json
   end
-  
-  user.to_h
 end
 ```
 
-### RESTful Resource Builder
+### 🏭 RESTful Resource Builder
 
-Build complete CRUD APIs with minimal code:
+Complete CRUD APIs with minimal code:
 
 ```ruby
-# Enhanced resource builder with custom validations and relationships
 api_resource '/users', schema: USER_SCHEMA do
-  crud do
-    index do
-      # Automatic pagination and filtering
+  # Configure resource-level settings
+  configure do
+    pagination default_limit: 25, max_limit: 100
+    filtering allow: [:name, :email, :active]
+    sorting allow: [:name, :created_at, :updated_at]
+  end
+
+  crud except: [:destroy] do # Exclude dangerous operations
+    index do |inputs|
       users = User.all
-      users = users.where(active: true) if params[:active] == 'true'
-      users.limit(params[:limit] || 50)
+      users = users.where(active: true) if inputs[:filter_active]
+      users = users.search(inputs[:search]) if inputs[:search]
+      
+      paginated_response(
+        data: users.map(&:to_h),
+        page: inputs[:page] || 1,
+        per_page: inputs[:per_page] || 25,
+        total: users.count
+      )
     end
     
-    show { |inputs| User.find(inputs[:id]) }
+    show { |inputs| User.find(inputs[:id])&.to_h || halt(404) }
     
     create do |inputs|
-      user = User.create(inputs[:body])
+      user = User.create!(inputs[:body])
       status 201
+      location "/users/#{user.id}"
       user.to_h
     end
     
-    update { |inputs| User.update(inputs[:id], inputs[:body]) }
-    destroy { |inputs| User.delete(inputs[:id]); status 204 }
+    update do |inputs|
+      user = User.find(inputs[:id]) || halt(404)
+      user.update!(inputs[:body])
+      user.to_h
+    end
   end
   
-  # Add custom endpoints with full type safety
-  custom :get, 'active' do
-    User.where(active: true).map(&:to_h)
-  end
-  
+  # Custom endpoints with full inheritance of resource configuration
   custom :post, ':id/avatar' do |inputs|
-    user = User.find(inputs[:id])
-    user.update_avatar(inputs[:body][:avatar_data])
-    { success: true }
+    user = User.find(inputs[:id]) || halt(404)
+    avatar = user.update_avatar(inputs[:body][:avatar_data])
+    { avatar_url: avatar.url, updated_at: avatar.updated_at }
+  end
+  
+  custom :get, 'search/advanced' do |inputs|
+    # Advanced search with multiple criteria
+    results = UserSearchService.advanced_search(inputs)
+    { users: results.map(&:to_h), search_metadata: results.metadata }
   end
 end
 ```
 
-### Automatic OpenAPI Documentation
+### 📖 Automatic Documentation
 
-Your API documentation is always up-to-date because it's generated from your actual code:
+Your API documentation is always up-to-date:
 
-- **Interactive Swagger UI** with try-it-out functionality
-- **Complete OpenAPI 3.0 specification** with schemas, examples, and security
-- **TypeScript client generation** for frontend teams
-- **Markdown documentation** for wikis and READMEs
+- **Interactive Swagger UI**: Try endpoints directly from the browser
+- **Complete OpenAPI 3.0**: Full specification with schemas, examples, security
+- **TypeScript clients**: Auto-generated for frontend teams
+- **Markdown docs**: Perfect for wikis and README files
+- **CLI generation**: `rapitapir generate docs --format html`
 
 ## 🔧 Framework Integration
 
 ### Sinatra (Recommended)
 
-**Option 1: Clean Base Class (Recommended)**
+**Option 1: SinatraRapiTapir Base Class**
 ```ruby
 require 'rapitapir'
 
 class MyAPI < SinatraRapiTapir
   rapitapir do
-    info(title: 'My API', version: '1.0.0')
+    info(title: 'My API', version: '2.0.0')
     development_defaults!
   end
-  # Enhanced HTTP verb DSL automatically available
+  # Enhanced HTTP verb DSL + T shortcut automatically available
 end
 ```
 
-**Option 2: Manual Extension Registration**
+**Option 2: Manual Extension**
 ```ruby
 require 'rapitapir/sinatra/extension'
 
 class MyAPI < Sinatra::Base
   register RapiTapir::Sinatra::Extension
-  # Use the full DSL...
+  # Use full DSL manually...
+end
+```
+
+### Rails Integration
+
+```ruby
+# app/controllers/api/base_controller.rb
+class Api::BaseController < ApplicationController
+  include RapiTapir::Server::Rails::ControllerBase
+  
+  rapitapir do
+    info(title: 'Rails API', version: '1.0.0')
+    bearer_auth :jwt
+  end
+end
+
+# app/controllers/api/users_controller.rb
+class Api::UsersController < Api::BaseController
+  endpoint(
+    GET('/users')
+      .summary('List users')
+      .ok(T.array(USER_SCHEMA))
+      .build
+  ) { User.all.map(&:to_h) }
 end
 ```
 
@@ -274,204 +828,653 @@ end
 require 'rapitapir/server/rack_adapter'
 
 class MyRackApp
-  def call(env)
-    # Manual integration with Rack
+  include RapiTapir::Server::RackAdapter
+  
+  def initialize
+    register_endpoints
+  end
+  
+  private
+  
+  def register_endpoints
+    endpoint(GET('/status').ok(T.hash({ "status" => T.string })).build) do
+      { status: 'ok' }
+    end
   end
 end
-```
-
-### Rails Support
-
-```ruby
-# In your Rails controller
-include RapiTapir::Rails::Controller
 ```
 
 ## 🛡️ Production Features
 
-### Authentication & Authorization
+### 🔐 Authentication & Authorization
 
 ```ruby
-# Bearer token authentication with enhanced syntax
 class SecureAPI < SinatraRapiTapir
   rapitapir do
-    info(title: 'Secure API', version: '1.0.0')
+    info(title: 'Secure API', version: '2.0.0')
+    
+    # Multiple auth schemes supported
     bearer_auth :api_key, realm: 'API'
-    production_defaults!
+    oauth2_auth0 :auth0, domain: ENV['AUTH0_DOMAIN'], audience: ENV['AUTH0_AUDIENCE']
+    basic_auth :admin, realm: 'Admin Panel'
+    
+    production_defaults! # Security headers, rate limiting, HTTPS enforcement
   end
 
-  # Protected endpoint with scope-based authorization
+  # Scope-based protection
+  protect_with_oauth2 scopes: ['api:read'] do
+    endpoint(GET('/protected/data').ok(T.array(T.hash({}))).build) { ProtectedData.all }
+  end
+  
+  # Fine-grained permissions
   endpoint(
-    GET('/admin/users')
-      .summary('List all users (admin only)')
-      .bearer_auth(scopes: ['admin'])
-      .query(:page, T.optional(T.integer(minimum: 1)), description: 'Page number')
-      .query(:per_page, T.optional(T.integer(minimum: 1, maximum: 100)), description: 'Items per page')
-      .ok(T.hash({
-        "users" => T.array(USER_SCHEMA),
-        "pagination" => T.hash({
-          "page" => T.integer,
-          "per_page" => T.integer,
-          "total" => T.integer,
-          "pages" => T.integer
-        })
-      }))
-      .error_response(401, T.hash({ "error" => T.string }), description: 'Unauthorized')
-      .error_response(403, T.hash({ "error" => T.string }), description: 'Insufficient permissions')
+    DELETE('/admin/users/:id')
+      .path_param(:id, T.integer)
+      .bearer_auth(scopes: ['admin', 'users:delete'])
+      .ok(T.hash({ "message" => T.string }))
       .build
   ) do |inputs|
-    require_scope!('admin')
-    
-    page = inputs[:page] || 1
-    per_page = inputs[:per_page] || 20
-    
-    users = User.paginate(page: page, per_page: per_page)
-    
-    {
-      users: users.map(&:to_h),
-      pagination: {
-        page: page,
-        per_page: per_page,
-        total: users.total_count,
-        pages: users.total_pages
-      }
-    }
+    require_scope!('admin') # Additional runtime check
+    UserService.delete(inputs[:id])
+    { message: 'User deleted successfully' }
   end
 end
 ```
 
-### Observability
+### 📊 Observability & Monitoring
 
 ```ruby
 class MonitoredAPI < SinatraRapiTapir
   rapitapir do
-    info(title: 'Monitored API', version: '1.0.0')
-    enable_health_checks path: '/health'
-    enable_metrics
-    production_defaults!
+    info(title: 'Production API', version: '2.0.0')
+    
+    enable_observability do |config|
+      # Health checks with custom probes
+      config.health_checks.enable(path: '/health')
+      config.health_checks.add_check('database') { Database.healthy? }
+      config.health_checks.add_check('redis') { Redis.current.ping == 'PONG' }
+      
+      # OpenTelemetry integration
+      config.tracing.enable_opentelemetry(
+        service_name: 'my-api',
+        exporters: [:honeycomb, :jaeger],
+        sample_rate: 0.1
+      )
+      
+      # Prometheus metrics
+      config.metrics.enable_prometheus(
+        namespace: 'my_api',
+        path: '/metrics'
+      )
+      
+      # Structured logging
+      config.logging.enable_structured(format: :json)
+    end
   end
 
-  # Endpoint with metrics and tracing
+  # Endpoints with observability
   endpoint(
-    GET('/api/data')
-      .summary('Get data with monitoring')
-      .with_metrics('api_data_requests')
-      .with_tracing('fetch_api_data')
-      .query(:filter, T.optional(T.string), description: 'Data filter')
-      .ok(T.hash({
-        "data" => T.array(T.hash({
-          "id" => T.integer,
-          "value" => T.string,
-          "timestamp" => T.datetime
-        })),
-        "metadata" => T.hash({
-          "total" => T.integer,
-          "filtered" => T.boolean
-        })
-      }))
+    GET('/monitored-endpoint')
+      .with_metrics('endpoint_requests', labels: { operation: 'get' })
+      .with_tracing('fetch_data')
+      .ok(T.hash({}))
       .build
-  ) do |inputs|
-    # Your endpoint code with automatic metrics collection
-    data = DataService.fetch(filter: inputs[:filter])
-    
-    {
-      data: data.map(&:to_h),
-      metadata: {
-        total: data.count,
-        filtered: inputs[:filter].present?
-      }
-    }
+  ) do
+    # Custom spans and metrics automatically collected
+    { data: 'response' }
   end
 end
 ```
 
-### Security Middleware
+### 🔒 Security Middleware
+
+Built-in security features for production deployments:
 
 ```ruby
-# Built-in security features
-use RapiTapir::Server::Middleware::CORS
-use RapiTapir::Server::Middleware::RateLimit, requests_per_minute: 100
+# Automatic security middleware
 use RapiTapir::Server::Middleware::SecurityHeaders
+use RapiTapir::Server::Middleware::RateLimit, requests_per_minute: 100
+use RapiTapir::Server::Middleware::CORS, origins: ['https://myapp.com']
+use RapiTapir::Server::Middleware::RequestValidation
 ```
 
-## 🎨 Examples
+## 🤖 AI Integration Features
 
-Explore our comprehensive examples:
+### LLM Instruction Generation
 
-- **[Hello World](examples/hello_world.rb)** - Minimal API with SinatraRapiTapir base class  
-- **[Getting Started](examples/getting_started_extension.rb)** - Complete bookstore API with CRUD operations
-- **[Enterprise API](examples/enterprise_rapitapir_api.rb)** - Production-ready example with auth
-- **[Authentication](examples/authentication_example.rb)** - Bearer token and scope-based auth
-- **[Observability](examples/observability/)** - Health checks, metrics, and tracing
+Generate context-aware instructions for any endpoint:
+
+```ruby
+# Generate instructions for different AI purposes
+generator = RapiTapir::AI::LLMInstruction::Generator.new
+
+# Validation instructions
+validation_prompt = generator.generate_instructions(
+  endpoint: my_endpoint,
+  purpose: :validation
+)
+
+# Documentation instructions  
+docs_prompt = generator.generate_instructions(
+  endpoint: my_endpoint,
+  purpose: :documentation
+)
+
+# Test generation instructions
+test_prompt = generator.generate_instructions(
+  endpoint: my_endpoint, 
+  purpose: :testing
+)
+```
+
+### RAG (Retrieval-Augmented Generation)
+
+Enable semantic search and context-aware responses:
+
+```ruby
+endpoint(
+  GET('/books/semantic-search')
+    .query(:query, T.string)
+    .enable_rag(
+      retrieval_backend: :memory, # or :elasticsearch, :postgresql
+      llm_provider: :openai,
+      context_window: 4000
+    )
+    .ok(T.hash({
+      "results" => T.array(BOOK_SCHEMA),
+      "context" => T.string,
+      "confidence" => T.float
+    }))
+    .build
+) do |inputs|
+  # RAG context automatically injected
+  rag_enhanced_search(inputs[:query], context: rag_context)
+end
+```
+
+### Model Context Protocol (MCP)
+
+Export your API for AI agent consumption:
+
+```ruby
+# Export MCP-compatible JSON
+exporter = RapiTapir::AI::MCP::Exporter.new(rapitapir_endpoints)
+mcp_json = exporter.export_json(pretty: true)
+
+# CLI export
+# rapitapir mcp export --output api-context.json
+```
+
+## 🎨 Complete Examples
+
+### 📚 Library Management System
+
+A comprehensive example showcasing all features:
+
+```ruby
+require 'rapitapir'
+
+class LibraryAPI < SinatraRapiTapir
+  rapitapir do
+    info(
+      title: 'Library Management System',
+      description: 'Complete library API with AI, auth, and observability',
+      version: '2.0.0',
+      contact: { name: 'API Team', email: 'api@library.com' }
+    )
+    
+    # Auth configuration
+    oauth2_auth0 :auth0,
+      domain: ENV['AUTH0_DOMAIN'],
+      audience: ENV['AUTH0_AUDIENCE']
+    
+    # Observability
+    enable_observability do |config|
+      config.health_checks.enable
+      config.tracing.enable_opentelemetry(service_name: 'library-api')
+      config.metrics.enable_prometheus
+    end
+    
+    production_defaults!
+  end
+
+  # Schemas
+  BOOK_SCHEMA = T.hash({
+    "id" => T.integer,
+    "isbn" => T.string(pattern: /^\d{13}$/),
+    "title" => T.string(min_length: 1, max_length: 500),
+    "authors" => T.array(T.string),
+    "published_date" => T.date,
+    "genres" => T.array(T.string),
+    "available_copies" => T.integer(minimum: 0),
+    "total_copies" => T.integer(minimum: 1),
+    "metadata" => T.optional(T.hash({}))
+  })
+
+  MEMBER_SCHEMA = T.hash({
+    "id" => T.integer,
+    "email" => T.email,
+    "name" => T.string(min_length: 1),
+    "member_since" => T.date,
+    "active" => T.boolean,
+    "borrowed_books" => T.array(T.integer)
+  })
+
+  # Public endpoints
+  endpoint(
+    GET('/books/search')
+      .query(:q, T.string(min_length: 1), description: 'Search query')
+      .query(:ai_enhanced, T.optional(T.boolean), description: 'Use AI semantic search')
+      .summary('Search books with optional AI enhancement')
+      .tags('Books', 'Search')
+      .ok(T.hash({
+        "books" => T.array(BOOK_SCHEMA),
+        "total" => T.integer,
+        "ai_enhanced" => T.boolean
+      }))
+      .enable_rag
+      .enable_mcp
+      .build
+  ) do |inputs|
+    if inputs[:ai_enhanced]
+      results = AIBookSearch.semantic_search(inputs[:q], context: rag_context)
+    else
+      results = Book.search(inputs[:q])
+    end
+    
+    {
+      books: results.map(&:to_h),
+      total: results.count,
+      ai_enhanced: !!inputs[:ai_enhanced]
+    }
+  end
+
+  # Protected member endpoints
+  protect_with_oauth2 scopes: ['library:read'] do
+    api_resource '/books', schema: BOOK_SCHEMA do
+      crud only: [:index, :show] do
+        index { Book.available.map(&:to_h) }
+        show { |inputs| Book.find(inputs[:id])&.to_h || halt(404) }
+      end
+      
+      custom :post, ':id/reserve' do |inputs|
+        book = Book.find(inputs[:id]) || halt(404)
+        member = current_member
+        
+        reservation = ReservationService.create(book: book, member: member)
+        { reservation_id: reservation.id, expires_at: reservation.expires_at }
+      end
+    end
+
+    endpoint(
+      GET('/members/me/profile')
+        .summary('Get current member profile')
+        .bearer_auth(scopes: ['profile:read'])
+        .ok(MEMBER_SCHEMA)
+        .build
+    ) { current_member.to_h }
+  end
+
+  # Admin endpoints
+  protect_with_oauth2 scopes: ['library:admin'] do
+    api_resource '/admin/books', schema: BOOK_SCHEMA do
+      crud do
+        index { Book.all.map(&:to_h) }
+        show { |inputs| Book.find(inputs[:id])&.to_h || halt(404) }
+        create { |inputs| Book.create!(inputs[:body]).to_h }
+        update { |inputs| Book.update!(inputs[:id], inputs[:body]).to_h }
+        destroy { |inputs| Book.destroy(inputs[:id]); status 204 }
+      end
+    end
+    
+    # AI-powered book recommendations
+    endpoint(
+      POST('/admin/ai/recommend-acquisitions')
+        .body(T.hash({
+          "budget" => T.float(minimum: 0),
+          "categories" => T.optional(T.array(T.string)),
+          "member_preferences" => T.optional(T.boolean)
+        }))
+        .summary('Get AI-powered book acquisition recommendations')
+        .tags('Admin', 'AI', 'Recommendations')
+        .ok(T.hash({
+          "recommendations" => T.array(T.hash({
+            "title" => T.string,
+            "author" => T.string,
+            "estimated_cost" => T.float,
+            "demand_score" => T.float,
+            "reasoning" => T.string
+          })),
+          "total_estimated_cost" => T.float,
+          "confidence" => T.float
+        }))
+        .enable_llm_instructions(purpose: :completion)
+        .build
+    ) do |inputs|
+      recommendations = AIAcquisitionService.recommend(
+        budget: inputs[:budget],
+        categories: inputs[:categories],
+        consider_member_preferences: inputs[:member_preferences],
+        context: library_context
+      )
+      
+      {
+        recommendations: recommendations[:items],
+        total_estimated_cost: recommendations[:total_cost],
+        confidence: recommendations[:confidence_score]
+      }
+    end
+  end
+
+  run! if __FILE__ == $0
+end
+```
+
+### 🏥 Healthcare API Example
+
+```ruby
+class HealthcareAPI < SinatraRapiTapir
+  rapitapir do
+    info(
+      title: 'Healthcare Management API',
+      description: 'HIPAA-compliant healthcare API with AI diagnostics',
+      version: '2.0.0'
+    )
+    
+    # Strict security for healthcare
+    bearer_auth :jwt, realm: 'Healthcare'
+    
+    enable_observability do |config|
+      config.health_checks.enable
+      config.tracing.enable_opentelemetry(
+        service_name: 'healthcare-api',
+        compliance_mode: :hipaa
+      )
+      config.logging.enable_structured(
+        format: :json,
+        exclude_fields: [:ssn, :medical_record_number] # PII protection
+      )
+    end
+    
+    production_defaults!
+  end
+
+  PATIENT_SCHEMA = T.hash({
+    "id" => T.string, # UUID for privacy
+    "name" => T.hash({
+      "first" => T.string,
+      "last" => T.string
+    }),
+    "date_of_birth" => T.date,
+    "medical_record_number" => T.string,
+    "insurance" => T.optional(T.hash({}))
+  })
+
+  # AI-powered diagnostic assistance
+  endpoint(
+    POST('/diagnostics/analyze')
+      .body(T.hash({
+        "patient_id" => T.string,
+        "symptoms" => T.array(T.string),
+        "vital_signs" => T.hash({
+          "temperature" => T.optional(T.float),
+          "blood_pressure" => T.optional(T.string),
+          "heart_rate" => T.optional(T.integer)
+        }),
+        "medical_history" => T.optional(T.array(T.string))
+      }))
+      .summary('AI-assisted diagnostic analysis')
+      .bearer_auth(scopes: ['diagnostics:read', 'ai:analyze'])
+      .tags('Diagnostics', 'AI')
+      .ok(T.hash({
+        "analysis" => T.hash({
+          "suggested_conditions" => T.array(T.hash({
+            "condition" => T.string,
+            "confidence" => T.float,
+            "reasoning" => T.string
+          })),
+          "recommended_tests" => T.array(T.string),
+          "urgency_level" => T.string(enum: %w[low medium high critical])
+        }),
+        "disclaimer" => T.string,
+        "generated_at" => T.datetime
+      }))
+      .enable_llm_instructions(purpose: :analysis)
+      .build
+  ) do |inputs|
+    # Verify provider permissions
+    require_scope!('diagnostics:read')
+    
+    # AI diagnostic analysis with medical context
+    analysis = MedicalAI.analyze_symptoms(
+      patient_id: inputs[:patient_id],
+      symptoms: inputs[:symptoms],
+      vital_signs: inputs[:vital_signs],
+      medical_history: inputs[:medical_history],
+      provider_context: current_provider_context
+    )
+    
+    {
+      analysis: analysis,
+      disclaimer: "This analysis is for informational purposes only and should not replace professional medical judgment.",
+      generated_at: Time.now
+    }
+  end
+
+  run! if __FILE__ == $0
+end
+```
 
 ## 📚 Documentation
 
-- **[API Reference](docs/endpoint-definition.md)** - Complete endpoint definition guide
-- **[SinatraRapiTapir Base Class](docs/sinatra_rapitapir.md)** - Clean inheritance syntax guide
-- **[Sinatra Extension](docs/SINATRA_EXTENSION.md)** - Detailed Sinatra integration
-- **[Type System](docs/types.md)** - All available types and validations (use `T.` shortcut!)
-- **[Authentication](docs/authentication.md)** - Security and auth patterns
-- **[Observability](docs/observability.md)** - Monitoring and health checks
-- **[GitHub Pages Setup](docs/github_pages_setup.md)** - Documentation deployment guide
+### Core Guides
 
-## 🧪 Testing
+- **[Getting Started Guide](examples/working_simple_example.rb)** - Your first RapiTapir API in 5 minutes
+- **[SinatraRapiTapir Base Class](docs/sinatra_rapitapir.md)** - Zero-boilerplate API creation
+- **[Enhanced HTTP DSL](docs/endpoint-definition.md)** - Complete endpoint definition guide
+- **[Type System & T Shortcut](docs/type_shortcuts.md)** - All available types and validations
+- **[Resource Builder](docs/RAILS_INTEGRATION_IMPLEMENTATION.md)** - RESTful CRUD with minimal code
 
-RapiTapir includes comprehensive testing utilities:
+### Advanced Features
 
-```ruby
-# Validate your endpoint definitions
-RapiTapir::CLI::Validator.new(endpoints).validate
+- **[AI Integration](docs/auto-derivation.md)** - LLM instructions, RAG pipelines, MCP export
+- **[Authentication & Security](examples/authentication_example.rb)** - OAuth2, JWT, scopes, and Auth0
+- **[Observability](docs/observability.md)** - OpenTelemetry, health checks, metrics
+- **[CLI Toolkit](docs/blueprint.md)** - Complete command-line development workflow
 
-# Generate test fixtures
-RapiTapir::Testing.generate_fixtures(USER_SCHEMA)
+### Framework Integration
+
+- **[Sinatra Extension](docs/SINATRA_EXTENSION.md)** - Detailed Sinatra integration guide
+- **[Rails Integration](docs/RAILS_INTEGRATION_IMPLEMENTATION.md)** - Controller-based Rails APIs
+- **[Rack Applications](docs/implementation-status.md)** - Direct Rack integration
+
+### Examples & Templates
+
+Explore our comprehensive examples directory:
+
+- **[Hello World](examples/hello_world.rb)** - 30-second minimal example
+- **[Enterprise API](examples/enterprise_rapitapir_api.rb)** - Production-ready with all features
+- **[OAuth2 + Auth0](examples/oauth2/)** - Complete authentication examples
+- **[AI-Powered APIs](examples/auto_derivation_ruby_friendly.rb)** - LLM and RAG integration
+- **[Observability Setup](examples/observability/)** - Monitoring and health checks
+- **[CLI Examples](examples/cli/)** - Command-line toolkit usage
+
+## 🛠️ CLI Development Toolkit
+
+RapiTapir includes a powerful CLI for streamlined development:
+
+### Code Generation
+```bash
+# Generate OpenAPI specifications
+rapitapir generate openapi --output api-spec.json --format json
+rapitapir generate openapi --output api-spec.yaml --format yaml
+
+# Generate TypeScript clients  
+rapitapir generate client typescript --output client/api.ts
+rapitapir generate client python --output client/api.py
+
+# Generate documentation
+rapitapir generate docs html --output docs/api.html
+rapitapir generate docs markdown --output API.md
 ```
 
-Run the test suite:
+### AI-Powered Features
+```bash
+# Generate LLM instructions for specific endpoints
+rapitapir llm generate --endpoint-id "get_users" --purpose validation
+rapitapir llm generate --endpoint-id "create_book" --purpose testing
+
+# Export LLM instructions for all endpoints
+rapitapir llm export --format instructions --output ai-prompts/
+
+# Test LLM instruction generation
+rapitapir llm test --endpoint-file my_api.rb
+
+# Export Model Context Protocol for AI agents
+rapitapir mcp export --output mcp-context.json --format compact
+```
+
+### Development & Validation
+```bash
+# Validate endpoint definitions
+rapitapir validate endpoints --file my_api.rb
+rapitapir validate openapi --file api-spec.json
+
+# Serve documentation and specs
+rapitapir serve --port 3000 --docs-path /documentation
+rapitapir docs --serve --port 8080 --watch
+
+# Project scaffolding (coming soon)
+rapitapir new my-api --template sinatra-ai
+rapitapir generate scaffold books --with-auth --with-observability
+```
+
+### Installation & Setup
 
 ```bash
+# Install the gem
+gem install rapitapir
+
+# Or add to Gemfile
+echo 'gem "rapitapir"' >> Gemfile
+bundle install
+
+# Verify installation
+rapitapir --version
+rapitapir --help
+```
+
+## 🧪 Testing & Quality
+
+RapiTapir includes comprehensive testing utilities and maintains high code quality:
+
+### Test Your APIs
+```ruby
+# Validate endpoint definitions
+RapiTapir::CLI::Validator.new(endpoints).validate
+
+# Generate test fixtures from schemas
+test_user = RapiTapir::Testing.generate_fixture(USER_SCHEMA)
+test_data = RapiTapir::Testing.generate_fixtures(BOOK_SCHEMA, count: 10)
+
+# Test endpoint types and validation
+endpoint.validate!({ name: "test", age: 25 }) # Returns validated data
+```
+
+### Quality Metrics
+- **643 tests passing** with comprehensive coverage
+- **67.67% line coverage** across the entire codebase  
+- **RuboCop compliance** with zero style violations
+- **Zero security vulnerabilities** in dependencies
+- **Continuous integration** with GitHub Actions
+
+### Run Tests Locally
+```bash
+# Clone the repository
+git clone https://github.com/riccardomerolla/rapitapir.git
+cd rapitapir
+
+# Install dependencies
+bundle install
+
+# Run the test suite
 bundle exec rspec
+
+# Check code style
+rubocop
+
+# View coverage report
+open coverage/index.html
 ```
 
 ## 🤝 Contributing
 
-We love contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We love contributions! RapiTapir thrives on community input and collaboration.
 
-### Development Setup
-
+### Quick Start Contributing
 ```bash
 git clone https://github.com/riccardomerolla/rapitapir.git
-cd ruby-tapir
+cd rapitapir
 bundle install
-bundle exec rspec
+bundle exec rspec # Ensure all tests pass
 ```
 
-### Roadmap
+### Ways to Contribute
+- **🐛 Bug Reports**: [Open an issue](https://github.com/riccardomerolla/rapitapir/issues/new)
+- **💡 Feature Requests**: [Start a discussion](https://github.com/riccardomerolla/rapitapir/discussions)
+- **📖 Documentation**: Improve guides, examples, and API docs
+- **🧪 Tests**: Add test coverage for edge cases
+- **🎨 Examples**: Create real-world API examples
+- **🔌 Integrations**: Build plugins for other frameworks
 
-- **Phase 4**: Advanced client generation (Python, Go, etc.)
-- **Phase 5**: GraphQL integration
-- **Phase 6**: gRPC support
-- **Community**: Plugin ecosystem
+### Development Roadmap
 
-## � License
+**Current Focus (v2.1)**:
+- Enhanced AI features and LLM provider support
+- Advanced authentication patterns
+- Performance optimizations and caching
+- Extended CLI functionality
 
-RapiTapir is released under the [MIT License](LICENSE).
+**Upcoming (v3.0)**:
+- GraphQL integration alongside REST
+- gRPC support for high-performance APIs  
+- Advanced plugin ecosystem
+- Multi-language client generation
 
-## 🙋‍♂️ Support
+See our [Contributing Guide](CONTRIBUTING.md) for detailed guidelines.
 
+## 🙋‍♂️ Support & Community
+
+### Get Help
 - **🐛 Bug Reports**: [GitHub Issues](https://github.com/riccardomerolla/rapitapir/issues)
-- **💡 Feature Requests**: [GitHub Discussions](https://github.com/riccardomerolla/rapitapir/discussions)
-- **📧 Email**: riccardo.merolla@gmail.com
+- **� Questions & Discussions**: [GitHub Discussions](https://github.com/riccardomerolla/rapitapir/discussions)
+- **📧 Direct Contact**: riccardo.merolla@gmail.com
+- **📖 Documentation**: Comprehensive guides in the [docs/](docs/) directory
+
+### Community
+- **⭐ Star the Project**: Show your support on [GitHub](https://github.com/riccardomerolla/rapitapir)
+- **🔗 Share**: Help others discover RapiTapir
+- **🤝 Contribute**: Join the growing community of contributors
 
 ---
 
-**Built with ❤️ for the Ruby and Sinatra community**
+## 📜 License
 
+RapiTapir is released under the [MIT License](LICENSE). Use it freely in personal and commercial projects.
 
 ## 🙏 Acknowledgments
 
-Inspired by:
-- [Scala Tapir](https://github.com/softwaremill/tapir) - Type-safe endpoints
+RapiTapir is inspired by excellent projects in the API development space:
+
+- **[Scala Tapir](https://github.com/softwaremill/tapir)** - Type-safe endpoint definitions that inspired our DSL
+- **[FastAPI](https://fastapi.tiangolo.com/)** - Automatic documentation and validation patterns
+- **[Ruby on Rails](https://rubyonrails.org/)** - Convention over configuration philosophy
+- **[Sinatra](http://sinatrarb.com/)** - Minimalist web framework elegance
+
+Special thanks to the Ruby and Sinatra communities for their ongoing support and feedback.
 
 ---
 
-**RapiTapir** - APIs so fast and clean, they practically run wild! 🦙⚡
+**RapiTapir 🦙** - *APIs so fast, clean, and intelligent, they practically run wild!* ⚡�
+
+**Built with ❤️ for the Ruby community**

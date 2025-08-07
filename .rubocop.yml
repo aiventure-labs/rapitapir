@@ -1,6 +1,12 @@
 # RuboCop configuration for RapiTapir
+inherit_from: .rubocop_todo.yml
+
+inherit_mode:
+  merge:
+    - Exclude
+
 AllCops:
-  TargetRubyVersion: 3.0
+  TargetRubyVersion: 3.1
   NewCops: enable
   SuggestExtensions: false
   Exclude:
@@ -35,12 +41,6 @@ Style/Documentation:
 
 # Class variables are acceptable in specs for testing
 Style/ClassVars:
-  Exclude:
-    - 'spec/**/*'
-
-# Line length is reasonable for API definitions
-Layout/LineLength:
-  Max: 120
   Exclude:
     - 'spec/**/*'
 

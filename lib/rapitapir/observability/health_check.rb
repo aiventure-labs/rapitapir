@@ -73,8 +73,8 @@ module RapiTapir
           register_default_checks
         end
 
-        def register(name, description = nil, &block)
-          @checks << Check.new(name, description, &block)
+        def register(name, description = nil, &)
+          @checks << Check.new(name, description, &)
         end
 
         def run_all
@@ -210,9 +210,9 @@ module RapiTapir
           @endpoint_path = endpoint
         end
 
-        def register(name, description = nil, &block)
+        def register(name, description = nil, &)
           @registry ||= Registry.new
-          @registry.register(name, description, &block)
+          @registry.register(name, description, &)
         end
 
         def endpoint

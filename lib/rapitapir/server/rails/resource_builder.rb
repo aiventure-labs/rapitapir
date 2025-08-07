@@ -128,15 +128,13 @@ module RapiTapir
         # @param handler [Proc] Request handler
         def custom(method, path_suffix, **options, &handler)
           full_path = path_suffix.start_with?('/') ? path_suffix : "#{@base_path}/#{path_suffix}"
-          
+
           endpoint_def = @controller_class.public_send(method.to_s.upcase, full_path)
                                           .summary(options[:summary] || "Custom #{method.upcase} #{path_suffix}")
                                           .description(options[:description] || "Custom endpoint for #{resource_name}")
 
           # Apply any custom configuration
-          if options[:configure]
-            endpoint_def = options[:configure].call(endpoint_def)
-          end
+          endpoint_def = options[:configure].call(endpoint_def) if options[:configure]
 
           endpoint_def = endpoint_def.build
 
@@ -165,17 +163,17 @@ module RapiTapir
         # @return [RapiTapir::Types::Hash] Error schema
         def error_schema
           RapiTapir::Types.hash({
-            'error' => RapiTapir::Types.string
-          })
+                                  'error' => RapiTapir::Types.string
+                                })
         end
 
         # Validation error schema for 400 responses
         # @return [RapiTapir::Types::Hash] Validation error schema
         def validation_error_schema
           RapiTapir::Types.hash({
-            'error' => RapiTapir::Types.string,
-            'details' => RapiTapir::Types.optional(RapiTapir::Types.array(RapiTapir::Types.string))
-          })
+                                  'error' => RapiTapir::Types.string,
+                                  'details' => RapiTapir::Types.optional(RapiTapir::Types.array(RapiTapir::Types.string))
+                                })
         end
       end
     end

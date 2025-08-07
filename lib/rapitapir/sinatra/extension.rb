@@ -29,9 +29,9 @@ module RapiTapir
       # Class methods added to the Sinatra application
       module ClassMethods
         # Configure RapiTapir integration
-        def rapitapir(&block)
+        def rapitapir(&)
           config = settings.rapitapir_config
-          config.instance_eval(&block) if block_given?
+          config.instance_eval(&) if block_given?
           setup_rapitapir_integration
         end
 

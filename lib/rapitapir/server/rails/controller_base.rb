@@ -10,7 +10,7 @@ module RapiTapir
   module Server
     module Rails
       # Enhanced Rails controller base class providing Sinatra-like experience
-      # 
+      #
       # This class bridges the gap between Sinatra's elegant DSL and Rails conventions,
       # offering the same clean syntax that Sinatra developers enjoy.
       #
@@ -51,9 +51,9 @@ module RapiTapir
           #     info(title: 'My API', version: '1.0.0')
           #     development_defaults!
           #   end
-          def rapitapir(&block)
+          def rapitapir(&)
             @rapitapir_config = Configuration.new
-            @rapitapir_config.instance_eval(&block) if block_given?
+            @rapitapir_config.instance_eval(&) if block_given?
             setup_default_features
           end
 
@@ -72,12 +72,12 @@ module RapiTapir
           #   ) do |inputs|
           #     User.find(inputs[:id]).attributes
           #   end
-          def endpoint(endpoint_definition, &block)
+          def endpoint(endpoint_definition, &)
             action_name = derive_action_name(endpoint_definition.path, endpoint_definition.method)
-            
+
             # Register endpoint with the Rails controller mixin
-            rapitapir_endpoint(action_name, endpoint_definition, &block)
-            
+            rapitapir_endpoint(action_name, endpoint_definition, &)
+
             # Auto-generate Rails controller action that passes the correct action name
             define_method(action_name) do
               process_rapitapir_endpoint(action_name)
@@ -101,7 +101,7 @@ module RapiTapir
           def api_resource(path, schema:, &block)
             resource_builder = ResourceBuilder.new(self, path, schema)
             resource_builder.instance_eval(&block)
-            
+
             # Generate all CRUD endpoints and actions automatically
             resource_builder.endpoints.each do |endpoint_def, handler|
               endpoint(endpoint_def, &handler)
@@ -158,11 +158,9 @@ module RapiTapir
           def derive_action_name(path, method)
             # For custom endpoints, always derive from path to avoid conflicts
             path_segments = path.split('/').reject(&:empty?)
-            
-            if path_segments.empty?
-              return method.to_s.downcase.to_sym
-            end
-            
+
+            return method.to_s.downcase.to_sym if path_segments.empty?
+
             # Get the main path segment (not parameters)
             main_segment = nil
             path_segments.each do |segment|
@@ -171,10 +169,10 @@ module RapiTapir
                 break
               end
             end
-            
+
             if main_segment
               # Create action name from method + segment to ensure uniqueness
-              "#{method.to_s.downcase}_#{main_segment}".to_sym
+              :"#{method.to_s.downcase}_#{main_segment}"
             else
               # Fallback to method name
               method.to_s.downcase.to_sym

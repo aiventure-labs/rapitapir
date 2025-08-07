@@ -19,9 +19,7 @@ module RapiTapir
 
       # Register an endpoint with the adapter
       def register_endpoint(endpoint, handler)
-        unless endpoint.is_a?(RapiTapir::Core::Endpoint)
-          raise ArgumentError, 'Endpoint must be a RapiTapir::Core::Endpoint'
-        end
+        raise ArgumentError, 'Endpoint must be a RapiTapir::Core::Endpoint' unless endpoint.is_a?(RapiTapir::Core::Endpoint)
         raise ArgumentError, 'Handler must respond to call' unless handler.respond_to?(:call)
 
         endpoint.validate!

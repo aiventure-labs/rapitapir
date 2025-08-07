@@ -210,17 +210,13 @@ module RapiTapir
 
       def validate_security_schemes!
         security_schemes.each do |scheme|
-          unless %i[bearer api_key basic].include?(scheme.options[:auth_type])
-            raise ArgumentError, "Unknown authentication type: #{scheme.options[:auth_type]}"
-          end
+          raise ArgumentError, "Unknown authentication type: #{scheme.options[:auth_type]}" unless %i[bearer api_key basic].include?(scheme.options[:auth_type])
         end
       end
 
       def validate_type_consistency!
         inputs.each do |input|
-          unless input.type.respond_to?(:validate)
-            raise ArgumentError, "Input '#{input.name}' type does not support validation"
-          end
+          raise ArgumentError, "Input '#{input.name}' type does not support validation" unless input.type.respond_to?(:validate)
         end
 
         outputs.each do |output|

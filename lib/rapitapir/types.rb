@@ -128,8 +128,8 @@ module RapiTapir
       Optional.new(type)
     end
 
-    def self.object(&block)
-      Object.new(&block)
+    def self.object(&)
+      Object.new(&)
     end
 
     # Auto-derivation convenience methods

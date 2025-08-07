@@ -24,9 +24,9 @@ module RapiTapir
     end
 
     # Define a schema using a block
-    def self.define(&block)
+    def self.define(&)
       builder = SchemaBuilder.new
-      builder.instance_eval(&block)
+      builder.instance_eval(&)
       builder.build
     end
 

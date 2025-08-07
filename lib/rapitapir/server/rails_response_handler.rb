@@ -11,13 +11,13 @@ module RapiTapir
           # Extract custom status code if provided
           status_code = 200
           response_data = result
-          
+
           if result.is_a?(Hash) && result.key?(:_status)
             status_code = result[:_status]
-            response_data = result.reject { |k, v| k == :_status }
+            response_data = result.except(:_status)
           elsif result.is_a?(Hash) && result.key?('_status')
             status_code = result['_status']
-            response_data = result.reject { |k, v| k == '_status' }
+            response_data = result.except('_status')
           else
             status_code = determine_rails_status_code(endpoint)
           end

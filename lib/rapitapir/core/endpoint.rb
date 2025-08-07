@@ -113,6 +113,27 @@ module RapiTapir
         metadata[:rag_inference]
       end
 
+      # Configure LLM instruction generation for this endpoint
+      def llm_instruction(purpose:, fields: :all, **options)
+        llm_config = {
+          purpose: purpose,
+          fields: fields,
+          options: options
+        }
+
+        with_metadata(llm_instruction: llm_config)
+      end
+
+      # Check if this endpoint has LLM instruction generation configured
+      def llm_instruction?
+        metadata.key?(:llm_instruction)
+      end
+
+      # Get LLM instruction configuration for this endpoint
+      def llm_instruction_config
+        metadata[:llm_instruction]
+      end
+
       # Validate input/output types for a given input/output hash
       # Raises validation errors if invalid, returns true if valid
       def validate!(input_hash = {}, output_hash = {}) # rubocop:disable Naming/PredicateMethod
@@ -177,14 +198,10 @@ module RapiTapir
       def validate_outputs!(output_hash)
         outputs.each do |output|
           if output.type.is_a?(Hash)
-            unless output.valid_type?(output_hash)
-              raise TypeError, "Invalid output hash: expected #{output.type}, got #{output_hash}"
-            end
+            raise TypeError, "Invalid output hash: expected #{output.type}, got #{output_hash}" unless output.valid_type?(output_hash)
           else
             output_hash.each do |k, v|
-              unless output.valid_type?(v)
-                raise TypeError, "Invalid type for output '#{k}': expected #{output.type}, got #{v.class}"
-              end
+              raise TypeError, "Invalid type for output '#{k}': expected #{output.type}, got #{v.class}" unless output.valid_type?(v)
             end
           end
         end

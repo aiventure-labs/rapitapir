@@ -13,9 +13,7 @@ module RapiTapir
         #     rapitapir_routes_for UsersController
         #   end
         def rapitapir_routes_for(controller_class)
-          unless controller_class.respond_to?(:rapitapir_endpoints)
-            raise ArgumentError, "#{controller_class} must include RapiTapir::Server::Rails::Controller"
-          end
+          raise ArgumentError, "#{controller_class} must include RapiTapir::Server::Rails::Controller" unless controller_class.respond_to?(:rapitapir_endpoints)
 
           controller_name = controller_class.controller_name
 
@@ -23,9 +21,10 @@ module RapiTapir
             endpoint_def = endpoint_config[:endpoint]
             method = endpoint_def.method.downcase
             path = convert_rapitapir_path_to_rails(endpoint_def.path)
-            
+
             # Generate the Rails route
-            public_send(method, path, to: "#{controller_name}##{action}", as: route_name(controller_name, action, method))
+            public_send(method, path, to: "#{controller_name}##{action}",
+                                      as: route_name(controller_name, action, method))
           end
         end
 
@@ -76,7 +75,7 @@ module RapiTapir
         # @return [Symbol] The route name
         def route_name(controller_name, action, method)
           base_name = controller_name.chomp('_controller')
-          
+
           case action
           when :index
             base_name.to_sym
@@ -89,7 +88,7 @@ module RapiTapir
           when :destroy
             singularize_name(base_name).to_sym
           else
-            "#{method}_#{base_name}_#{action}".to_sym
+            :"#{method}_#{base_name}_#{action}"
           end
         end
 
@@ -99,7 +98,7 @@ module RapiTapir
         def singularize_name(name)
           # Simple singularization logic
           if name.end_with?('ies')
-            name.chomp('ies') + 'y'
+            "#{name.chomp('ies')}y"
           elsif name.end_with?('s')
             name.chomp('s')
           else
@@ -111,5 +110,5 @@ module RapiTapir
   end
 end
 
-# Note: Rails routes extension is handled in the rails_integration.rb file
+# NOTE: Rails routes extension is handled in the rails_integration.rb file
 # to ensure proper timing with Rails application initialization

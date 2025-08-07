@@ -7,10 +7,15 @@ RapiTapir supports the Model Context Protocol (MCP) to make your API endpoints d
 Use the `.mcp_export` method in your endpoint DSL chain:
 
 ```ruby
-endpoint = RapiTapir.get('/hello')
-  .in(query(:name, :string))
-  .out(json_body(:message => :string))
-  .mcp_export
+endpoint(
+  GET('/hello')
+    .query(:name, T.string, description: 'Name to greet')
+    .ok(T.hash({ "message" => T.string }))
+    .enable_mcp  # Mark for MCP export
+    .build
+) do |inputs|
+  { message: "Hello, #{inputs[:name]}!" }
+end
 ```
 
 ### CLI Usage

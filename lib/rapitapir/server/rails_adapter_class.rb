@@ -13,9 +13,7 @@ module RapiTapir
 
         # Register an endpoint and generate Rails routes
         def register_endpoint(endpoint, controller_class, action_name)
-          unless endpoint.is_a?(RapiTapir::Core::Endpoint)
-            raise ArgumentError, 'Endpoint must be a RapiTapir::Core::Endpoint'
-          end
+          raise ArgumentError, 'Endpoint must be a RapiTapir::Core::Endpoint' unless endpoint.is_a?(RapiTapir::Core::Endpoint)
 
           endpoint.validate!
 

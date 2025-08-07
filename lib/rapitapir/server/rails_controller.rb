@@ -19,9 +19,7 @@ module RapiTapir
         class_methods do
           # Register an endpoint for this controller
           def rapitapir_endpoint(action_name, endpoint, &handler)
-            unless endpoint.is_a?(RapiTapir::Core::Endpoint)
-              raise ArgumentError, 'Endpoint must be a RapiTapir::Core::Endpoint'
-            end
+            raise ArgumentError, 'Endpoint must be a RapiTapir::Core::Endpoint' unless endpoint.is_a?(RapiTapir::Core::Endpoint)
 
             endpoint.validate!
 

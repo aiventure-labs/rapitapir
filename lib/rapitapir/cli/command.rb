@@ -452,10 +452,10 @@ module RapiTapir
       end
 
       def validate_mcp_options
-        unless @options[:input]
-          puts 'Error: --endpoints is required'
-          exit 1
-        end
+        return if @options[:input]
+
+        puts 'Error: --endpoints is required'
+        exit 1
       end
 
       def save_mcp_output(content)
@@ -585,12 +585,14 @@ module RapiTapir
 
       def run_ai(args)
         subcommand = args.shift
-        
+
         case subcommand
         when 'rag'
           run_ai_rag(args)
         when 'query'
           run_ai_query(args)
+        when 'llm'
+          run_ai_llm(args)
         when 'help', nil
           puts ai_help
         else
@@ -602,14 +604,14 @@ module RapiTapir
 
       def run_ai_rag(args)
         command = args.shift
-        
+
         case command
         when 'test'
           run_rag_test(args)
         when 'setup'
           run_rag_setup(args)
         else
-          puts "RAG subcommands: test, setup"
+          puts 'RAG subcommands: test, setup'
           exit 1
         end
       end
@@ -619,47 +621,47 @@ module RapiTapir
           puts 'Error: --endpoints is required'
           exit 1
         end
-        
+
         endpoints = load_endpoints(@options[:input])
-        
+
         # Find RAG-enabled endpoints
         rag_endpoints = endpoints.select(&:rag_inference?)
-        
+
         if rag_endpoints.empty?
           puts "No RAG-enabled endpoints found in #{@options[:input]}"
-          puts "Add .rag_inference to your endpoints to enable RAG capabilities"
+          puts 'Add .rag_inference to your endpoints to enable RAG capabilities'
           exit 1
         end
 
         require_relative '../ai/rag'
-        
-        puts "Testing RAG functionality..."
+
+        puts 'Testing RAG functionality...'
         puts "Found #{rag_endpoints.size} RAG-enabled endpoint(s):"
-        
+
         rag_endpoints.each do |endpoint|
           puts "  #{endpoint.method} #{endpoint.path}"
           config = endpoint.rag_config
-          
+
           # Create pipeline and test
           pipeline = RapiTapir::AI::RAG::Pipeline.new(
             llm: config[:llm] || :openai,
             retrieval: config[:retrieval] || :memory,
             config: config[:config] || {}
           )
-          
-          test_query = args.first || "What can this API do?"
+
+          test_query = args.first || 'What can this API do?'
           result = pipeline.process(test_query)
-          
+
           puts "    Query: #{test_query}"
-          puts "    Answer: #{result[:answer][0..100]}#{result[:answer].length > 100 ? '...' : ''}"
+          puts "    Answer: #{result[:answer][0..100]}#{'...' if result[:answer].length > 100}"
           puts "    Sources: #{result[:sources].size} document(s)"
           puts
         end
       end
 
-      def run_rag_setup(args)
-        puts "Setting up RAG configuration..."
-        
+      def run_rag_setup(_args)
+        puts 'Setting up RAG configuration...'
+
         config_template = {
           rag: {
             llm: {
@@ -672,63 +674,220 @@ module RapiTapir
             }
           }
         }
-        
+
         config_file = 'rapitapir_ai.json'
-        
+
         if File.exist?(config_file)
           puts "Configuration file #{config_file} already exists"
           exit 1
         end
-        
+
         File.write(config_file, JSON.pretty_generate(config_template))
         puts "Created #{config_file}"
-        puts "Please update the configuration with your API keys and document paths"
+        puts 'Please update the configuration with your API keys and document paths'
       end
 
       def run_ai_query(args)
         query = args.join(' ')
-        
+
         if query.empty?
-          puts "Usage: rapitapir ai query <your question>"
+          puts 'Usage: rapitapir ai query <your question>'
           exit 1
         end
-        
+
         unless @options[:input]
           puts 'Error: --endpoints is required'
           exit 1
         end
-        
+
         endpoints = load_endpoints(@options[:input])
-        
+
         # Export MCP context for the query
         require_relative '../ai/mcp'
         exporter = RapiTapir::AI::MCP::Exporter.new(endpoints)
         context = exporter.as_mcp_context
-        
-        puts "API Context for AI Agents:"
-        puts "========================="
+
+        puts 'API Context for AI Agents:'
+        puts '========================='
         puts
         puts "Query: #{query}"
         puts
-        puts "Available Endpoints:"
+        puts 'Available Endpoints:'
         if context && context[:endpoints]
           context[:endpoints].each do |ep|
             puts "  #{ep[:method]} #{ep[:path]} - #{ep[:summary]}"
           end
         else
-          puts "  No endpoints found"
+          puts '  No endpoints found'
         end
         puts
-        puts "This context can be used by AI agents to understand your API structure."
+        puts 'This context can be used by AI agents to understand your API structure.'
+      end
+
+      def run_ai_llm(args)
+        command = args.shift
+
+        case command
+        when 'generate'
+          run_llm_generate(args)
+        when 'export'
+          run_llm_export(args)
+        when 'test'
+          run_llm_test(args)
+        else
+          puts 'LLM subcommands: generate, export, test'
+          exit 1
+        end
+      end
+
+      def run_llm_generate(_args)
+        unless @options[:input]
+          puts 'Error: --endpoints is required'
+          exit 1
+        end
+
+        endpoints = load_endpoints(@options[:input])
+
+        # Find LLM instruction-enabled endpoints
+        llm_endpoints = endpoints.select(&:llm_instruction?)
+
+        if llm_endpoints.empty?
+          puts "No LLM instruction-enabled endpoints found in #{@options[:input]}"
+          puts 'Add .llm_instruction(purpose: :validation) to your endpoints to enable LLM instruction generation'
+          exit 1
+        end
+
+        require_relative '../ai/llm_instruction'
+
+        puts 'Generating LLM instructions...'
+        puts "Found #{llm_endpoints.size} LLM instruction-enabled endpoint(s):"
+
+        generator = RapiTapir::AI::LLMInstruction::Generator.new(llm_endpoints)
+        instructions = generator.generate_all_instructions
+
+        instructions[:instructions].each do |instruction|
+          puts "\n#{'=' * 60}"
+          puts "#{instruction[:method]} #{instruction[:path]} (#{instruction[:purpose]})"
+          puts '=' * 60
+          puts instruction[:instruction]
+        end
+
+        puts "\n#{'=' * 60}"
+        puts "Generated #{instructions[:instructions].size} LLM instructions"
+      end
+
+      def run_llm_export(args)
+        format = args.shift || 'json'
+        output_file = @options[:output]
+
+        unless @options[:input]
+          puts 'Error: --endpoints is required'
+          exit 1
+        end
+
+        endpoints = load_endpoints(@options[:input])
+        llm_endpoints = endpoints.select(&:llm_instruction?)
+
+        if llm_endpoints.empty?
+          puts 'No LLM instruction-enabled endpoints found'
+          exit 1
+        end
+
+        require_relative '../ai/llm_instruction'
+
+        generator = RapiTapir::AI::LLMInstruction::Generator.new(llm_endpoints)
+        instructions = generator.generate_all_instructions
+        exporter = RapiTapir::AI::LLMInstruction::Exporter.new(instructions)
+
+        case format.downcase
+        when 'json'
+          output = exporter.to_json
+          extension = '.json'
+        when 'yaml', 'yml'
+          output = exporter.to_yaml
+          extension = '.yml'
+        when 'markdown', 'md'
+          output = exporter.to_markdown
+          extension = '.md'
+        when 'prompts'
+          if output_file
+            puts exporter.to_prompt_files(output_file)
+            return
+          else
+            puts 'Error: --output directory is required for prompts format'
+            exit 1
+          end
+        else
+          puts "Error: Unsupported format '#{format}'. Supported: json, yaml, markdown, prompts"
+          exit 1
+        end
+
+        if output_file
+          output_file += extension unless output_file.end_with?(extension)
+          File.write(output_file, output)
+          puts "LLM instructions exported to #{output_file}"
+        else
+          puts output
+        end
+      end
+
+      def run_llm_test(args)
+        purpose = args.shift
+
+        unless purpose
+          puts 'Usage: rapitapir ai llm test <purpose>'
+          puts 'Available purposes: validation, transformation, analysis, documentation, testing, completion'
+          exit 1
+        end
+
+        unless @options[:input]
+          puts 'Error: --endpoints is required'
+          exit 1
+        end
+
+        endpoints = load_endpoints(@options[:input])
+        llm_endpoints = endpoints.select(&:llm_instruction?)
+
+        if llm_endpoints.empty?
+          puts 'No LLM instruction-enabled endpoints found'
+          exit 1
+        end
+
+        require_relative '../ai/llm_instruction'
+
+        puts "Testing LLM instruction generation for purpose: #{purpose}"
+        puts
+
+        generator = RapiTapir::AI::LLMInstruction::Generator.new(llm_endpoints)
+
+        llm_endpoints.each do |endpoint|
+          config = endpoint.llm_instruction_config.dup
+          config[:purpose] = purpose.to_sym
+
+          begin
+            instruction = generator.generate_instruction(endpoint, config)
+            puts "✅ #{endpoint.method&.upcase} #{endpoint.path}"
+            puts "   Purpose: #{instruction[:purpose]}"
+            puts "   Length: #{instruction[:instruction].length} characters"
+            puts
+          rescue StandardError => e
+            puts "❌ #{endpoint.method&.upcase} #{endpoint.path}"
+            puts "   Error: #{e.message}"
+            puts
+          end
+        end
       end
 
       def ai_help
         <<~HELP
           AI Commands:
-            rapitapir ai rag test [query]     - Test RAG functionality on your API
-            rapitapir ai rag setup           - Create RAG configuration template
-            rapitapir ai query <question>     - Get AI-ready context for a query
-            rapitapir ai help                 - Show this help
+            rapitapir ai rag test [query]       - Test RAG functionality on your API
+            rapitapir ai rag setup             - Create RAG configuration template
+            rapitapir ai query <question>       - Get AI-ready context for a query
+            rapitapir ai llm generate           - Generate LLM instructions from endpoints
+            rapitapir ai llm export [format]    - Export LLM instructions (json, yaml, markdown, prompts)
+            rapitapir ai llm test <purpose>     - Test LLM instruction generation for a purpose
+            rapitapir ai help                   - Show this help
         HELP
       end
     end

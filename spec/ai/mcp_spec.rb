@@ -7,21 +7,25 @@ require_relative '../../lib/rapitapir/core/endpoint'
 RSpec.describe RapiTapir::AI::MCP do
   include RapiTapir::DSL
 
+  # Type alias for convenience
+  T = RapiTapir::Types
+
   describe 'Exporter' do
     let(:endpoints) do
       [
-        RapiTapir::Core::Endpoint.get('/users')
-          .out(RapiTapir::IO.json_body(RapiTapir::Types.hash({ 'users' => RapiTapir::Types.array })))
+        RapiTapir.get('/users')
+          .ok(T.hash({ 'users' => T.array(T.hash) }))
           .summary('List all users')
+          .description('Returns a list of users for AI agent consumption')
           .mcp_export,
           
-        RapiTapir::Core::Endpoint.post('/users')
-          .in(RapiTapir::IO.json_body(RapiTapir::Types.hash({ 'name' => RapiTapir::Types.string, 'email' => RapiTapir::Types.string })))
-          .out(RapiTapir::IO.json_body(RapiTapir::Types.hash({ 'id' => RapiTapir::Types.string, 'name' => RapiTapir::Types.string, 'email' => RapiTapir::Types.string })))
+        RapiTapir.post('/users')
+          .json_body(T.hash({ 'name' => T.string, 'email' => T.string }))
+          .ok(T.hash({ 'id' => T.string, 'name' => T.string, 'email' => T.string }))
           .summary('Create a new user'),
           
-        RapiTapir::Core::Endpoint.get('/health')
-          .out(RapiTapir::IO.json_body(RapiTapir::Types.hash({ 'status' => RapiTapir::Types.string })))
+        RapiTapir.get('/health')
+          .ok(T.hash({ 'status' => T.string }))
           .mcp_export
       ]
     end
@@ -116,15 +120,15 @@ RSpec.describe RapiTapir::AI::MCP do
 
   describe 'Endpoint MCP Integration' do
     let(:mcp_endpoint) do
-      RapiTapir::Core::Endpoint.get('/api/test')
-        .out(RapiTapir::IO.json_body(RapiTapir::Types.hash({ 'result' => RapiTapir::Types.string })))
+      RapiTapir.get('/api/test')
+        .ok(T.hash({ 'result' => T.string }))
         .mcp_export
     end
 
     let(:regular_endpoint) do
-      RapiTapir::Core::Endpoint.post('/internal/admin')
-        .in(RapiTapir::IO.json_body(RapiTapir::Types.hash({ 'action' => RapiTapir::Types.string })))
-        .out(RapiTapir::IO.json_body(RapiTapir::Types.hash({ 'success' => RapiTapir::Types.boolean })))
+      RapiTapir.post('/internal/admin')
+        .json_body(T.hash({ 'action' => T.string }))
+        .ok(T.hash({ 'success' => T.boolean }))
     end
 
     it 'correctly identifies MCP-exportable endpoints' do
@@ -149,20 +153,20 @@ RSpec.describe RapiTapir::AI::MCP do
 
   describe 'Schema Generation' do
     let(:complex_endpoint) do
-      RapiTapir::Core::Endpoint.post('/complex')
-        .in(RapiTapir::IO.json_body(RapiTapir::Types.hash({
-          'user' => RapiTapir::Types.hash({
-            'name' => RapiTapir::Types.string,
-            'age' => RapiTapir::Types.integer,
-            'active' => RapiTapir::Types.boolean
+      RapiTapir.post('/complex')
+        .json_body(T.hash({
+          'user' => T.hash({
+            'name' => T.string,
+            'age' => T.integer,
+            'active' => T.boolean
           }),
-          'preferences' => RapiTapir::Types.array
-        })))
-        .out(RapiTapir::IO.json_body(RapiTapir::Types.hash({
-          'success' => RapiTapir::Types.boolean,
-          'user_id' => RapiTapir::Types.string,
-          'created_at' => RapiTapir::Types.string
-        })))
+          'preferences' => T.array(T.string)
+        }))
+        .ok(T.hash({
+          'success' => T.boolean,
+          'user_id' => T.string,
+          'created_at' => T.string
+        }))
         .mcp_export
     end
 

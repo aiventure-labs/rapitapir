@@ -42,9 +42,7 @@ module RapiTapir
           # Assume Unix timestamp
           ::Time.at(value).to_datetime
         else
-          unless value.respond_to?(:to_datetime)
-            raise CoercionError.new(value, 'DateTime', 'Value cannot be converted to DateTime')
-          end
+          raise CoercionError.new(value, 'DateTime', 'Value cannot be converted to DateTime') unless value.respond_to?(:to_datetime)
 
           value.to_datetime
 

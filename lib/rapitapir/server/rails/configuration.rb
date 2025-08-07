@@ -56,17 +56,17 @@ module RapiTapir
           # This would set up automatic documentation endpoints
           # For now, just enable health checks
           @health_check_enabled = true
-          
+
           # Enable docs
           enable_docs
         end
-        
+
         # Enable documentation endpoints
         def enable_docs(path: '/docs', openapi_path: '/openapi.json')
           @docs_path = path
           @openapi_path = openapi_path
         end
-        
+
         # Check if docs are enabled
         def docs_enabled?
           !@docs_path.nil?

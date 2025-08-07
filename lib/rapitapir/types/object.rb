@@ -9,14 +9,14 @@ module RapiTapir
     class Object < Base
       attr_reader :fields
 
-      def initialize(**options, &block)
+      def initialize(**options, &)
         @fields = {}
         super(**options)
 
         return unless block_given?
 
         builder = ObjectBuilder.new(self)
-        builder.instance_eval(&block)
+        builder.instance_eval(&)
       end
 
       def field(name, type, required: true, **options)

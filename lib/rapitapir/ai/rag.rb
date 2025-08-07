@@ -27,7 +27,7 @@ module RapiTapir
       class OpenAIProvider < LLMProvider
         def initialize(config = {})
           super
-          @api_key = config[:api_key] || ENV['OPENAI_API_KEY']
+          @api_key = config[:api_key] || ENV.fetch('OPENAI_API_KEY', nil)
           @model = config[:model] || 'gpt-3.5-turbo'
           @base_url = config[:base_url] || 'https://api.openai.com/v1'
         end
@@ -104,7 +104,7 @@ module RapiTapir
           @documents = config[:documents] || []
         end
 
-        def retrieve(query, context_fields = [])
+        def retrieve(query, _context_fields = [])
           # Simple text matching for demo purposes
           matching_docs = @documents.select do |doc|
             doc[:content]&.downcase&.include?(query.downcase)
@@ -183,20 +183,103 @@ module RapiTapir
 
         def build_prompt(query, context)
           documents_text = context[:retrieved_documents]
-                          .map { |doc| doc[:content] }
-                          .join("\n\n")
+                           .map { |doc| doc[:content] }
+                           .join("\n\n")
 
           <<~PROMPT
             You are an AI assistant that answers questions based on the provided context.
-            
+
             Context Documents:
             #{documents_text}
-            
+
             User Question: #{query}
-            
+
             Please provide a helpful and accurate answer based on the context provided.
             If the context doesn't contain enough information, say so clearly.
           PROMPT
+        end
+      end
+
+      # Rack middleware for handling RAG inference requests
+      class Middleware
+        def initialize(app)
+          @app = app
+        end
+
+        def call(env)
+          endpoint = env['rapitapir.endpoint']
+
+          # Pass through if not a RAG endpoint
+          return @app.call(env) unless endpoint&.rag_inference?
+
+          # Process RAG request
+          process_rag_request(env, endpoint)
+        end
+
+        private
+
+        def process_rag_request(env, endpoint)
+          # Parse request body
+          request_body = env['rack.input']&.read
+          env['rack.input']&.rewind if env['rack.input'].respond_to?(:rewind)
+
+          query_data = request_body ? JSON.parse(request_body) : {}
+          question = query_data['question'] || query_data[:question]
+
+          # Get RAG config from endpoint
+          rag_config = endpoint.metadata[:rag_inference]
+
+          # Create RAG pipeline
+          pipeline = Pipeline.new(
+            llm: rag_config[:llm],
+            retrieval: rag_config[:retrieval],
+            config: rag_config[:config] || {}
+          )
+
+          # Process the query
+          result = pipeline.process(
+            question,
+            context_fields: rag_config[:context_fields] || [],
+            user_context: extract_user_context(env)
+          )
+
+          # Return JSON response
+          response_body = JSON.generate(
+            answer: result[:answer],
+            sources: result[:sources],
+            metadata: {
+              query: result[:query],
+              context_fields: result[:context][:context_fields],
+              document_count: result[:context][:document_count]
+            }
+          )
+
+          [
+            200,
+            { 'Content-Type' => 'application/json' },
+            [response_body]
+          ]
+        rescue StandardError => e
+          error_response = JSON.generate(
+            error: 'RAG processing failed',
+            message: e.message
+          )
+
+          [
+            500,
+            { 'Content-Type' => 'application/json' },
+            [error_response]
+          ]
+        end
+
+        def extract_user_context(env)
+          # Extract relevant context from request environment
+          {
+            user_agent: env['HTTP_USER_AGENT'],
+            remote_ip: env['REMOTE_ADDR'],
+            method: env['REQUEST_METHOD'],
+            path: env['PATH_INFO']
+          }
         end
       end
     end

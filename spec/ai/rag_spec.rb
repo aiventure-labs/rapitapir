@@ -7,6 +7,9 @@ require_relative '../../lib/rapitapir/core/endpoint'
 RSpec.describe RapiTapir::AI::RAG do
   include RapiTapir::DSL
 
+  # Type alias for convenience
+  T = RapiTapir::Types
+
   describe 'LLM Providers' do
     describe RapiTapir::AI::RAG::OpenAIProvider do
       let(:provider) { described_class.new(api_key: 'mock') }
@@ -30,7 +33,7 @@ RSpec.describe RapiTapir::AI::RAG do
       let(:backend) { described_class.new(documents: documents) }
 
       it 'retrieves relevant documents' do
-        results = backend.retrieve('Ruby programming', [:user_id])
+        results = backend.retrieve('Ruby', [:user_id])
         expect(results).not_to be_empty
         expect(results.first[:content]).to include('Ruby')
         expect(results.first).to have_key(:score)
@@ -78,7 +81,7 @@ RSpec.describe RapiTapir::AI::RAG do
     end
 
     it 'includes retrieved documents in response' do
-      result = pipeline.process('RapiTapir framework')
+      result = pipeline.process('RapiTapir')
       
       expect(result[:sources]).not_to be_empty
       expect(result[:sources].first[:content]).to include('RapiTapir')
@@ -87,9 +90,9 @@ RSpec.describe RapiTapir::AI::RAG do
 
   describe 'Endpoint RAG Integration' do
     let(:rag_endpoint) do
-      RapiTapir::Core::Endpoint.post('/ask')
-        .in(RapiTapir::IO.json_body(RapiTapir::Types.hash({ 'question' => RapiTapir::Types.string })))
-        .out(RapiTapir::IO.json_body(RapiTapir::Types.hash({ 'answer' => RapiTapir::Types.string })))
+      RapiTapir.post('/ask')
+        .json_body(T.hash({ 'question' => T.string }))
+        .ok(T.hash({ 'answer' => T.string }))
         .rag_inference(
           llm: :openai,
           retrieval: :memory,
@@ -99,8 +102,8 @@ RSpec.describe RapiTapir::AI::RAG do
     end
 
     let(:regular_endpoint) do
-      RapiTapir::Core::Endpoint.get('/users')
-        .out(RapiTapir::IO.json_body(RapiTapir::Types.hash({ 'users' => RapiTapir::Types.array })))
+      RapiTapir.get('/users')
+        .ok(T.hash({ 'users' => T.array(T.hash) }))
     end
 
     it 'correctly identifies RAG-enabled endpoints' do
@@ -120,8 +123,8 @@ RSpec.describe RapiTapir::AI::RAG do
     end
 
     it 'allows chaining with other DSL methods' do
-      endpoint = RapiTapir::Core::Endpoint.post('/chat')
-        .in(RapiTapir::IO.json_body(RapiTapir::Types.hash({ 'message' => RapiTapir::Types.string })))
+      endpoint = RapiTapir.post('/chat')
+        .json_body(T.hash({ 'message' => T.string }))
         .rag_inference(llm: :openai, retrieval: :memory)
         .summary('Chat with AI')
         .mcp_export

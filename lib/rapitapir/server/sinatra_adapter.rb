@@ -24,9 +24,7 @@ module RapiTapir
 
       # Register an endpoint with automatic Sinatra route creation
       def register_endpoint(endpoint, handler = nil, &block)
-        unless endpoint.is_a?(RapiTapir::Core::Endpoint)
-          raise ArgumentError, 'Endpoint must be a RapiTapir::Core::Endpoint'
-        end
+        raise ArgumentError, 'Endpoint must be a RapiTapir::Core::Endpoint' unless endpoint.is_a?(RapiTapir::Core::Endpoint)
 
         endpoint.validate!
 
@@ -43,7 +41,6 @@ module RapiTapir
 
       private
 
-      # rubocop:disable Metrics/AbcSize
       def register_sinatra_route(endpoint_info)
         method_name = endpoint_info[:endpoint].method.to_s.downcase.to_sym
         path_pattern = convert_path_to_sinatra(endpoint_info[:endpoint].path)
@@ -61,7 +58,6 @@ module RapiTapir
           end
         end
       end
-      # rubocop:enable Metrics/AbcSize
 
       public
 

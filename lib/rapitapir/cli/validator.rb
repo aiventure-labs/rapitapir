@@ -112,9 +112,7 @@ module RapiTapir
         # Check path parameter format
         path.scan(/:(\w+)/).each do |param_match|
           param_name = param_match[0]
-          unless param_name.match?(/^[a-zA-Z][a-zA-Z0-9_]*$/)
-            @errors << "#{context}: Invalid path parameter name '#{param_name}'"
-          end
+          @errors << "#{context}: Invalid path parameter name '#{param_name}'" unless param_name.match?(/^[a-zA-Z][a-zA-Z0-9_]*$/)
         end
       end
 
@@ -219,9 +217,7 @@ module RapiTapir
 
       def validate_hash_schema(schema, context)
         schema.each do |key, value|
-          unless key.is_a?(Symbol) || key.is_a?(String)
-            @errors << "#{context}: Hash key '#{key}' must be a symbol or string"
-          end
+          @errors << "#{context}: Hash key '#{key}' must be a symbol or string" unless key.is_a?(Symbol) || key.is_a?(String)
 
           validate_type(value, "#{context}.#{key}")
         end

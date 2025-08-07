@@ -22,24 +22,24 @@ module RapiTapir
           @logger.formatter = @formatter
         end
 
-        def debug(message = nil, **fields, &block)
-          log(:debug, message, **fields, &block)
+        def debug(message = nil, **fields, &)
+          log(:debug, message, **fields, &)
         end
 
-        def info(message = nil, **fields, &block)
-          log(:info, message, **fields, &block)
+        def info(message = nil, **fields, &)
+          log(:info, message, **fields, &)
         end
 
-        def warn(message = nil, **fields, &block)
-          log(:warn, message, **fields, &block)
+        def warn(message = nil, **fields, &)
+          log(:warn, message, **fields, &)
         end
 
-        def error(message = nil, **fields, &block)
-          log(:error, message, **fields, &block)
+        def error(message = nil, **fields, &)
+          log(:error, message, **fields, &)
         end
 
-        def fatal(message = nil, **fields, &block)
-          log(:fatal, message, **fields, &block)
+        def fatal(message = nil, **fields, &)
+          log(:fatal, message, **fields, &)
         end
 
         def log_request(**options)

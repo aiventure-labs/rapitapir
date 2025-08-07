@@ -23,8 +23,8 @@ module RapiTapir
         end
 
         # Mount an endpoint in Sinatra
-        def mount_endpoint(endpoint, &handler)
-          rapitapir_adapter.mount(endpoint, &handler)
+        def mount_endpoint(endpoint, &)
+          rapitapir_adapter.mount(endpoint, &)
 
           # Register the route with Sinatra
           method_name = endpoint.method.to_s.downcase
@@ -42,8 +42,8 @@ module RapiTapir
         end
 
         # Register error handlers
-        def rapitapir_error(error_class, &handler)
-          rapitapir_adapter.on_error(error_class, &handler)
+        def rapitapir_error(error_class, &)
+          rapitapir_adapter.on_error(error_class, &)
         end
 
         # Generate OpenAPI spec for all mounted endpoints
