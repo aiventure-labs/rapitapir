@@ -118,6 +118,8 @@ module RapiTapir
         schema[:additionalProperties] = false # Objects are strict by default
       end
 
+      public
+
       def to_s
         if fields.empty?
           'Object'
@@ -126,6 +128,8 @@ module RapiTapir
           "Object{#{field_strs.join(', ')}}"
         end
       end
+
+      private
 
       def extract_field_value(hash, field_name)
         # Try different key formats: symbol, string, and string version of symbol

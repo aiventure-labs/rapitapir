@@ -148,6 +148,8 @@ module RapiTapir
         schema[:additionalProperties] = constraints[:additional_properties]
       end
 
+      public
+
       def to_s
         if field_types.empty?
           'Hash'

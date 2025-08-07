@@ -136,11 +136,15 @@ module RapiTapir
         schema[:uniqueItems] = constraints[:unique_items] if constraints[:unique_items]
       end
 
+      public
+
       def to_s
         item_type_str = format_item_type_string
         constraint_part = format_constraints_string
         "Array[#{item_type_str}]#{constraint_part}"
       end
+
+      private
 
       def format_item_type_string
         item_type.respond_to?(:to_s) ? item_type.to_s : item_type.class.name
