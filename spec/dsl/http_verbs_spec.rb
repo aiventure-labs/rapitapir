@@ -263,6 +263,21 @@ RSpec.describe RapiTapir::DSL::HTTPVerbs do
         expect(get_endpoint.method).to eq(:get)
         expect(get_endpoint.path).to eq('/users/search')
       end
+
+      it 'raises on invalid type definitions in builder' do
+        # invalid symbol
+        expect { GET('/x').query(:q, :unknown).build }.to raise_error(ArgumentError, /Unknown type symbol/)
+
+        # invalid class not inheriting from Types::Base
+        expect do
+          POST('/y').body(String).build
+        end.to raise_error(ArgumentError, /Type class must inherit/)
+
+        # invalid general object
+        expect do
+          PUT('/z').json_body(Object.new).build
+        end.to raise_error(ArgumentError, /Invalid type definition/)
+      end
     end
 
     context 'Sinatra integration' do

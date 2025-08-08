@@ -111,6 +111,51 @@ RSpec.describe RapiTapir::CLI::Command do
       end
     end
 
+    context 'with unsupported types and error branches' do
+      it 'shows error for unknown generate type' do
+        output = capture_output do
+          described_class.new(%w[generate unknown --endpoints spec/fixtures/endpoints.rb --output out.txt]).run
+        end
+        expect(output).to include('Error: Unknown generation type: unknown')
+        expect(output).to include('Available types: openapi, client, docs, mcp')
+      end
+
+      it 'shows error for unknown client type' do
+        output = capture_output do
+          described_class.new([
+                                'generate', 'client', 'go',
+                                '--endpoints', test_endpoints_file,
+                                '--output', File.join(temp_dir, 'client.go')
+                              ]).run
+        end
+        expect(output).to include('Error: Unknown client type: go')
+        expect(output).to include('Available types: typescript, python')
+      end
+
+      it 'shows not implemented error for python client generator' do
+        output = capture_output do
+          described_class.new([
+                                'generate', 'client', 'python',
+                                '--endpoints', test_endpoints_file,
+                                '--output', File.join(temp_dir, 'client.py')
+                              ]).run
+        end
+        expect(output).to include('Error: Python client generator not implemented yet')
+      end
+
+      it 'shows error for unknown documentation type' do
+        output = capture_output do
+          described_class.new([
+                                'generate', 'docs', 'pdf',
+                                '--endpoints', test_endpoints_file,
+                                '--output', File.join(temp_dir, 'docs.pdf')
+                              ]).run
+        end
+        expect(output).to include("Error: Unknown documentation type: pdf")
+        expect(output).to include('Available types: markdown, html')
+      end
+    end
+
     context 'with client type' do
       it 'generates TypeScript client' do
         output_file = File.join(temp_dir, 'client.ts')

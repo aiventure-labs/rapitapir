@@ -39,8 +39,8 @@ module RapiTapir
 
         def default_logger
           require 'logger'
-          Logger.new($stdout).tap do |logger|
-            logger.level = Logger::INFO
+          ::Logger.new($stdout).tap do |logger|
+            logger.level = ::Logger::INFO
             logger.formatter = proc do |severity, datetime, _progname, msg|
               "[#{datetime.strftime('%Y-%m-%d %H:%M:%S')}] #{severity}: #{msg}\n"
             end

@@ -1,7 +1,8 @@
 # RapiTapir
 
-[![Tests](https://img.shields.io/badge/tests-643%20passing-brightgreen)](spec/)
-[![Coverage](https://img.shields.io/badge/coverage-67.67%25-green)](coverage/)
+[![Tests](https://img.shields.io/badge/tests-695%20passing-brightgreen)](spec/)
+[![Coverage](https://img.shields.io/badge/coverage-72.7%25-green)](coverage/)
+[![Branches](https://img.shields.io/badge/branches-44.89%25-yellow)](coverage/)
 [![Ruby](https://img.shields.io/badge/ruby-3.1%2B-red)](Gemfile)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![RuboCop](https://img.shields.io/badge/code%20style-rubocop-brightgreen)](https://github.com/rubocop/rubocop)
@@ -18,7 +19,7 @@
 - **⚡ T Shortcut**: Use `T.string` instead of `RapiTapir::Types.string` everywhere
 - **📚 GitHub Pages Ready**: Modern documentation deployment with GitHub Actions
 - **🔍 CLI Toolkit**: Complete command-line interface for generation, validation, and serving
-- **🧪 Comprehensive Tests**: 643 tests passing with 67.67% coverage
+- **🧪 Comprehensive Tests**: 695 examples, 0 failures; 72.7% coverage
 
 ## ✨ Why RapiTapir?
 

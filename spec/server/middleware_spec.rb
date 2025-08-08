@@ -45,6 +45,17 @@ RSpec.describe RapiTapir::Server::Middleware do
 
       get '/'
     end
+
+    it 'uses default logger when none is provided' do
+      default_logger_app = RapiTapir::Server::Middleware::Logger.new(
+        ->(_env) { [200, { 'Content-Type' => 'text/plain' }, ['ok']] }
+      )
+
+      status, headers, body = default_logger_app.call(Rack::MockRequest.env_for('/'))
+      expect(status).to eq(200)
+      expect(headers['Content-Type']).to eq('text/plain')
+      expect(body.each.to_a.join).to eq('ok')
+    end
   end
 
   describe RapiTapir::Server::Middleware::ExceptionHandler do
@@ -66,6 +77,20 @@ RSpec.describe RapiTapir::Server::Middleware do
       response_data = JSON.parse(last_response.body)
       expect(response_data['exception']).to eq('StandardError')
       expect(response_data['message']).to eq('Test error')
+    end
+
+    it 'hides exception details when show_exceptions is false' do
+      silent_app = RapiTapir::Server::Middleware::ExceptionHandler.new(
+        ->(_env) { raise StandardError, 'Test error' },
+        logger: nil, show_exceptions: false
+      )
+
+      status, _headers, body = silent_app.call(Rack::MockRequest.env_for('/'))
+      expect(status).to eq(500)
+      data = JSON.parse(body.each.to_a.join)
+      expect(data['error']).to eq('Internal Server Error')
+      expect(data).not_to have_key('exception')
+      expect(data).not_to have_key('message')
     end
   end
 end

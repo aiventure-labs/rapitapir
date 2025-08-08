@@ -120,6 +120,32 @@ RSpec.describe RapiTapir::Client::TypescriptGenerator do
     end
   end
 
+  describe 'edge cases and failure paths' do
+    it 'handles endpoints without params and without response (void)' do
+      endpoints = [RapiTapir.post('/ping').no_content.build]
+      generator = described_class.new(endpoints: endpoints, config: { client_name: 'C', base_url: 'http://x' })
+      output = generator.generate
+      expect(output).to include('class C')
+      # Method should not require request parameter and return void response type
+      expect(output).to match(/async createPing\(\): Promise<ApiResponse<void>>/)
+    end
+
+    it 'renders path parameters in template string' do
+      endpoint = RapiTapir.get('/users/:id').path_param(:id, :integer).ok(RapiTapir::Types.hash({ 'id' => RapiTapir::Types.integer })).build
+      generator = described_class.new(endpoints: [endpoint], config: { client_name: 'C', base_url: 'http://x' })
+      output = generator.generate
+      expect(output).to include('`/users/${request.id}`')
+    end
+
+    it 'produces ApiError on non-ok responses (error structure present in generated code)' do
+      # This asserts the error branch template exists in generated output
+      generator = described_class.new(endpoints: [], config: { client_name: 'C' })
+      output = generator.generate
+      expect(output).to include('throw error')
+      expect(output).to include('const apiError: ApiError')
+    end
+  end
+
   describe '#save_to_file' do
     let(:temp_file) { Tempfile.new(['test-client', '.ts']) }
 

@@ -203,7 +203,8 @@ module RapiTapir
         return nil if body.empty?
 
         content_type = request.content_type&.downcase
-        format = input.options[:format] || detect_format_from_content_type(content_type)
+        # EnhancedInput exposes `format` directly; fall back to content-type detection
+        format = (input.respond_to?(:format) && input.format) || detect_format_from_content_type(content_type)
 
         case format
         when :json
@@ -260,7 +261,8 @@ module RapiTapir
         validate_response_result(result, output)
 
         serialized = output.serialize(result)
-        content_type = determine_content_type(output)
+        # Prefer the explicit content type declared on the output
+        content_type = output.respond_to?(:content_type) && output.content_type ? output.content_type : determine_content_type(output)
 
         [status_code, { 'Content-Type' => content_type }, [serialized]]
       end
@@ -274,16 +276,17 @@ module RapiTapir
       end
 
       def build_default_response(result, status_code)
+        # For 204 No Content, return an empty body and no content-type header
+        return [204, {}, []] if status_code == 204
+
         [status_code, { 'Content-Type' => 'application/json' }, [JSON.generate(result)]]
       end
 
       def determine_content_type(output)
-        case output.kind
-        when :text
-          'text/plain'
-        else # Default to JSON for :json and unknown formats
-          'application/json'
-        end
+        # Fallback content-type resolution based on output kind
+        return 'text/plain' if output.kind == :text
+
+        'application/json'
       end
 
       def determine_default_status(method)

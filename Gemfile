@@ -15,6 +15,8 @@ group :development, :test do
   gem 'simplecov', '~> 0.22'
   gem 'sinatra', '~> 4.0'
   gem 'webmock', '~> 3.19'
+  # Linting and style
+  gem 'rubocop', '~> 1.79'
 end
 
 gem 'rackup', '~> 2.2'
