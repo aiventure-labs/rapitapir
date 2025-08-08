@@ -1,6 +1,94 @@
-# Ruby Tapir - Type-Safe HTTP API Library
+# RapiTapir (formerly "Ruby Tapir") – Type-Safe HTTP API Library
 
-A Ruby library for describing, serving, consuming, and documenting HTTP APIs with type safety and developer experience in mind.
+A Ruby library for describing, serving, consuming, and documenting HTTP APIs with type safety and great developer experience.
+
+## Status update — August 2025
+
+This document started as an early blueprint. The project has since shipped a substantial v2.0 with many areas exceeding the original scope. Below is a concise snapshot of where we are and what we should tackle next.
+
+### What’s implemented and usable today
+
+- Core DSL and Types
+  - Fluent HTTP verb DSL (GET/POST/PUT/DELETE/HEAD/OPTIONS/PATCH)
+  - Global T shortcut (e.g., T.string) and rich type system with validation/coercion
+  - Resource builder (CRUD), error responses, metadata (summary, description, tags)
+- Servers and runtime
+  - Rack adapter and Sinatra base class (SinatraRapiTapir) with zero-boilerplate startup
+  - Middleware: CORS, Security headers, Rate limiting, Request logging, Exception handler
+  - Health checks and observability hooks (metrics, logging, tracing scaffolding)
+- Tooling and docs
+  - OpenAPI 3.0.3 generator (JSON/YAML) + interactive HTML docs + Markdown docs
+  - TypeScript client generator with types and request/response modeling
+  - CLI: generate openapi/docs/client, validate, serve
+- Authentication
+  - OAuth2/JWT schemes, bearer/api-key/basic auth, scope-based authorization helpers
+- AI features (distinctive)
+  - RAG pipeline (memory backend), LLM instruction generator, MCP exporter
+- Serverless examples (new)
+  - Examples for AWS Lambda, Google Cloud Functions, Azure Functions, and Vercel
+
+### Quality gates snapshot
+
+- Tests: 643 passing, 55 pending (primarily OAuth2 integration/helpers due to test infra)
+- Coverage: ~67.6% line coverage, ~39.3% branch coverage
+- Build: rspec green locally; CLI flows validated via specs
+
+### Notable gaps and risks
+
+1. Multipart/form-data & file uploads
+   - Missing first-class multipart parsing, file validations (size, type), and streaming
+2. Streaming/SSE/WebSockets
+   - No streaming response primitives, SSE helpers, or WebSocket integration
+3. Rails integration depth
+   - Foundational modules and route helpers exist; needs deeper, ergonomic controller wiring
+4. OAuth2 test infrastructure
+   - 55 pending specs rely on external JWT/JWKS/WebMock setup; needs deterministic fixtures
+5. Request body naming consistency
+   - Handlers typically receive JSON under `:body`; align docs/tests (deprecate `:data` alias)
+6. Documentation drift
+   - Some README snippets are truncated or schematic; ensure copy-paste runnable examples
+7. Performance and budgets
+   - No standardized benchmark suite or perf budgets in CI; schema caching hot paths can improve
+8. API stability and versioning
+   - Clarify SemVer guarantees, deprecations policy, and extension points
+9. Error model consistency
+   - Consider standard Problem Details (RFC 7807) responses and uniform error envelopes
+
+### Prioritized improvements (next 4–8 weeks)
+
+- P0 – Test & DX hardening (1–2 weeks)
+  - Convert OAuth2/JWT specs from pending to passing using local JWKS fixtures/mocks
+  - Normalize request body to `inputs[:body]` in docs/tests; add deprecation notice for `:data`
+  - Fix/validate README code blocks; add a doc-examples smoke test in CI
+  - Raise coverage to ≥75% by adding failure-path tests for DSL, middleware, and generators
+
+- P1 – Multipart/form-data + content negotiation (2–3 weeks)
+  - Add `multipart_body`, `file_part`, `form_field`, content-type validation, and max-size limits
+  - Stream uploads to tempfiles; pluggable validators for MIME/type magic
+
+- P2 – Rails deep integration (2–3 weeks)
+  - Controller macro to mount endpoints with automatic validation/serialization
+  - Error mapping to Rails responders; parameter extraction; generators/scaffolds
+
+- P3 – Streaming primitives (3–4 weeks)
+  - SSE helper (`.out(stream_body(...))`), chunked responses; foundational WebSocket adapter design
+
+- P3 – Performance/observability (parallel, 1–2 weeks)
+  - Add microbench suite (endpoint build, request path, serialization); cache compiled schemas
+  - Optional OTLP tracing exporter wiring helper and labeled Prometheus metrics out-of-the-box
+
+### ADRs and decision tracking
+
+- A new `docs/adr/` directory is in place. Suggested initial ADRs:
+  - [ADR-0001: Base class strategy (SinatraRapiTapir) vs manual extension](adr/0001-base-class-strategy.md)
+  - [ADR-0002: Type shortcut (T) and type system boundaries](adr/0002-type-shortcut-and-type-system.md)
+  - [ADR-0003: OpenAPI source-of-truth and doc generation flow](adr/0003-openapi-source-of-truth.md)
+  - [ADR-0004: Client generation target (TypeScript first) and interface conventions](adr/0004-client-generation-typescript-first.md)
+  - [ADR-0005: Authentication architecture (schemes + helpers + middleware)](adr/0005-auth-architecture.md)
+  - [ADR-0006: Observability defaults (health, logging, metrics/tracing hooks)](adr/0006-observability-defaults.md)
+  - [ADR-0007: AI features scope (RAG/LLM/MCP) and maintainability boundaries](adr/0007-ai-scope-and-boundaries.md)
+
+The remainder of this document preserves the original blueprint for historical context and broader roadmap.
 
 ## Repository Structure
 

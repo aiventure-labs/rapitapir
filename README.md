@@ -1388,6 +1388,24 @@ Explore our comprehensive examples directory:
 - **[Observability Setup](examples/observability/)** - Monitoring and health checks
 - **[CLI Examples](examples/cli/)** - Command-line toolkit usage
 
+## Architecture Decision Records (ADRs)
+
+Key architectural decisions are tracked in `docs/adr/`:
+
+- ADR index and guidelines: [docs/adr/README.md](docs/adr/README.md)
+- Template: [docs/adr/template.md](docs/adr/template.md)
+
+Initial ADRs:
+
+- [ADR-0001: Base class strategy (SinatraRapiTapir) vs manual extension](docs/adr/0001-base-class-strategy.md)
+- [ADR-0002: Type shortcut (T) and type system boundaries](docs/adr/0002-type-shortcut-and-type-system.md)
+- [ADR-0003: OpenAPI source-of-truth and doc generation flow](docs/adr/0003-openapi-source-of-truth.md)
+- [ADR-0004: Client generation target (TypeScript first) and interface conventions](docs/adr/0004-client-generation-typescript-first.md)
+- [ADR-0005: Authentication architecture (schemes + helpers + middleware)](docs/adr/0005-auth-architecture.md)
+- [ADR-0006: Observability defaults (health, logging, metrics/tracing hooks)](docs/adr/0006-observability-defaults.md)
+- [ADR-0007: AI features scope (RAG/LLM/MCP) and maintainability boundaries](docs/adr/0007-ai-scope-and-boundaries.md)
+
+
 ## 🛠️ CLI Development Toolkit
 
 RapiTapir includes a powerful CLI for streamlined development:
