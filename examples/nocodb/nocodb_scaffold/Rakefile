@@ -1,0 +1,7 @@
+# frozen_string_literal: true
+
+ENV['RACK_ENV'] ||= 'development'
+
+require 'dotenv/load'
+require_relative 'app/api/app'
+require 'sinatra/activerecord/rake'

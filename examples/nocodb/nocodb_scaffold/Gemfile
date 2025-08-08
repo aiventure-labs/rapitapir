@@ -1,0 +1,22 @@
+    source 'https://rubygems.org'
+
+    ruby '>= 3.2.0'
+
+    gem 'sinatra'
+    gem 'activerecord', require: 'active_record'
+    gem 'sinatra-activerecord'
+    gem 'sqlite3'
+    gem 'rackup'
+    gem 'rake'
+
+    # API layer
+# If you're using this scaffold from inside the rapitapir repo, this local path works.
+# Otherwise, replace with: gem 'rapitapir', '~> 2.0.1'
+gem 'rapitapir', path: File.expand_path('../../..', __dir__)
+
+    group :development, :test do
+      gem 'rspec'
+      gem 'rack-test'
+      gem 'dotenv'
+      gem 'pry'
+    end

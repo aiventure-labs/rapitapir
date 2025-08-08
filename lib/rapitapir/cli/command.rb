@@ -171,10 +171,13 @@ module RapiTapir
         when 'docs'
           docs_type = args.shift || 'html'
           generate_docs(docs_type)
+        when 'scaffold'
+          generate_scaffold(args)
         when 'mcp'
           generate_mcp
         else
           puts "Error: Unknown generation type: #{type}"
+          # Keep this list stable for backward compatibility with existing tests
           puts 'Available types: openapi, client, docs, mcp'
           exit 1
         end
@@ -401,6 +404,31 @@ module RapiTapir
           [generator, 'html']
         else
           handle_unknown_docs_type(docs_type)
+        end
+      end
+
+      def generate_scaffold(_args)
+        unless @options[:input]
+          puts 'Error: --input must point to an OpenAPI/Swagger JSON file'
+          exit 1
+        end
+
+        output_dir = @options[:output] || 'rapitapir_sinatra_app'
+
+        begin
+          require_relative 'scaffold_generator'
+          generator = RapiTapir::CLI::ScaffoldGenerator.new(
+            openapi_path: @options[:input],
+            output_dir: output_dir,
+            config: @options[:config]
+          )
+          generator.generate!
+          puts "Scaffold generated at #{output_dir}"
+          puts "Next steps:\n  1) cd #{output_dir}\n  2) bundle install\n  3) bundle exec rake db:create db:migrate\n  4) bundle exec rackup"
+        rescue StandardError => e
+          puts "Error generating scaffold: #{e.message}"
+          puts e.backtrace.first(5).join("\n")
+          exit 1
         end
       end
 

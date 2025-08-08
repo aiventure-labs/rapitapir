@@ -13,6 +13,7 @@ module RapiTapir
         @endpoints = endpoints
         @info = default_info.merge(info)
         @servers = servers.empty? ? default_servers : servers
+        @components_schemas = {}
       end
 
       # Generate complete OpenAPI 3.0 specification
@@ -272,11 +273,23 @@ module RapiTapir
       end
 
       def generate_schema_components
-        # For now, return empty. In the future, we can extract common schemas
-        {}
+        # Collected during generation when encountering types with a component_name
+        @components_schemas
       end
 
       def type_to_schema(type)
+        # If the type carries a component name, register it and return a $ref
+        if type.respond_to?(:metadata)
+          name = type.metadata[:component_name]
+          if name && !name.to_s.empty?
+            add_component_schema(name, schema_payload_for(type))
+            return { '$ref' => "#/components/schemas/#{sanitize_component_name(name)}" }
+          end
+        end
+
+        # If the type knows how to render itself to JSON Schema, use that
+        return type.to_json_schema if type.respond_to?(:to_json_schema)
+
         case type
         when RapiTapir::Types::String, :string, String
           { type: 'string' }
@@ -288,6 +301,37 @@ module RapiTapir
           { type: 'boolean' }
         else
           generate_complex_type_schema(type)
+        end
+      end
+
+      def schema_payload_for(type)
+        if type.respond_to?(:to_json_schema)
+          type.to_json_schema
+        else
+          generate_complex_type_schema(type)
+        end
+      end
+
+      def add_component_schema(name, schema)
+        key = sanitize_component_name(name)
+        @components_schemas[key] ||= deep_stringify_keys(schema)
+      end
+
+      def sanitize_component_name(name)
+        key = name.to_s.strip
+        key = key.gsub(/[^A-Za-z0-9_.-]/, '_')
+        key = "Model_#{key}" if key.empty? || key =~ /^\d/
+        key
+      end
+
+      def deep_stringify_keys(obj)
+        case obj
+        when Array
+          obj.map { |v| deep_stringify_keys(v) }
+        when Hash
+          obj.each_with_object({}) { |(k, v), h| h[k.to_s] = deep_stringify_keys(v) }
+        else
+          obj
         end
       end
 
